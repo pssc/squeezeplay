@@ -362,3 +362,18 @@ BSP_BRIGHTNESS_ACTIVE_WHEN_PLAYING
 	PL	Use active brightness when playing
 	RU	Use active brightness when playing
 	SV	Use active brightness when playing
+
+BSP_BRIGHTNESS_DISABLE_SCREEN_SAFE
+	CS	Disable gradual dim when idle (not recommended!)
+	DA	Disable gradual dim when idle (not recommended!)
+	DE	Disable gradual dim when idle (not recommended!) 
+	EN	Disable gradual dim when idle (not recommended!) 
+	ES	Disable gradual dim when idle (not recommended!) 
+	FI	Disable gradual dim when idle (not recommended!) 
+	FR	Disable gradual dim when idle (not recommended!) 
+	IT	Disable gradual dim when idle (not recommended!) 
+	NL	Helderheid voor scherm niet aanpassen (niet aanbevolen!)
+	NO	Disable gradual dim when idle (not recommended!) 
+	PL	Disable gradual dim when idle (not recommended!) 
+	RU	Disable gradual dim when idle (not recommended!) 
+	SV	Disable gradual dim when idle (not recommended!) 
