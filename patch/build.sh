@@ -8,20 +8,17 @@
 # LMS version to build for
 VERSION="7.8"
 # Patch version
-PATCH_VERSION="0.4"
+PATCH_VERSION="1.2"
 
 # Build defaults
-BUILD_FAB4=false
-BUILD_BABY=false
+BUILD_FAB4=true
+BUILD_BABY=true
 
 if [ "$1" = "fab4" ]; then
 	BUILD_FAB4=true
 	BUILD_BABY=false
 elif [ "$1" = "baby" ]; then
 	BUILD_FAB4=false
-	BUILD_BABY=true
-else
-	BUILD_FAB4=true
 	BUILD_BABY=true
 fi
 
