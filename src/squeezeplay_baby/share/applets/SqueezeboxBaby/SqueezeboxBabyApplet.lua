@@ -25,6 +25,7 @@ local Checkbox               = require("jive.ui.Checkbox")
 local Framework              = require("jive.ui.Framework")
 local Group                  = require("jive.ui.Group")
 local Icon                   = require("jive.ui.Icon")
+local Button                 = require("jive.ui.Button")
 local Event                  = require("jive.ui.Event")
 local Label                  = require("jive.ui.Label")
 local Popup                  = require("jive.ui.Popup")
@@ -554,7 +555,7 @@ function _setBrightness(self, level)
 
 	-- Gradually reduce display brightness in IDLE mode when over half brightness
 	if self.powerState == "IDLE" then
-		if level > (MAX_BRIGHTNESS_LEVEL / 2) then
+		if level > (MAX_BRIGHTNESS_LEVEL / 2) and settings.disableDimToSaveScreen == false then
 			level = level - math.floor(10 * (level - (MAX_BRIGHTNESS_LEVEL / 2)) / (MAX_BRIGHTNESS_LEVEL / 2))
 		end
 	end
@@ -1207,6 +1208,20 @@ function settingsBrightnessControlShow(self, menuItem)
 						self:setBrightness(settings.brightness)
 					end,
 					settings.brightnessControl == "manual")
+		},
+		{
+			text = self:string("BSP_BRIGHTNESS_DISABLE_SCREEN_SAFE"),
+			style = "item_choice",
+                        check = Checkbox( "checkbox",
+				function( _, isSelected)
+                                	if isSelected then
+						settings.disableDimToSaveScreen = true
+					else
+						settings.disableDimToSaveScreen = false
+					end
+				end,
+				settings.disableDimToSaveScreen
+				)
 		}
 	})
 
@@ -1232,11 +1247,13 @@ end
 
 Reduce brightness when screensaver is active
 Patch by Daniel Vijge (daniel@vijge.net)
-Version 0.4
+Version 1.2
 
 
 Version history:
 
+version 1.2 (21-08-2012):
+Added option to disable dimmer to safe screen life time (use with caution!)
 version 0.4 (29-02-2012):
 Added automatic brightness control options
 version 0.3 (24-11-2011):
@@ -1260,6 +1277,8 @@ function initReduceBrightnessOnScreenSaver(self)
 	settings.brightnessScreenSaver = settings.brightnessScreenSaver or settings.brightness
 	settings.brightnessMinimumScreenSaver = settings.brightnessMinimumScreenSaver or settings.brightnessMinimal
 	
+	settings.disableDimToSaveScreen = settings.disableDimToSaveScreen or false
+
 	-- this is the timer for manual brightness control
 	screensaverTimer = Timer(5000, 
 		function()
