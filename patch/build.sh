@@ -28,7 +28,7 @@ echo '*' > ReduceBrightness-$PATCH_VERSION/.gitignore
 if [ $BUILD_FAB4 = true ]; then
 	echo 'Building patch for Squeezebox Touch...'
 
-	git diff upstream/$VERSION ../src/squeezeplay_fab4/share/applets/SqueezeboxFab4/* > ReduceBrightness-$PATCH_VERSION/ReduceBrightness-fab4-$PATCH_VERSION.patch
+	git diff $VERSION ../src/squeezeplay_fab4/share/applets/SqueezeboxFab4/* > ReduceBrightness-$PATCH_VERSION/ReduceBrightness-fab4-$PATCH_VERSION.patch
 
 	cd ReduceBrightness-$PATCH_VERSION
 	sed 's/--- a\/src\/squeezeplay_fab4\/share\//--- share\/jive\//g' ReduceBrightness-fab4-$PATCH_VERSION.patch > ReduceBrightness-fab4.patch.tmp
@@ -59,7 +59,7 @@ fi
 
 if [ $BUILD_BABY = true ]; then
 	echo 'Building patch for Squeezebox Radio...'
-	git diff upstream/$VERSION ../src/squeezeplay_baby/share/applets/SqueezeboxBaby/* > ReduceBrightness-$PATCH_VERSION/ReduceBrightness-baby-$PATCH_VERSION.patch
+	git diff $VERSION ../src/squeezeplay_baby/share/applets/SqueezeboxBaby/* > ReduceBrightness-$PATCH_VERSION/ReduceBrightness-baby-$PATCH_VERSION.patch
 
 	cd ReduceBrightness-$PATCH_VERSION
 	sed 's/--- a\/src\/squeezeplay_baby\/share\//--- share\/jive\//g' ReduceBrightness-baby-$PATCH_VERSION.patch > ReduceBrightness-baby.patch.tmp
