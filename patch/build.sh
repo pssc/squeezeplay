@@ -8,7 +8,7 @@
 # LMS version to build for
 VERSION="7.8"
 # Patch version
-PATCH_VERSION="1.2"
+PATCH_VERSION="1.3"
 
 # Build defaults
 BUILD_FAB4=true
