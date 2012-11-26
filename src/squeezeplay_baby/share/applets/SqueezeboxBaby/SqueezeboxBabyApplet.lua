@@ -1247,11 +1247,11 @@ end
 
 Reduce brightness when screensaver is active
 Patch by Daniel Vijge (daniel@vijge.net)
-Version 1.2
-
+Version 1.3
 
 Version history:
-
+version 1.3 (26-11-2012):
+Setting use active brightness when playing was not saved correctly
 version 1.2 (21-08-2012):
 Added option to disable dimmer to safe screen life time (use with caution!)
 version 0.4 (29-02-2012):
@@ -1267,17 +1267,19 @@ Initial release
 
 function initReduceBrightnessOnScreenSaver(self)
 	-- initial settings
-	settings.dimWhenPlaying = settings.dimWhenPlaying or false
-	settings.dimWhenStopped = settings.dimWhenStopped or true
-	settings.dimWhenOff = settings.dimWhenOff or true
-	settings.brightnessActiveScreenSaver = settings.brightnessActiveScreenSaver or true
+	local settings = self:getSettings()
 	
-	settings.brightnessActive = settings.brightnessActive or settings.brightness
-	settings.brightnessMinimumActive = settings.brightnessMinimumActive or settings.brightnessMinimal
-	settings.brightnessScreenSaver = settings.brightnessScreenSaver or settings.brightness
-	settings.brightnessMinimumScreenSaver = settings.brightnessMinimumScreenSaver or settings.brightnessMinimal
+	settings.dimWhenPlaying = _getDefaultSetting(settings.dimWhenPlaying, false)
+	settings.dimWhenStopped = _getDefaultSetting(settings.dimWhenStopped, true)
+	settings.dimWhenOff = _getDefaultSetting(settings.dimWhenOff, true)
+	settings.brightnessActiveScreenSaver = _getDefaultSetting(settings.brightnessActiveScreenSaver, true)
 	
-	settings.disableDimToSaveScreen = settings.disableDimToSaveScreen or false
+	settings.brightnessActive = _getDefaultSetting(settings.brightnessActive, settings.brightness)
+	settings.brightnessMinimumActive = _getDefaultSetting(settings.brightnessMinimumActive, settings.brightnessMinimal)
+	settings.brightnessScreenSaver = _getDefaultSetting(settings.brightnessScreenSaver, settings.brightness)
+	settings.brightnessMinimumScreenSaver = _getDefaultSetting(settings.brightnessMinimumScreenSaver, settings.brightnessMinimal)
+	
+	settings.disableDimToSaveScreen = _getDefaultSetting(settings.disableDimToSaveScreen, false)
 
 	-- this is the timer for manual brightness control
 	screensaverTimer = Timer(5000, 
@@ -1306,6 +1308,14 @@ function initReduceBrightnessOnScreenSaver(self)
 	-- if brightness control is manual, start the timer
 	if settings.brightnessControl == "manual" then
 		screensaverTimer:start()
+	end
+end
+
+function _getDefaultSetting(setting, default)
+	if setting == nil then
+		return default
+	else
+		return setting
 	end
 end
 		
@@ -1387,6 +1397,13 @@ function menuAutomaticBrightness(self, menuItem)
 					},
 					
 				})
+				
+	window:addListener(EVENT_WINDOW_POP,
+		function()
+			self:storeSettings()
+		end
+	)
+	
 	window:addWidget(menu)
 	window:show()
 end
