@@ -102,6 +102,9 @@ struct decode_audio *decode_audio;
 #define FLAG_STREAM_EFFECTS  0x02
 #define FLAG_STREAM_NOISE    0x04
 #define FLAG_STREAM_LOOPBACK 0x08
+#define FLAG_NOMMAP          0x16
+
+#define PCM_WAIT_TIMEOUT     500
 
 
 struct decode_alsa {
@@ -135,6 +138,8 @@ struct decode_alsa {
 
 	/* MMAP output available? */
 	char has_mmap;
+
+	int pcm_wait_timeout;
 };
 
 #define PCM_FRAMES_TO_BYTES(frames) (snd_pcm_frames_to_bytes(state->pcm, (frames)))
@@ -701,15 +706,18 @@ static int pcm_open(struct decode_alsa *state, bool_t loopback, int mode)
 			sample_rate = 44100;
 		}
 
-		err = _pcm_open(state,
+		if ( state->flags & FLAG_NOMMAP ) {
+			err = _pcm_open(state,
 				&state->pcm,
 				mode,
 				state->playback_device,
 				SND_PCM_ACCESS_MMAP_INTERLEAVED,
 				sample_rate);
-		state->has_mmap = 1;
+			state->has_mmap = 1;
+		}
 
-		if (err < 0) {
+		if (err < 0 || state->flags & FLAG_NOMMAP ) {
+			LOG_WARN("PCM Open without mem map\n");
 			/* Retry without MMAP */
 			err = _pcm_open(state,
 					&state->pcm,
@@ -904,12 +912,15 @@ static void *audio_thread_execute(void *data) {
 				}
 			}
 			else {
-				if ((err = snd_pcm_wait(state->pcm, 500)) < 0) {
-					LOG_WARN("xrun (snd_pcm_wait) err=%d",err);
+				if ((err = snd_pcm_wait(state->pcm, state->pcm_wait_timeout)) < 0) {
+					LOG_WARN("xrun (snd_pcm_wait) err=%s",snd_strerror(err));
 					if ((err = snd_pcm_recover(state->pcm, err, 1)) < 0) {
-						LOG_ERROR("PCM wait failed: %s", snd_strerror(err));
+						LOG_ERROR("PCM wait recover failed: %s", snd_strerror(err));
 					}
 					first = 1;
+				}
+				if (err == 0) {
+					LOG_INFO("snd_pcm_wait timeout(%d)",state->pcm_wait_timeout);
 				}
 
 			}
@@ -1031,14 +1042,13 @@ static void *audio_thread_execute(void *data) {
 			} else {
 				commitres = snd_pcm_writei(state->pcm, buf, frames); 
 				if (commitres < 0 || (snd_pcm_uframes_t)commitres != frames) { 
-					LOG_WARN("xrun (snd_pcm_writei) err=%ld", commitres);
+					LOG_WARN("xrun (snd_pcm_writei) err=%s", snd_strerror(commitres));
 					if ((err = snd_pcm_recover(state->pcm, commitres, 1)) < 0) {
-						LOG_ERROR("sound write failed: %s", snd_strerror(err));
+						LOG_ERROR("PCM recover failed sound writei failed: %s", snd_strerror(err));
 					}
 					first = 1;
 				}
 			}
-
 
 			size -= frames;
 
@@ -1092,6 +1102,8 @@ static int decode_lock_memory()
 		LOG_WARN("mlockall failed");
 		return -1;
 	}
+	// FIXME pssc pa dies...
+	//return -1;
 
 	/* Turn off malloc trimming.*/
    	mallopt(M_TRIM_THRESHOLD, -1);
@@ -1110,6 +1122,7 @@ static int decode_lock_memory()
 	debug_pagefaults();
 #endif
 	
+	LOG_DEBUG("decode_lock_memory done");
 	return 0;
 }
 
@@ -1176,6 +1189,10 @@ int main(int argv, char **argc)
 		state.format = SND_PCM_FORMAT_S16_LE;
 	}
 
+	if(!state.pcm_wait_timeout) {
+		state.pcm_wait_timeout = PCM_WAIT_TIMEOUT;
+	}
+
 #ifdef HAVE_SYSLOG
 	openlog("squeezeplay", LOG_ODELAY | LOG_CONS, LOG_USER);
 #endif
@@ -1192,8 +1209,9 @@ int main(int argv, char **argc)
 		exit(-1);
 	}
 	if (strstr(utsname.version, "PREEMPT") != NULL) {
-		LOG_INFO("PREEMPT Dectected");
 		decode_lock_memory();
+	} else {
+		LOG_INFO("PREEMPT Not Dectected");
 	}
 
 	/* who is our parent */
