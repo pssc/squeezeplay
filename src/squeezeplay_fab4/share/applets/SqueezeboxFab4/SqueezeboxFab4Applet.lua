@@ -470,7 +470,7 @@ function _setBrightness(self, level)
 	-- Gradually reduce LCD brightness when IDLE and level is over half of maximum brightness
 	--  to increase lifetime of LCD backlight
 	if brightOverride == 0 then
-		if level > (MAX_BRIGHTNESS_LEVEL / 2) then
+		if level > (MAX_BRIGHTNESS_LEVEL / 2) and settings.disableDimToSaveScreen == false then
 			level = level - math.floor(40 * (level - (MAX_BRIGHTNESS_LEVEL / 2)) / (MAX_BRIGHTNESS_LEVEL / 2))
 		end
 	end
@@ -819,6 +819,20 @@ function settingsBrightnessControlShow(self, menuItem)
 						self:setBrightness(settings.brightness)
 					end,
 					settings.brightnessControl == "manual")
+		},
+		{
+			text = self:string("BSP_BRIGHTNESS_DISABLE_SCREEN_SAFE"),
+			style = "item_choice",
+                        check = Checkbox( "checkbox",
+				function( _, isSelected)
+                                	if isSelected then
+						settings.disableDimToSaveScreen = true
+					else
+						settings.disableDimToSaveScreen = false
+					end
+				end,
+				settings.disableDimToSaveScreen
+				)
 		}
 	})
 	
@@ -832,7 +846,6 @@ function settingsBrightnessControlShow(self, menuItem)
 	window:show()
 
 end
-
 
 -- Moved here from SqueezeCenter applet since SC applet is not resident
 --  but we need scGuardTimer to survive
@@ -922,11 +935,13 @@ end
 
 Reduce brightness when screensaver is active
 Patch by Daniel Vijge (daniel@vijge.net)
-Version 0.4
-
+Version 1.3
 
 Version history:
-
+version 1.3 (26-11-2012):
+Setting use active brightness when playing was not saved correctly
+version 1.2 (21-08-2012):
+Added option to disable dimmer to safe screen life time (use with caution!)
 version 0.4 (29-02-2012):
 Added automatic brightness control options
 version 0.3 (24-11-2011):
@@ -940,16 +955,20 @@ Initial release
 
 function initReduceBrightnessOnScreenSaver(self)
 	-- initial settings
-	settings.dimWhenPlaying = settings.dimWhenPlaying or false
-	settings.dimWhenStopped = settings.dimWhenStopped or true
-	settings.dimWhenOff = settings.dimWhenOff or true
-	settings.brightnessActiveScreenSaver = settings.brightnessActiveScreenSaver or true
+	local settings = self:getSettings()
 	
-	settings.brightnessActive = settings.brightnessActive or settings.brightness
-	settings.brightnessMinimumActive = settings.brightnessMinimumActive or settings.brightnessMinimal
-	settings.brightnessScreenSaver = settings.brightnessScreenSaver or settings.brightness
-	settings.brightnessMinimumScreenSaver = settings.brightnessMinimumScreenSaver or settings.brightnessMinimal
+	settings.dimWhenPlaying = _getDefaultSetting(settings.dimWhenPlaying, false)
+	settings.dimWhenStopped = _getDefaultSetting(settings.dimWhenStopped, true)
+	settings.dimWhenOff = _getDefaultSetting(settings.dimWhenOff, true)
+	settings.brightnessActiveScreenSaver = _getDefaultSetting(settings.brightnessActiveScreenSaver, true)
 	
+	settings.brightnessActive = _getDefaultSetting(settings.brightnessActive, settings.brightness)
+	settings.brightnessMinimumActive = _getDefaultSetting(settings.brightnessMinimumActive, settings.brightnessMinimal)
+	settings.brightnessScreenSaver = _getDefaultSetting(settings.brightnessScreenSaver, settings.brightness)
+	settings.brightnessMinimumScreenSaver = _getDefaultSetting(settings.brightnessMinimumScreenSaver, settings.brightnessMinimal)
+	
+	settings.disableDimToSaveScreen = _getDefaultSetting(settings.disableDimToSaveScreen, false)
+
 	-- this is the timer for manual brightness control
 	screensaverTimer = Timer(5000, 
 		function()
@@ -977,6 +996,14 @@ function initReduceBrightnessOnScreenSaver(self)
 	-- if brightness control is manual, start the timer
 	if settings.brightnessControl == "manual" then
 		screensaverTimer:start()
+	end
+end
+
+function _getDefaultSetting(setting, default)
+	if setting == nil then
+		return default
+	else
+		return setting
 	end
 end
 		
@@ -1058,6 +1085,13 @@ function menuAutomaticBrightness(self, menuItem)
 					},
 					
 				})
+				
+	window:addListener(EVENT_WINDOW_POP,
+		function()
+			self:storeSettings()
+		end
+	)
+	
 	window:addWidget(menu)
 	window:show()
 end

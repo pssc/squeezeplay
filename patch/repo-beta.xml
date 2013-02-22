@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<extensions>
+	<details>
+		<title lang="EN">Squeezebox repository by Daniel Vijge</title>
+	</details>
+	<patches>
+		<patch name="ReduceBrightness" target="fab4" version="%PATCH_VERSION%" minTarget="7.5" maxTarget="%VERSION%">
+		    <title lang="EN">Reduce Screensaver Brightness (beta)</title>
+		    <desc lang="EN">Reduce brightness when the screensaver is active</desc>
+		    <creator>Daniel Vijge</creator>
+		    <url>http://server.vijge.net/static/squeezebox/%PATCH%</url>
+		    <sha>%CHECKSUM%</sha>
+		</patch>
+		<patch name="ReduceBrightnessBaby" target="baby" version="%PATCH_VERSION%" minTarget="7.5" maxTarget="%VERSION%">
+			<title lang="EN">Reduce Screensaver Brightness (beta)</title>
+			<desc lang="EN">Reduce brightness when the screensaver is active</desc>
+			<creator>Daniel Vijge</creator>
+			<url>http://server.vijge.net/static/squeezebox/%PATCHBABY%</url>
+			<sha>%CHECKSUMBABY%</sha>
+		</patch>
+        </patches>
+</extensions>
