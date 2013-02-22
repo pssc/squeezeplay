@@ -280,7 +280,8 @@ VideoBootStrap FBCON_bootstrap = {
 	FB_Available, FB_CreateDevice
 };
 
-#define FB_MODES_DB	"/etc/fb.modes"
+/* FIXME ENV VAR */
+#define FB_MODES_DB	"/etc/fb.modes.squeezeplay" 
 
 static int read_fbmodes_line(FILE*f, char* line, int length)
 {

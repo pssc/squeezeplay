@@ -1,0 +1,14 @@
+diff --git a/src/SDL-1.2.15/src/video/fbcon/SDL_fbvideo.c b/src/SDL-1.2.15/src/video/fbcon/SDL_fbvideo.c
+index 5e58809..7337bc6 100644
+--- a/src/SDL-1.2.15/src/video/fbcon/SDL_fbvideo.c
++++ b/src/SDL-1.2.15/src/video/fbcon/SDL_fbvideo.c
+@@ -280,7 +280,8 @@ VideoBootStrap FBCON_bootstrap = {
+ 	FB_Available, FB_CreateDevice
+ };
+ 
+-#define FB_MODES_DB	"/etc/fb.modes"
++/* FIXME ENV VAR */
++#define FB_MODES_DB	"/etc/fb.modes.squeezeplay" 
+ 
+ static int read_fbmodes_line(FILE*f, char* line, int length)
+ {

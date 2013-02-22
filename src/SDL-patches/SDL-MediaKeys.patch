@@ -1,0 +1,301 @@
+diff -ru a/SDL-1.2.13/configure.in b/SDL-1.2.13/configure.in
+--- a/SDL-1.2.13/configure.in	2007-12-31 04:48:39.000000000 +0000
++++ b/SDL-1.2.13/configure.in	2012-09-03 13:39:20.000000000 +0100
+@@ -1103,6 +1103,23 @@
+                     AC_DEFINE(SDL_VIDEO_DRIVER_X11_DPMS)
+                 fi
+             fi
++            AC_ARG_ENABLE(video-x11-xf86-keysyms,
++[  --enable-video-x11-xf86-keysyms   use XFree86's Internet-Keyboard keysyms[default=yes]],
++                          , enable_video_x11_xf86_keysyms=yes)
++            if test x$enable_video_x11_xf86_keysyms = xyes; then
++                AC_MSG_CHECKING(for XFree86 Internet/MultiMedia Keyboard keysym support)
++                video_x11_xf86_keysyms=no
++                AC_TRY_COMPILE([
++                 #include <X11/XF86keysym.h>
++                ],[
++                ],[
++                video_x11_xf86_keysyms=yes
++                ])
++                AC_MSG_RESULT($video_x11_xf86_keysyms)
++                if test x$video_x11_xf86_keysyms = xyes; then
++                    EXTRA_CFLAGS="$EXTRA_CFLAGS -DXFREE86_KEYSYMS"
++                fi
++            fi
+         fi
+     fi
+ }
+diff -ru a/SDL-1.2.13/include/SDL_keysym.h b/SDL-1.2.13/include/SDL_keysym.h
+--- a/SDL-1.2.13/include/SDL_keysym.h	2007-12-31 04:48:36.000000000 +0000
++++ b/SDL-1.2.13/include/SDL_keysym.h	2012-09-03 13:39:20.000000000 +0100
+@@ -281,6 +281,71 @@
+ 	SDLK_EURO		= 321,		/* Some european keyboards */
+ 	SDLK_UNDO		= 322,		/* Atari keyboard has Undo */
+ 
++    /* "Internet"/"MultiMedia" keyboards */
++    SDLK_Standby            = 323,
++    SDLK_AudioLowerVolume   = 324,
++    SDLK_AudioMute          = 325,
++    SDLK_AudioRaiseVolume   = 326,
++    SDLK_AudioPlay          = 327,
++    SDLK_AudioStop          = 328,
++    SDLK_AudioPrev          = 329,
++    SDLK_AudioNext          = 330,
++    SDLK_HomePage           = 331,
++    SDLK_Mail               = 332,
++    SDLK_Start              = 333,
++    SDLK_Search             = 334,
++    SDLK_AudioRecord        = 325,
++
++    SDLK_Calculator         = 326,
++    SDLK_Memo               = 327,
++    SDLK_ToDoList           = 328,
++    SDLK_Calendar           = 329,
++    SDLK_PowerDown          = 330,
++    SDLK_ContrastAdjust     = 331,
++    SDLK_RockerUp           = 332,
++    SDLK_RockerDown         = 333,
++    SDLK_RockerEnter        = 334,
++
++    SDLK_Back               = 335,
++    SDLK_Forward            = 336,
++    SDLK_Stop               = 337,
++    SDLK_Refresh            = 338,
++    SDLK_PowerOff           = 339,
++    SDLK_WakeUp             = 340,
++    SDLK_Eject              = 341,
++    SDLK_ScreenSaver        = 342,
++    SDLK_WWW                = 343,
++    SDLK_Sleep              = 344,
++    SDLK_Favorites          = 345,
++    SDLK_AudioPause         = 346,
++    SDLK_AudioMedia         = 347,
++    SDLK_MyComputer         = 348,
++    SDLK_VendorHome         = 349,
++    SDLK_LightBulb          = 350,
++    SDLK_Shop               = 351,
++    SDLK_History            = 352,
++    SDLK_OpenURL            = 353,
++    SDLK_AddFavorite        = 354,
++    SDLK_HotLinks           = 355,
++    SDLK_BrightnessAdjust   = 356,
++
++    SDLK_Launch0            = 357,
++    SDLK_Launch1            = 358,
++    SDLK_Launch2            = 359,
++    SDLK_Launch3            = 360,
++    SDLK_Launch4            = 361,
++    SDLK_Launch5            = 362,
++    SDLK_Launch6            = 363,
++    SDLK_Launch7            = 364,
++    SDLK_Launch8            = 365,
++    SDLK_Launch9            = 366,
++    SDLK_LaunchA            = 367,
++    SDLK_LaunchB            = 368,
++    SDLK_LaunchC            = 369,
++    SDLK_LaunchD            = 370,
++    SDLK_LaunchE            = 371,
++    SDLK_LaunchF            = 372,
++
+ 	/* Add any other keys here */
+ 
+ 	SDLK_LAST
+diff -ru a/SDL-1.2.13/src/video/fbcon/SDL_fbevents.c b/SDL-1.2.13/src/video/fbcon/SDL_fbevents.c
+--- a/SDL-1.2.13/src/video/fbcon/SDL_fbevents.c	2007-12-31 04:48:08.000000000 +0000
++++ b/SDL-1.2.13/src/video/fbcon/SDL_fbevents.c	2012-09-03 13:39:20.000000000 +0100
+@@ -61,8 +61,8 @@
+ /* The translation tables from a console scancode to a SDL keysym */
+ #define NUM_VGAKEYMAPS	(1<<KG_CAPSSHIFT)
+ static Uint16 vga_keymap[NUM_VGAKEYMAPS][NR_KEYS];
+-static SDLKey keymap[128];
+-static Uint16 keymap_temp[128]; /* only used at startup */
++static SDLKey keymap[210];
++static Uint16 keymap_temp[210]; /* only used at startup */
+ static SDL_keysym *TranslateKey(int scancode, SDL_keysym *keysym);
+ 
+ /* Ugh, we have to duplicate the kernel's keysym mapping code...
+@@ -989,14 +989,27 @@
+ 	int pressed;
+ 	int scancode;
+ 	SDL_keysym keysym;
+-
+ 	nread = read(keyboard_fd, keybuf, BUFSIZ);
+-	for ( i=0; i<nread; ++i ) {
+-		scancode = keybuf[i] & 0x7F;
+-		if ( keybuf[i] & 0x80 ) {
+-			pressed = SDL_RELEASED;
++	for ( i = 0; i<nread; ++i ) {
++		if ( ((keybuf[i] == 0) || keybuf[i] == 128) && (nread-i >= 2) && keybuf[i + 1] == 129) {
++			/* is extended character (scancode>128), comes in as three codes,
++			first code: 0(pressed) or 128(released), second code:129
++			third code: actual extended scancode value */
++			scancode = keybuf[i + 2];
++			if (keybuf[i] == 0) {
++				pressed = SDL_PRESSED;
++			} else {
++				pressed = SDL_RELEASED;
++			}
++			//push past next 2 since the set of 3 are the extended character representation
++			i += 2;
+ 		} else {
+-			pressed = SDL_PRESSED;
++			scancode = keybuf[i] & 0x7F;
++			if ( keybuf[i] & 0x80 ) {
++				pressed = SDL_RELEASED;
++			} else {
++				pressed = SDL_PRESSED;
++			}
+ 		}
+ 		TranslateKey(scancode, &keysym);
+ 		/* Handle Ctrl-Alt-FN for vt switch */
+@@ -1124,6 +1137,33 @@
+ 	  case 127:
+ 	    keymap[i] = SDLK_MENU;
+ 	    break;
++	  case 113:
++	    keymap[i] = SDLK_AudioMute;
++	    break;
++	  case 114:
++	    keymap[i] = SDLK_AudioLowerVolume;
++	    break;
++	  case 115:
++	    keymap[i] = SDLK_AudioRaiseVolume;
++	    break;
++	  case 116:
++	    keymap[i] = SDLK_POWER;
++	    break;
++	  case 142:
++	    keymap[i] = SDLK_Sleep;
++	    break;
++	  case 163:
++	    keymap[i] = SDLK_AudioNext;
++	    break;
++	  case 164:
++	    keymap[i] = SDLK_AudioPause;
++	    break;
++	  case 165:
++	    keymap[i] = SDLK_AudioPrev;
++	    break;
++	  case 207:
++	    keymap[i] = SDLK_AudioPlay;
++	    break;
+ 	  /* this should take care of all standard ascii keys */
+ 	  default:
+ 	    keymap[i] = KVAL(vga_keymap[0][i]);
+diff -ru a/SDL-1.2.13/src/video/x11/SDL_x11events.c b/SDL-1.2.13/src/video/x11/SDL_x11events.c
+--- a/SDL-1.2.13/src/video/x11/SDL_x11events.c	2007-12-31 04:48:13.000000000 +0000
++++ b/SDL-1.2.13/src/video/x11/SDL_x11events.c	2012-09-03 13:39:20.000000000 +0100
+@@ -48,6 +48,9 @@
+ #include "SDL_x11mouse_c.h"
+ #include "SDL_x11events_c.h"
+ 
++#ifdef XFREE86_KEYSYMS
++#include <X11/XF86keysym.h>
++#endif
+ 
+ /* Define this if you want to debug X11 events */
+ /*#define DEBUG_XEVENTS*/
+@@ -1092,6 +1095,90 @@
+ 	MISC_keymap[XK_Hyper_R&0xFF] = SDLK_MENU;   /* Windows "Menu" key */
+ }
+ 
++#ifdef XFREE86_KEYSYMS
++/* Macro for trivial assignment from XFree86 value to SDL value */
++#define XF86_to_SDLK(x) \
++    case XF86XK_##x:    \
++        return SDLK_##x
++
++static SDLKey
++TranslateXFree86VendorSpecificKeysyms(KeySym xsym)
++{
++    switch (xsym) {
++        /* Keys found on some "Internet" keyboards. */
++        XF86_to_SDLK(Standby);
++        XF86_to_SDLK(AudioLowerVolume);
++        XF86_to_SDLK(AudioMute);
++        XF86_to_SDLK(AudioRaiseVolume);
++        XF86_to_SDLK(AudioPlay);
++        XF86_to_SDLK(AudioStop);
++        XF86_to_SDLK(AudioPrev);
++        XF86_to_SDLK(AudioNext);
++        XF86_to_SDLK(HomePage);
++        XF86_to_SDLK(Mail);
++        XF86_to_SDLK(Start);
++        XF86_to_SDLK(Search);
++        XF86_to_SDLK(AudioRecord);
++
++        /* These are sometimes found on PDA's (e.g. Palm, PocketPC or elsewhere) */
++        XF86_to_SDLK(Calculator);
++        XF86_to_SDLK(Memo);
++        XF86_to_SDLK(ToDoList);
++        XF86_to_SDLK(Calendar);
++        XF86_to_SDLK(PowerDown);
++        XF86_to_SDLK(ContrastAdjust);
++        XF86_to_SDLK(RockerUp);
++        XF86_to_SDLK(RockerDown);
++        XF86_to_SDLK(RockerEnter);
++
++        /* Some more "Internet" keyboard symbols */
++        XF86_to_SDLK(Back);
++        XF86_to_SDLK(Forward);
++        XF86_to_SDLK(Stop);
++        XF86_to_SDLK(Refresh);
++        XF86_to_SDLK(PowerOff);
++        XF86_to_SDLK(WakeUp);
++        XF86_to_SDLK(Eject);
++        XF86_to_SDLK(ScreenSaver);
++        XF86_to_SDLK(WWW);
++        XF86_to_SDLK(Sleep);
++        XF86_to_SDLK(Favorites);
++        XF86_to_SDLK(AudioPause);
++        XF86_to_SDLK(AudioMedia);
++        XF86_to_SDLK(MyComputer);
++        XF86_to_SDLK(VendorHome);
++        XF86_to_SDLK(LightBulb);
++        XF86_to_SDLK(Shop);
++        XF86_to_SDLK(History);
++        XF86_to_SDLK(OpenURL);
++        XF86_to_SDLK(AddFavorite);
++        XF86_to_SDLK(HotLinks);
++        XF86_to_SDLK(BrightnessAdjust);
++
++        XF86_to_SDLK(Launch0);
++        XF86_to_SDLK(Launch1);
++        XF86_to_SDLK(Launch2);
++        XF86_to_SDLK(Launch3);
++        XF86_to_SDLK(Launch4);
++        XF86_to_SDLK(Launch5);
++        XF86_to_SDLK(Launch7);
++        XF86_to_SDLK(Launch8);
++        XF86_to_SDLK(Launch9);
++        XF86_to_SDLK(LaunchA);
++        XF86_to_SDLK(LaunchB);
++        XF86_to_SDLK(LaunchC);
++        XF86_to_SDLK(LaunchD);
++        XF86_to_SDLK(LaunchE);
++        XF86_to_SDLK(LaunchF);
++
++        default:
++            return SDLK_UNKNOWN;
++    }
++}
++#endif
++
++
++
+ /* Get the translated SDL virtual keysym */
+ SDLKey X11_TranslateKeycode(Display *display, KeyCode kc)
+ {
+@@ -1138,6 +1225,12 @@
+ 		    case 0xFF:
+ 			key = MISC_keymap[xsym&0xFF];
+ 			break;
++
++#ifdef XFREE86_KEYSYMS
++                    case 0x1008ff: /* XFree86 vendor specific keysyms from /usr/X11R6/include/X11/XF86keysym.h */
++                	key = TranslateXFree86VendorSpecificKeysyms(xsym);
++                	break;
++#endif
+ 		    default:
+ 			/*
+ 			fprintf(stderr, "X11: Unhandled xsym, sym = 0x%04x\n",
