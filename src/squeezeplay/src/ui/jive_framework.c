@@ -86,6 +86,7 @@ static struct jive_keymap keymap[] = {
 	{ SDLK_HOME,		JIVE_KEY_HOME },
 	{ SDLK_AudioPlay,	JIVE_KEY_PLAY },
 	{ SDLK_AudioPause,	JIVE_KEY_PAUSE },
+	{ SDLK_AudioStop,	JIVE_KEY_PAUSE },
 	{ SDLK_KP_PLUS,		JIVE_KEY_ADD },
 	{ SDLK_AudioPrev,	JIVE_KEY_REW },
 	{ SDLK_AudioNext,	JIVE_KEY_FWD },
@@ -104,6 +105,7 @@ static struct jive_keymap keymap[] = {
 	{ SDLK_AudioMute,       JIVE_KEY_MUTE },
 	{ SDLK_POWER,           JIVE_KEY_POWER },
 	{ SDLK_Sleep,           JIVE_KEY_ALARM },
+	{ SDLK_HomePage,	JIVE_KEY_HOME },
 	{ SDLK_UNKNOWN,		JIVE_KEY_NONE },
 };
 
@@ -176,6 +178,8 @@ static int jiveL_initSDL(lua_State *L) {
 		LOG_ERROR(log_ui_draw, "SDL_Init(V|T|A): %s\n", SDL_GetError());
 		SDL_Quit();
 		exit(-1);
+	} else {
+	  atexit(SDL_Quit);
 	}
 
 	/* report video info */
@@ -233,6 +237,7 @@ static int jiveL_initSDL(lua_State *L) {
 
 		sprintf(splashfile, "jive/splash%dx%d.png", screen_w, screen_h);
 
+		// Get largest?
 		splash = jive_surface_load_image(splashfile);
 		if(!splash) {
 			sprintf(splashfile,"jive/splash.png");
@@ -252,6 +257,22 @@ static int jiveL_initSDL(lua_State *L) {
 
 		SDL_Quit();
 		exit(-1);
+	} else {
+		jive_surface_get_size(srf, &screen_w, &screen_h);
+		if ((video_info = SDL_GetVideoInfo())) {
+			/* We may not get the mode we ask for...but the surface is the right size... */
+			if ((screen_w != video_info->current_w) || (screen_h != video_info->current_h)) {
+				LOG_ERROR(log_ui_draw, "Splash Video Mode Fail.");
+				screen_w = video_info->current_w;
+        			screen_h = video_info->current_h;
+				srf = jive_surface_set_video_mode(screen_w, screen_h, screen_bpp, fullscreen);
+				if(!srf) {
+					LOG_ERROR(log_ui_draw, "Splash Video Mode Fail.");
+				}
+		
+			}
+		}
+
 	}
 
 	if (splash) {
