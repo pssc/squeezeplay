@@ -86,7 +86,6 @@ function setCredentials(class, cred)
 	credentials[key] = cred
 end
 
-
 --[[
 
 =head2 jive.net.SocketHttp(jnt, host, port, name)
@@ -105,6 +104,7 @@ function __init(self, jnt, host, port, name)
 
 	-- hostname
 	obj.host = host
+	obj.port = port 
 
 	-- init states
 	obj.t_httpSendState = 't_sendDequeue'
@@ -210,43 +210,96 @@ end
 function t_sendResolve(self)
 	log:debug(self, ":t_sendResolve()")
 
-	if self.cachedIp then
-		log:debug("Using cached ip address: ", self.cachedIp, " for: ", self.host)
-		-- don't lookup an ip address
+	local t = nil
+
+	if  self.t_tcp.proxy:isProxying() then
+		-- failed or reconnect... re-resolve;
+		self.t_tcp.address = nil
+		self.t_tcp.port = self.t_tcp.proxy:getHostPort()
+		self.t_tcp.proxy:resetProxy();
+        end
+
+	if self.t_tcp.address and DNS:isip(self.t_tcp.address) then
+		-- Called with host ip set...
+		if self.t_tcp.proxy:isProxied() then 
+			log:debug(self, " is proxied ",self.t_tcp.proxy:getProxyServer(),"(",self.t_tcp.proxy:getProxyIp(),")")
+			if not self.t_tcp.proxy:getProxyIp() then
+				t = Task(tostring(self) .. "(D)", self, function()
+					local proxy = self.t_tcp.proxy:getProxyServer()
+					log:debug(self, " DNS loopup for proxy ", proxy)
+
+					local ip, err = DNS:toip(proxy)
+
+					if self.t_httpSendState ~= 't_sendResolve' then
+	       		                	log:debug(self, " socket closed during DNS request")
+        	                        	return
+					end
+
+					log:debug(self, " Proxy IP=", ip)
+                        		if not ip then
+                                		self:close(self.t_tcp.proxy:getProxyServer() .. " " .. err)
+                        			return
+                        		end
+
+					self.t_tcp.proxy:setProxyIp(ip)
+                        		self:t_nextSendState(true, 't_sendConnect')
+                		end)
+			else
+		   		log:debug("Using cached proxy ip address: ", self.t_tcp.proxy:getProxyIp(), " for: ", self.t_tcp.proxy:getProxyServer())
+				-- don't lookup an ip address
+				self:t_nextSendState(true, 't_sendConnect')
+				return
+			end
+		else
+			-- Rresolved and not proxied.
+			self:t_nextSendState(true, 't_sendConnect')
+			return
+		end
+	elseif self.cachedIp then
+		-- only used for ensuring comet requests to go from same ip...
+		log:debug(self," Using cached ip address: ", self.cachedIp, " for: ", self.host)
 		self.t_tcp.address = self.cachedIp
-		self:t_nextSendState(true, 't_sendConnect')
+		self.t_tcp.proxy:setHostIp(self.cachedIp)
+		self:t_nextSendState(true, 't_sendResolve')
 		return
-	end
-
-	if DNS:isip(self.host) then
-		-- don't lookup an ip address
+	elseif DNS:isip(self.host) then
+		log:debug(self, " Host is ip address: ", self.host)
 		self.t_tcp.address = self.host
-		self:t_nextSendState(true, 't_sendConnect')
+		self.t_tcp.proxy:setHostIp(self.host)
+		-- don't lookup an ip address
+		-- but check for proxying
+		self:t_nextSendState(true, 't_sendResolve')
 		return
+	else
+		t = Task(tostring(self) .. "(D)", self, function()
+			log:debug(self, " DNS loopup for ", self.host)
+			local ip, err = DNS:toip(self.host)
+
+			-- make sure the socket has not closed while
+			-- resolving DNS
+			if self.t_httpSendState ~= 't_sendResolve' then
+				log:debug(self, " socket closed during DNS request")
+				return
+			end
+
+			log:debug(self, " IP=", ip)
+			if not ip then
+				self:close(self.host .. " " .. err)
+			    return
+			end
+
+			self.t_tcp.address = ip
+			self.t_tcp.proxy:setHostIp(ip)
+			-- check proxy
+			self:t_nextSendState(true, 't_sendResolve')
+		end)
 	end
 
-	local t = Task(tostring(self) .. "(D)", self, function()
-		log:debug(self, " DNS loopup for ", self.host)
-		local ip, err = DNS:toip(self.host)
-
-		-- make sure the socket has not closed while
-		-- resolving DNS
-		if self.t_httpSendState ~= 't_sendResolve' then
-			log:debug(self, " socket closed during DNS request")
-			return
-		end
-
-		log:debug(self, " IP=", ip)
-		if not ip then
-		self:close(self.host .. " " .. err)
-			return
-		end
-
-		self.t_tcp.address = ip
-		self:t_nextSendState(true, 't_sendConnect')
-	end)
-
-	t:addTask()
+	if t then
+		t:addTask()
+	else
+		log:error(self, "Resolution task not set for ", self.host)
+	end
 end
 
 
@@ -284,14 +337,12 @@ function t_getSendHeaders(self)
 			')'})
 	}
 	
-	local ip, port = self:t_getAddressPort()
-
 	local req_headers = self.t_httpSendRequest:t_getRequestHeaders()
 	if not req_headers["Host"] then
-		if port == 80 then
+		if self.port == 80 then
 			headers["Host"] = self.host
 		else
-			headers["Host"] = self.host .. ":" .. port
+			headers["Host"] = self.host .. ":" .. self.port
 		end
 	end
 	
@@ -299,11 +350,11 @@ function t_getSendHeaders(self)
 		headers["Content-Length"] = #self.t_httpSendRequest:t_body()
 	end
 
-	req_headers["Accept-Language"] = string.lower(locale.getLocale())
+	req_headers["Accept-Language"] =  string.lower(locale.getLocale())
 
 	-- http authentication?
-	local cred = credentials[ip .. ":" .. port]
-	if cred then
+	local cred = credentials[self.t_tcp.proxy:getHostIp()  .. ":" .. self.t_tcp.proxy:getHostPort()]
+	if ocred then
 		req_headers["Authorization"] = "Basic " .. mime.b64(cred.username .. ":" .. cred.password)
 	end
 
@@ -347,8 +398,19 @@ function t_sendRequest(self)
 
 	local source = function()
 		local line1 = string.format("%s HTTP/%s", self.t_httpSendRequest:t_getRequestString(), self.t_httpProtocol)
-
 		local t = {}
+
+		--[[ if self.proxy.proxied and self.proxy.proxy_method == "http" then -- FIXME direct access
+			--deal the broken http request string when proxying
+			local method, rest = string.match(line1,"^(%w+)%s(.+)")
+			-- self.address for proxying host so cachedIp works and all connections go to same server...
+			if method and rest then
+				line1 = string.format("%s http://%s:%d%s",method,self.proxy:getHostIp(),self.proxy:getHostPort(),rest)
+				log:debug(self, ":t_sendRequest.proxy rewrite request ",line1)
+			else		
+				log:error(self, ":t_sendRequest.proxy rewrite request failed",method,rest)
+			end
+		end ]]--
 		
 		table.insert(t, line1)
 		
@@ -360,6 +422,7 @@ function t_sendRequest(self)
 		end
 		
 		table.insert(t, "")
+		log:debug(self, ":t_sendRequest.headers\n",table.concat(t, "\r\n"))
 		if self.t_httpSendRequest:t_hasBody() then
 			table.insert(t, self.t_httpSendRequest:t_body())
 		else
@@ -509,6 +572,7 @@ function t_rcvHeaders(self)
 			end
 
 			local data = socket.skip(2, string.find(line, "HTTP/%d*%.%d* (%d%d%d)"))
+			log:debug(self," headers ",line)
 
 			if data then
 				statusCode = tonumber(data)
@@ -536,6 +600,7 @@ function t_rcvHeaders(self)
 				end
 
 				headers[name] = value
+				log:debug(self," headers ",line)
 			else
 				-- we're done
 				self.t_httpRecvRequest:t_setResponseHeaders(statusCode, statusLine, headers)

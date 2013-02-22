@@ -162,7 +162,7 @@ local function _t_select(self, timeout)
 	if e then
 		-- timeout is a normal error for select if there's nothing to do!
 		if e ~= 'timeout' then
-			log:error(e)
+			log:error("Select Error: ",e)
 		end
 
 	else
