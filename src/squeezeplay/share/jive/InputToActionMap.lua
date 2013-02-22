@@ -96,6 +96,7 @@ keyActionMappings.press = {
 	[KEY_PRINT] = "take_screenshot",
 	[KEY_POWER] = "power",
 	[KEY_ALARM] = "go_alarms",
+	[KEY_HOME | KEY_FWD] = "show_developer_menu", 
 }
 
 --Hmm, this won't work yet since we still look for KEY_PRESS in a lot of places, and would get double responses
@@ -109,7 +110,9 @@ gestureActionMappings = {
 	[GESTURE_L_R] = "go_home", --will be reset by ShortcutsMeta defaults
 	[GESTURE_R_L] = "go_now_playing_or_playlist", --will be reset by ShortcutsMeta defaults
 }
-
+keyActionMappings.longHold = {
+    [KEY_BACK | KEY_PLAY] = "exit_demo",
+}
 keyActionMappings.hold = {
 	[KEY_HOME] = "go_home",
 	[KEY_PLAY] = "create_mix",

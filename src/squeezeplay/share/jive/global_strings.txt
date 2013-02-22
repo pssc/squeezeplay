@@ -29,16 +29,31 @@ INTERNET_RADIO
 	NL	Radio
 	NO	Radio
 	PL	Radio
-	RU	Радиостанции
+	RU	Радиостанция
 	SV	Radio
 
+RADIO_TITLE
+	CS	Radio od TuneIn
+	DA	Radio fra TuneIn
+	DE	Radio von TuneIn
+	EN	Radio by TuneIn
+	ES	Radio de TuneIn
+	FI	Radio by TuneIn
+	FR	Radio par TuneIn
+	IT	Radio di TuneIn
+	NL	Radio van TuneIn
+	NO	Radio fra TuneIn
+	PL	Radio usługi TuneIn
+	RU	Радио TuneIn
+	SV	Radio från TuneIn
+
 MY_MUSIC
-	CS	Hudba
+	CS	Moje hudba
 	DA	Musik
 	DE	Eigene Musik
 	EN	My Music
 	ES	Mi música
-	FI	Omat musiikkitiedostot
+	FI	Oma musiikki
 	FR	Ma musique
 	IT	Musica
 	NL	Mijn muziek
@@ -124,7 +139,7 @@ SCREEN_SETTINGS
 
 HOME
 	CS	Domů
-	DA	Startside
+	DA	Start
 	DE	Hauptmenü
 	EN	Home
 	ES	Inicio
@@ -379,22 +394,22 @@ RETURN_TO_SETUP
 
 SHORTCUTS_RESET
 	CS	Opětovně nastavit na výchozí
-	DA	Nulstil
-	DE	Zurücksetzen
+	DA	Gendan standardindsitllinger
+	DE	Standardeinstellungen wiederherstellen
 	EN	Reset to Defaults
-	ES	Restablecer a valores predeterminados
+	ES	Restablecer configuración predeterminada
 	FI	Palauta oletuksiin
 	FR	Restauration des valeurs par défaut
-	IT	Impostazioni predefinite
-	NL	Standaardwaarden
-	NO	Tilbakestill til standardinnstillinger
-	PL	Resetuj do wartości domyślnych
+	IT	Reimposta valori predefiniti
+	NL	Standaardinstellingen herstellen
+	NO	Tilbakestill til standard
+	PL	Przywróć domyślne
 	RU	Восстановление стандартных настроек
 	SV	Återställ standardinställningarna
 
 KEYBOARD_DONE
 	CS	hotovo
-	DA	udført
+	DA	afslut
 	DE	Fertig
 	EN	done
 	ES	listo
@@ -402,7 +417,7 @@ KEYBOARD_DONE
 	FR	terminé
 	IT	fine
 	NL	gereed
-	NO	ferdig
+	NO	fullført
 	PL	gotowe
 	RU	готово
 	SV	klart
@@ -454,7 +469,7 @@ MONTH_3
 
 MONTH_4
 	CS	Duben
-	DA	April
+	DA	april
 	DE	April
 	EN	April
 	ES	Abril
@@ -489,7 +504,7 @@ MONTH_6
 	EN	June
 	ES	Junio
 	FI	kesäkuu
-	FR	Juin
+	FR	Jun
 	IT	Giugno
 	NL	juni
 	NO	juni
@@ -657,7 +672,7 @@ MONTHSHORT_5
 	DA	Maj
 	DE	Mai
 	EN	May
-	ES	May
+	ES	Mayo
 	FI	tou
 	FR	Mai
 	IT	Maggio
@@ -675,7 +690,7 @@ MONTHSHORT_6
 	EN	Jun
 	ES	Jun
 	FI	kes
-	FR	Jan
+	FR	Jun
 	IT	Giu
 	NL	jun
 	NO	jun
@@ -996,3 +1011,62 @@ DAYSHORT_7
 	RU	Суб
 	SV	lör
 
+DEVELOPER_MENU
+	CS	Vývojář
+	DA	Udvikler
+	DE	Entwickler
+	EN	Developer
+	ES	Desarrollador
+	FI	Kehittäjä
+	FR	Développeur
+	IT	Sviluppatore
+	NL	Ontwikkelaar
+	NO	Utvikler
+	PL	Programista
+	RU	Создатель
+	SV	Utvecklare
+
+SETTINGS_SMART_RADIO
+	CS	Smart Radio
+	DA	Smart Radio
+	DE	Smart Radio
+	EN	Smart Radio
+	ES	Smart Radio
+	FI	Smart Radio
+	FR	Smart Radio
+	IT	Smart Radio
+	NL	Smart Radio
+	NO	Smart Radio
+	PL	Smart Radio
+	RU	Smart Radio
+	SV	Smart Radio
+
+SETTINGS_TIME
+	CS	Čas
+	DA	Klokkeslæt
+	DE	Zeit
+	EN	Time
+	ES	Hora
+	FI	Aika
+	FR	Temps
+	IT	Ora
+	NL	Tijd
+	NO	Klokkeslett
+	PL	Czas
+	RU	Время
+	SV	Kl
+
+POWER_TO_MUSIC
+	CS	POWER TO THE MUSIC
+	DA	POWER TO THE MUSIC
+	DE	POWER TO THE MUSIC
+	EN	POWER TO THE MUSIC
+	ES	POWER TO THE MUSIC
+	FI	POWER TO THE MUSIC
+	FR	LA MUSIQUE AU POUVOIR
+	IT	POWER TO THE MUSIC
+	NL	POWER TO THE MUSIC
+	NO	POWER TO THE MUSIC
+	PL	POWER TO THE MUSIC
+	RU	POWER TO THE MUSIC
+	SV	POWER TO THE MUSIC

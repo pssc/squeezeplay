@@ -31,6 +31,10 @@ local jnt               = jnt
 module(..., Framework.constants)
 oo.class(_M, Applet)
 
+--[[The alarm time in the player is always 2 secs earlier than the actual alarm time. This is done to ensure the
+player alarm always fires before the server alarm and the player does not stop the next alarm sound started by the
+server accidentally(in case of multiple alarms in active state Defect #97).]]
+local epochSecAdvanced = 2
 --[[
 New alarm code with less server dependency
 
@@ -103,9 +107,10 @@ function init(self, ...)
 
 			self.alarmInProgress = 'rtc'
 
+			self:_changeAlarmState('active')
+
 			-- Rearm fallback alarm (if repeating)
 			self:rearmRTCAlarm()
-
 			-- This also starts check about audio state
 			self:openAlarmWindow()
 		end,
@@ -116,6 +121,9 @@ function init(self, ...)
 		function ()
 			log:warn("*** Alarm: Snooze time passed")
 			self.alarmInProgress = 'rtc'
+
+			self:_changeAlarmState('active')
+
 			-- Kick server again to play
 			self.localPlayer:play(true)
 			-- This also starts check about audio state
@@ -272,14 +280,21 @@ function notify_playerAlarmState(self, player, alarmState, alarmNext, alarmVersi
 	end
 
 	-- New alarm code
-	-- need to check alarmState too to prevent overriding values when it is 'active' or 'snooze'
-	if alarmVersion and alarmVersion == 2 and (alarmState == 'none' or alarmState == 'set') then
+	-- need to check alarmState too to prevent overriding values when it is 'snooze'
+	if alarmVersion and alarmVersion == 2 and ((alarmState == 'none' or alarmState == 'set') or (alarmState == 'active' and alarmNext2)) then
 		log:debug("*** NEW ALARM CODE ***")
 		-- store alarmNext2 as epoch seconds
 		if alarmNext2 and alarmNext2 > 0 then
+			log:debug("*** Alarm self.alarmNext is :", self.alarmNext," alarmNext is: ", alarmNext2)
+			log:debug("*** Alarm self.alarmRepeat is :", self.alarmRepeat," alarmRepeat is: ", alarmRepeat)
+			log:debug("*** Alarm self.alarmDays is :", self.alarmDays," alarmDays is: ", alarmDays)
 			if alarmNext2 > os.time() then
 				log:info("*** Alarm: Storing epochseconds of next alarm: ", alarmNext2, " now: ", os.time())
-
+				-- avoid re setting the in case of repeating alarms
+				if(alarmState == 'active' and (self.alarmNext + epochSecAdvanced) == alarmNext2 and self.alarmRepeat == alarmRepeat and self.alarmDays == alarmDays) then
+					log:info("*** Alarm did not set the RTC")
+					return
+				end
 				-- use existing variable
 				self.alarmNext = alarmNext2
 				self.alarmRepeat = alarmRepeat
@@ -296,6 +311,7 @@ function notify_playerAlarmState(self, player, alarmState, alarmNext, alarmVersi
 				-- Restart local timer
 				self:_stopRTCAlarmTimer()
 				self:_startRTCAlarmTimer()
+				self:_changeAlarmState('set')
 			else
 				log:warn("*** Alarm: ignoring past alarm: ", alarmNext2, " now: ", os.time())
 			end
@@ -318,8 +334,10 @@ function notify_playerAlarmState(self, player, alarmState, alarmNext, alarmVersi
 			self:_setWakeupTime('none')
 
 			self:_stopRTCAlarmTimer()
+			self:_changeAlarmState('cancel')
 		end
 	end
+	jnt:notify('playerAlarmStateClock', player:getAlarmState())
 end
 
 
@@ -384,6 +402,7 @@ function _alarmSnooze(self)
 		self.alarmWindow:playSound("WINDOWHIDE")
 		self:_hideAlarmWindow()
 	end
+	self:_changeAlarmState('snooze')
 
 	-- Inform server
 	if self.localPlayer:isConnected() then
@@ -395,9 +414,11 @@ end
 
 function _alarmOff(self, stopStream)
 	log:warn("*** Alarm: _alarmOff: RTC alarm canceled")
-	
+	appletManager:callService("setWakeupAlarm", 'none')
 	self:_silenceFallbackAlarm()
 	self.alarmInProgress = nil
+	self:_changeAlarmState('none')
+
 	self:_stopSnoozeTimer()
 
 	if self.alarmWindow then
@@ -408,8 +429,13 @@ function _alarmOff(self, stopStream)
 
 	-- Inform server
 	if self.localPlayer:isConnected() then
-		log:warn("*** Alarm: _alarmOff: tell server alarm is off, and only pause if stopStream is true")
-		self.localPlayer:stopAlarm(not stopStream)
+		if self.localPlayer:getAlarmState() == 'set' and self.alarmNext and (0 <= self.alarmNext - os.time()) and (self.alarmNext -os.time() <= epochSecAdvanced ) then
+			--Ugly hack to get rid of the race condition between the server and player
+			log:info("*** Alarm: skipping server notification")
+		else
+			log:warn("*** Alarm: _alarmOff: tell server alarm is off, and only pause if stopStream is true alarmState is: ", self.localPlayer:getAlarmState())
+			self.localPlayer:stopAlarm(not stopStream)
+		end
 	end
 end
 
@@ -422,7 +448,6 @@ function soundFallbackAlarm(self)
 	self.localPlayer:stop(true)
 	-- Bug 16100 - Sound comes from headphones although Radio is set to use speaker
 	-- We need to set a valid alarm state for the fallback case
-	self.localPlayer:setAlarmState("active_fallback")
 	self.localPlayer:playFileInLoop(self.alarmTone)
 	self.localPlayer:volumeLocal(self.alarmVolume)
 end
@@ -521,7 +546,6 @@ function _startRTCAlarmTimer(self)
 
 	-- restart the WOL timer for 5 minutes, or immediately send WOL if alarm is within 5 mins
 	self:_restartWakeOnLanTimer(rtcSleepMsecs)
-
 	self.RTCAlarmTimer:start()
 	iconbar:setAlarm('ON')
 end
@@ -791,7 +815,7 @@ end
 -- returns default of 1000ms if epochsecs is in the past...
 function _deltaMsecs(self, epochsecs)
 
-	local deltaSecs = epochsecs - os.time() 
+	local deltaSecs = epochsecs - epochSecAdvanced - os.time()
 	if deltaSecs <= 0 then
 		log:warn("*** Alarm: _deltaMsecs: epochsecs is in the past, deltaSecs: ", deltaSecs)
 		return(1000)
@@ -825,6 +849,96 @@ end
 -- where the revert method is called  needs rethinking
 function _revertAudioEndpointOverride(self)
 	appletManager:callService("overrideAudioEndpoint", nil)
+end
+
+--This method takes care of the state changes of the alarm
+--[[			      'None'
+                               / | \
+                              /  ^  \
+			     /	 3 \ \1
+			  8 ^	    \ \   _ _ _ _
+			     \	    'set'/_ _ _ _ ) 5
+			      \    /    \
+	                       \   ^ 7   )2
+		      11 -_> _ _\  |    /
+      	 _ _ _ _     /	   	\\ |   /
+12 or 13(_ _ _ _ \'snooze'	'active'_ _ _ _
+		      \_ _ _ _ _/    \_ _ _ _ _	) 9 or 10
+			  <-6	      	
+
+	1: Set By Server(none ----> set)
+
+	2: Current alarm fired (set ----> active)
+	3: Alarm turned off locally or canceled from the web when RTC timer not running(set -----> none)
+	5: Another alarm set (set ------>set)
+
+	6: Alarm snoozed (active ----> snooze)
+	7: Alarm Turned off but other alarm running(active ----> set)
+	8: Alarm Turned off and no other alarm is set(active ----> none)
+	9: A future alarm is set from the web(active ---> active)
+	10:A Future alarm is cancelled from the web (active--->active)
+
+	11: Alarm snooze timed out (snooze -----> active)
+	12: A future alarm is cancelled from the web(snooze ---> snooze)
+	13: A future alarm is set from the web (snooze ----> snooze)
+]]
+function _changeAlarmState(self, action)
+	local currentAlarmState = self.localPlayer:getAlarmState()
+	log:info("current alarmState is: ", currentAlarmState)
+	log:info("requested alarmState is: ", action)
+	local changedState = nil
+	if currentAlarmState == nil then
+		if action == 'set' then
+			-- Transition 1
+			changedState = "set"
+		end
+	elseif currentAlarmState == "set" then
+		if action == 'active' then
+			-- Transition 2
+			changedState = 'active'
+		elseif action == 'cancel' then
+			-- Transition 3
+			changedState = nil
+		elseif action == 'set' then
+			-- Transition 5
+			changedState = 'set'
+		end
+	elseif currentAlarmState == "active" then
+		if action == 'snooze' then
+			-- Transition 6
+			changedState = "snooze"
+		elseif action == 'none' then
+			if self.alarmNext and ( 0 <= self.alarmNext - os.time()) and (self.alarmNext -os.time() <= epochSecAdvanced) then
+				changedState = 'set'
+			elseif self.RTCAlarmTimer:isRunning() then
+				-- Transition 7
+				changedState = 'set'
+			else
+				-- Transition 8
+				changedState = nil
+			end
+		elseif action == 'cancel' then
+			-- Transition 9
+			changedState = 'active'
+		elseif action == 'set' then
+			-- Transition 10
+			changedState = 'active'
+		end
+	elseif currentAlarmState == "snooze" then
+		if action == 'active' then
+			-- Transition 11
+			changedState = 'active'
+		elseif action == 'cancel' then
+			-- Transition 12
+			changedState = 'snooze'
+		elseif action == 'set' then
+			-- Transition 13
+			changedState = 'snooze'
+		end
+	end
+	log:info("alarmState changed to: ", changedState)
+	self.localPlayer:setAlarmState(changedState)
+
 end
 
 --[[

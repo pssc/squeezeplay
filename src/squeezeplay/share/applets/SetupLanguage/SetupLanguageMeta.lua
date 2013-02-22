@@ -42,15 +42,21 @@ end
 
 
 function registerApplet(meta)
+	local currentLanguage = meta:getSettings().locale
+
+	if currentLanguage == "RU" then
+		currentLanguage = "EN"
+		meta:getSettings().locale = currentLanguage
+		meta:storeSettings()
+	end
 
 	-- set the current locale from the applet settings
-	locale:setLocale(meta:getSettings().locale)
-	
+	locale:setLocale(currentLanguage)
 	meta:registerService("setupShowSetupLanguage")
 
 	-- add ourselves to the main menu
 	-- setupLanguage is the function that gets called from SetupLanguageApplet.lua when the menu item is selected
-	jiveMain:addItem(meta:menuItem('appletSetupLanguage', 'advancedSettings', "LANGUAGE", function(applet, ...) applet:settingsShow(...) end))
+	jiveMain:addItem(meta:menuItem('appletSetupLanguage', 'settings', "LANGUAGE", function(applet, ...) applet:settingsShow(...) end, 50, nil, 'hm_settingsLanguage'))
 end
 
 

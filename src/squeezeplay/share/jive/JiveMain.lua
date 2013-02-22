@@ -63,6 +63,7 @@ local EVENT_KEY_UP         = jive.ui.EVENT_KEY_UP
 local EVENT_KEY_DOWN       = jive.ui.EVENT_KEY_DOWN
 local EVENT_CHAR_PRESS      = jive.ui.EVENT_CHAR_PRESS
 local EVENT_KEY_HOLD       = jive.ui.EVENT_KEY_HOLD
+local EVENT_KEY_LONGHOLD   = jive.ui.EVENT_KEY_LONGHOLD
 local EVENT_SCROLL         = jive.ui.EVENT_SCROLL
 local EVENT_WINDOW_RESIZE  = jive.ui.EVENT_WINDOW_RESIZE
 local EVENT_UNUSED         = jive.ui.EVENT_UNUSED
@@ -120,6 +121,16 @@ function JiveMain:goHome()
 			jiveMain:closeToHome(true)
 		else
 			Framework:playSound("BUMP")
+			windowStack[1]:bumpLeft()
+		end
+end
+
+function JiveMain:goHomeWithoutPlaySound()
+		local windowStack = Framework.windowStack
+
+		if #windowStack > 1 then
+			jiveMain:closeToHome(true)
+		else
 			windowStack[1]:bumpLeft()
 		end
 end
@@ -460,19 +471,19 @@ function JiveMain:jiveMainNodes(globalStrings)
 
 	jiveMain:addNode( { id = 'hidden', node = 'nowhere' } )
 	jiveMain:addNode( { id = 'extras', node = 'home', text = _globalStrings:str("EXTRAS"), weight = 50, hiddenWeight = 91  } )
-	jiveMain:addNode( { id = 'radios', iconStyle = 'hm_radio', node = 'home', text = _globalStrings:str("INTERNET_RADIO"), weight = 20  } )
+	jiveMain:addNode( { id = 'radios', iconStyle = 'hm_radio', node = 'home', text = _globalStrings:str("INTERNET_RADIO"), weight = 20, windowTitle = _globalStrings:str("RADIO_TITLE")  } )
 	jiveMain:addNode( { id = '_myMusic', iconStyle = 'hm_myMusic', node = 'hidden', text = _globalStrings:str("MY_MUSIC"), synthetic = true , hiddenWeight = 2  } )
 	jiveMain:addNode( { id = 'games', node = 'extras', text = _globalStrings:str("GAMES"), weight = 70  } )
 	jiveMain:addNode( { id = 'settings', iconStyle = 'hm_settings', node = 'home', noCustom = 1, text = _globalStrings:str("SETTINGS"), weight = 1005, })
-	jiveMain:addNode( { id = 'advancedSettings', iconStyle = 'hm_advancedSettings', node = 'settings', text = _globalStrings:str("ADVANCED_SETTINGS"), weight = 105, windowStyle = 'text_only' })
+	jiveMain:addNode( { id = 'advancedSettings', iconStyle = 'hm_advancedSettings', node = 'settings', text = _globalStrings:str("ADVANCED_SETTINGS"), weight = 105 })
 	jiveMain:addNode( { id = 'screenSettings', iconStyle = 'hm_settingsScreen', node = 'settings', text = _globalStrings:str("SCREEN_SETTINGS"), weight = 60, windowStyle = 'text_only' })
 	jiveMain:addNode( { id = 'screenSettingsNowPlaying', node = 'screenSettings', text = _globalStrings:str("NOW_PLAYING"), windowStyle = 'text_only' })
-	jiveMain:addNode( { id = 'factoryTest', node = 'advancedSettings', noCustom = 1, text = _globalStrings:str("FACTORY_TEST"), weight = 120, windowStyle = 'text_only' })
-	jiveMain:addNode( { id = 'advancedSettingsBetaFeatures', node = 'advancedSettings', noCustom = 1, text = _globalStrings:str("BETA_FEATURES"), weight = 100, windowStyle = 'text_only' })
-	jiveMain:addNode( { id = 'networkSettings', node = 'advancedSettings', noCustom = 1, text = _globalStrings:str("NETWORK_NETWORKING"), weight = 100, windowStyle = 'text_only' })
+	jiveMain:addNode( { id = 'factoryTest', node = 'developerSettings', noCustom = 1, text = _globalStrings:str("FACTORY_TEST"), weight = 120, windowStyle = 'text_only' })
+	jiveMain:addNode( { id = 'networkSettings', iconStyle = "hm_settingsNetworking", node = 'advancedSettings', noCustom = 1, text = _globalStrings:str("NETWORK_NETWORKING"), weight = 100, windowStyle = 'text_only' })
 	jiveMain:addNode( { id = 'settingsAudio', iconStyle = "hm_settingsAudio", node = 'settings', noCustom = 1, text = _globalStrings:str("AUDIO_SETTINGS"), weight = 40, windowStyle = 'text_only' })
 	jiveMain:addNode( { id = 'settingsBrightness', iconStyle = "hm_settingsBrightness", node = 'settings', noCustom = 1, text = _globalStrings:str("BRIGHTNESS_SETTINGS"), weight = 45, windowStyle = 'text_only' })
-
+	jiveMain:addNode( { id = 'settingsTime', iconStyle = 'hm_settingsTime', node = 'settings', text = _globalStrings:str("SETTINGS_TIME"), weight = 85, windowStyle = 'text_only' })
+	jiveMain:addNode( { id = 'developerSettings', iconStyle = 'hm_settingsDeveloper', node = 'hidden',noCustom = 1, text = _globalStrings:str("DEVELOPER_MENU"), weight = 110, windowStyle = 'text_only' })
 
 end
 

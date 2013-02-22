@@ -24,8 +24,8 @@ INVALID_MAC_TEXT
 	DE	Ungültige MAC-Adresse oder UUID. Wenden Sie sich an den Kundendienst.
 	EN	Invalid mac address or uuid. Please contact support.
 	ES	Dirección MAC o UUID no válidos. Contacte con asistencia técnica.
-	FI	Virheellinen MAC-osoite tai UUID. Ota yhteyttä tekniseen tukeen.
-	FR	Adresse MAC ou uuid non valide. Veuillez contacter le service de support.
+	FI	Virheellinen MAC-osoite tai UUID. Ota yhteyttä tukeen.
+	FR	Adresse MAC ou UUID non valide. Veuillez contacter le service de support.
 	IT	Indirizzo MAC o UUID non valido. Contattare il servizio di assistenza.
 	NL	Ongeldig mac-adres of uuid. Neem contact op met ondersteuning.
 	NO	Ugyldig mac-adresse eller uuid. Ta kontakt med kundestøtte.
@@ -144,7 +144,7 @@ BSP_BRIGHTNESS_MIN_ADJUST_HELP
 	DE	Sie können die minimale Helligkeit mit dem Rad anpassen.
 	EN	Use the wheel to adjust the minimal brightness.
 	ES	Use la rueda para ajustar el brillo al mínimo.
-	FI	Voit säätää kirkkautta kiekolla.
+	FI	Voit säätää vähimmäiskirkkautta kiekolla.
 	FR	Utilisez la molette pour régler la luminosité minimale.
 	IT	Usare la rotellina per regolare la luminosità minima.
 	NL	Gebruik het wiel om de minimale helderheid aan te passen.
@@ -175,7 +175,7 @@ BATTERY_LOW
 	EN	Battery Low
 	ES	Carga de pila baja
 	FI	Heikko paristojännite
-	FR	Niveau faible des piles
+	FR	Niveau de la batterie faible
 	IT	Batteria quasi scarica
 	NL	Laag batterijvermogen
 	NO	Dårlig batteri
@@ -221,7 +221,7 @@ BETA_HARDWARE_TEXT
 	ES	Esta es una unidad de pre-producción, revisión de hardware %s.\n\nPuede que algunas características no funcionen.
 	FI	Tämä on testiyksikkö, laitteistoversio %s.\n\nKaikki ominaisuudet eivät välttämättä toimi.
 	FR	Cette unité est une unité de pré-production, révision matérielle %s.\n\nCertaines fonctionnalités risquent de ne pas fonctionner.
-	IT	Questa è un'unità non ancora rilasciata. Revisione hardware %s.\n\nAlcune funzioni potrebbero non funzionare.
+	IT	Questa è un'unità non ancora rilasciata. %s.\n\nAlcune funzioni potrebbero non funzionare.
 	NL	Dit is een preproductie-eenheid, hardwarerevisie %s.\n\nSommige functies werken mogelijk niet.
 	NO	Dette er en forproduksjonsenhet, maskinvarerevisjon %s.\n\nIkke alle funksjoner fungerer nødvendigvis.
 	PL	To jest urządzenie przedprodukcyjne, wersja sprzętowa %s.\n\nNiektóre funkcje mogą nie działać.
@@ -236,7 +236,7 @@ BETA_HARDWARE_EUTHANIZE
 	ES	Ésta es una unidad de pre-producción, revisión de hardware %s.\n\nEsta unidad ya no es compatible, devuélvala a Logitech.
 	FI	Tämä on testiyksikkö, laitteistoversio %s.\n\nYksikköä ei enää tueta, palauta yksikkö Logitechille.
 	FR	Cette unité est une unité de pré-production, révision matérielle %s.\n\nCette unité n'est plus prise en charge. Veuillez la renvoyer à Logitech.
-	IT	Questa è un'unità non ancora rilasciata. Revisione hardware %s.\n\nQuesta unità non è più supportata. Restituirla a Logitech.
+	IT	Questa è un'unità non ancora rilasciata. %s.\n\nQuesta unità non è più supportata. Restituirla a Logitech.
 	NL	Dit is een preproductie-eenheid, hardwarerevisie %s.\n\nDeze eenheid wordt niet langer ondersteund. Gelieve deze aan Logitech te retourneren.
 	NO	Dette er en forproduksjonsenhet, maskinvarerevisjon %s.\n\nDenne enheten støttes ikke lenger, returner den til Logitech.
 	PL	To jest urządzenie przedprodukcyjne, wersja sprzętowa %s.\n\nTo urządzenie nie jest już obsługiwane, prosimy zwrócić je do firmy Logitech.

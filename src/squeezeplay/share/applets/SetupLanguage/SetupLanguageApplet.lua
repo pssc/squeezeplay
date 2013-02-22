@@ -56,13 +56,22 @@ local locales = {
 	FR = {'Français', 4},
 	IT = {'Italiano', 10},
 	NL = {'Nederlands', 3},
-	RU = {'русский', 10},
+	--RU = {'русский', 10},
 	PL = {'Polski', 10},
 	CS = {'Čeština', 10},
 }
 
 
 function _jumpToDemo(self)
+	log:info("come in _jumpToDemo")
+	if self.gChoice ~= locale:getLocale() then
+		self:setLang(self.gChoice, _demoNext)
+	else
+		_demoNext()
+	end
+end
+
+function _demoNext(self)
 	appletManager:callService("jumpToInStoreDemo")
 end
 
@@ -74,6 +83,7 @@ end
 
 
 function setupShowSetupLanguage(self, setupNext, helpText)
+	self.gChoice = 0
 	local currentLocale = locale:getLocale()
 	log:info("locale currently is ", currentLocale)
 
@@ -100,6 +110,7 @@ function setupShowSetupLanguage(self, setupNext, helpText)
 		if not locales[locale] then
 			log:warn("unknown lang ", locale)
 		else
+		
 			menu:addItem({
 				locale = locale,
 				text = locales[locale][1],
@@ -143,6 +154,7 @@ end
 
 
 function settingsShow(self, menuItem)
+	self.gChoice = 0
 	local currentLocale = locale:getLocale()
 	log:info("locale currently is ", currentLocale)
 
@@ -202,7 +214,8 @@ function _showLang(self, choice)
 	if not choice then
 		choice = self:getSettings().locale
 	end
-
+	self.gChoice = choice
+	log:info("self.gChoice set to: ", self.gChoice)
 	-- this modifies the Applets strings directly. don't do this elsewhere, but it's
 	-- needed for speed here
 	for k,v in pairs(self._stringsTable) do
@@ -219,42 +232,46 @@ function setLang(self, choice, next)
 
 	self:getSettings().locale = choice
 
-	-- FIXME SlimBrowser should use notification
-	-- if connected to a player, ask for the menu again
-	local player = appletManager:callService("getCurrentPlayer")
-	if player then
-		local server = player:getSlimServer()
-		if server then
-			 server:userRequest(nil, player:getId(), { 'menu', 0, 100 })
-		end
+	-- changing the locale is slow, do this in a task with a spinny
+	if choice ~= locale:getLocale() then
+		self.popup = Popup("waiting_popup")
+		self.popup:setAllowScreensaver(false)
+		self.popup:ignoreAllInputExcept()
+
+		self.popup:addWidget(Icon("icon_connecting"))
+	  	local stringChoice = "LOADING_LANGUAGE"
+		self.popup:addWidget(Label("text", self:string(stringChoice)))
+		self:tieAndShowWindow(self.popup)
 	end
 
-	-- changing the locale is slow, do this in a task with a spinny
-	self.popup = Popup("waiting_popup")
-	self.popup:setAllowScreensaver(false)
-	self.popup:setAlwaysOnTop(true)
-	self.popup:setAutoHide(false)
-	self.popup:ignoreAllInputExcept()
-
-	self.popup:addWidget(Icon("icon_connecting"))
-  	local stringChoice = "LOADING_LANGUAGE"
-	self.popup:addWidget(Label("text", self:string(stringChoice)))
-   	self.popup:show()
-
 	self.task = Task('setLang', self, 
-			 function(self)
-				 locale:setLocale(choice, true)
+			function(self)
+				locale:setLocale(choice, true)
 
-				 -- FIXME jiveMainNodes should use notification
-				 jiveMain:jiveMainNodes()
-				 Framework:styleChanged()
+				-- FIXME jiveMainNodes should use notification
+				jiveMain:jiveMainNodes()
+				Framework:styleChanged()
 
-				 self.popup:hide()
+				-- FIXME SlimBrowser should use notification
+				-- if connected to a player, ask for the menu again
+				local player = appletManager:callService("getCurrentPlayer")
+				if player then
+					local server = player:getSlimServer()
+					if server then
+						 server:userRequest(nil, player:getId(), { 'menu', 0, 100 })
+					end
+				end
 
-				 if next then
-					 next()
-				 end
-			 end
+				if next then
+					-- Hiding works automatically when next screen is loaded
+					next()
+				else
+					-- Just hide the popup and show the language list again
+					if self.popup then
+						self.popup:hide()
+					end
+				end
+			end
 		 ):addTask()
 end
 

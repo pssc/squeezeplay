@@ -3,19 +3,34 @@
 # http://en.wikipedia.org/wiki/List_of_ISO_639_codes
 
 RESET_FACTORY_RESET
-	CS	Obnovit tovární nastavení
+	CS	Obnovení továrních nastavení
 	DA	Gendan fabriksindstillinger
-	DE	Standardeinstellungen wiederherstellen
-	EN	Restore Factory Settings
-	ES	Restaurar configuración de fábrica
+	DE	Standardeinstellungen
+	EN	Factory Reset
+	ES	Configuración de fábrica
 	FI	Palauta tehdasasetukset
-	FR	Rétablir les réglages d'usine
-	IT	Ripristina impostazioni di fabbrica
+	FR	Réinitialisation réglages d'usine
+	IT	Ripristino impostazioni di fabbrica
 	NL	Fabrieksinstellingen herstellen
-	NO	Gjenopprett fabrikkinnstillingene
-	PL	Przywróć ustawienia fabryczne
+	NO	Fabrikkinnstillinger
+	PL	Przywracanie ustawień fabrycznych
 	RU	Восстановить заводские настройки
-	SV	Återställ standardinställningarna
+	SV	Återställ fabriksinställningarna
+
+RESET_RESTORE_DEFAULTS
+	CS	Obnovit výchozí
+	DA	Standardindstillinger
+	DE	Standardwerte wiederherstellen
+	EN	Restore Defaults
+	ES	Restaurar configuración predeterminada
+	FI	Palauta oletukset
+	FR	Restaurer les valeurs par défaut
+	IT	Ripristina impostazioni predefinite
+	NL	Standaardinstellingen
+	NO	Tilbakestill til standardinnstillinger
+	PL	Przywróć domyślne
+	RU	Восстановить настройки по умолчанию
+	SV	Återställ standardinställningar
 
 RESET_CANCEL
 	CS	Storno
@@ -48,7 +63,7 @@ RESET_CONTINUE
 	SV	Fortsätt
 
 RESET_RESETTING
-	CS	\nRestartování
+	CS	Restartování
 	DA	Genstarter
 	DE	Neustart
 	EN	Restarting

@@ -59,16 +59,17 @@ function registerApplet(meta)
 --        jive.perfhook(1000, 10000)
 
 	-- Set player device type
-	LocalPlayer:setDeviceType("baby", "Squeezebox Radio")
+	LocalPlayer:setDeviceType("baby", "Logitech UE Smart Radio")
 
 	-- Set the minimum support server version
-	SlimServer:setMinimumVersion("7.4")
+	SlimServer:setMinimumVersion("10.0.0")
 
 	-- System sound effects attenuation
 	Sample:setEffectAttenuation(Sample.MAXVOLUME / 25)
 
 	-- SN hostname
-	jnt:setSNHostname("baby.squeezenetwork.com")
+--	jnt:setSNHostname("baby.squeezenetwork.com")
+	jnt:setSNHostname("sn_not_configured")	-- it will be configured during boot time by consulting the config server
 
 	-- BSP is a resident Applet
 	appletManager:loadApplet("SqueezeboxBaby")

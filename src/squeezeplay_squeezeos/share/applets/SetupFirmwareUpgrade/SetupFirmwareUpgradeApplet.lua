@@ -38,7 +38,6 @@ local Upgrade                = require("applets.SetupFirmwareUpgrade.Upgrade")
 
 local debug                  = require("jive.utils.debug")
 
-local jnt                    = jnt
 local jiveMain               = jiveMain
 local appletManager          = appletManager
 
@@ -63,26 +62,9 @@ module(..., Framework.constants)
 oo.class(_M, Applet)
 
 
-function init(self)
-	jnt:subscribe(self)
-
-end
-
-
-function notify_firmwareAvailable(self, server)
-        local url, force = server:getUpgradeUrl()
-
-        if force and not url then
-                log:warn("sometimes force is true but url is nil, seems like a server bug: server:", server)
-        end
-        if force and url then
-                local player = appletManager:callService("getCurrentPlayer")
-
-                if player and player:getSlimServer() == server then
-			self:firmwareUpgrade(server)
-                end
-        end
-end
+-- We no longer care about firmware update notifications from server
+-- Settings/Advanced/FirmwareUpdate can still be used manually
+-- function notify_firmwareAvailable(self, server) ...
 
 
 function _firmwareVersion(self, url)
@@ -394,6 +376,79 @@ function firmwareUpgrade(self, server, optionalForScDiscoveryMode)
 
 
 	return _upgradeWindow(self, upgrades, not force, disallowScreensaver)
+end
+
+
+function _softwareUpdateAvailableMenu(self, url)
+	local window = Window("text_list", self:string("SOFTWARE_UPDATE_AVAILABLE"))
+	local menu = SimpleMenu("menu")
+
+	menu:addItem({
+		text = self:string("UPDATE_NOW"),
+		sound = "WINDOWSHOW",
+		style = "item",
+		callback = function ()
+			self:_upgrade(url)
+		end
+	})
+	menu:addItem({
+		text = self:string("UPDATE_LATER"),
+		sound = "WINDOWSHOW",
+		style = "item",
+		callback = function ()
+			window:hide()
+		end
+	})
+
+	window:addWidget(menu)
+
+	self:tieAndShowWindow(window)
+	return window
+end
+
+
+-- service method
+-- no url -> remove menu
+-- url and required -> upgrade without asking
+-- url and not required -> show options
+function firmwareUpgradeWithUrl(self, url, required)
+	-- no url provided - remove menu item
+	if not url then
+		-- Remove software update available menu
+		jiveMain:removeItemById("homeMenuFirmwareUpgrade")
+		return
+	end
+
+	-- url and a required upgrade - just do it
+	if url and required then
+		self:_upgrade(url)
+		return
+	end
+
+	-- Add software update available menu
+	local menuItem = {
+		id = "homeMenuFirmwareUpgrade",
+		node = "home",
+		iconStyle = "hm_swUpload",
+		text = self:string("SOFTWARE_UPDATE_AVAILABLE"),
+		sound = "WINDOWSHOW",
+		callback = function ()
+				self:_softwareUpdateAvailableMenu(url)
+			end,
+		weight = 1005	-- 1005 or bigger to be below 'Settings'
+	}
+	jiveMain:addItem(menuItem)
+
+--[[
+	local upgrades = {}
+	local version = self:_firmwareVersion(url)
+	upgrades[#upgrades + 1] = {
+		url = url,
+		version = version,
+	}
+
+	return _upgradeWindow(self, upgrades, true)
+--]]
 end
 
 

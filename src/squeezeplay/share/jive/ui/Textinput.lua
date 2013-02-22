@@ -274,11 +274,15 @@ function _delete(self, alwaysBackspace)
 
 	elseif cursor > 1 then
 		-- backspace
+		local v = self:_getChars()
 		local s1 = string.sub(str, 1, cursor - 2)
 		local s3 = string.sub(str, cursor)
 
 		self:setValue(s1 .. s3)
 		self.cursor = cursor - 1
+		if #v == 0 then
+			_scroll(self, 1)
+		end
 		return true
 
 	else
@@ -321,7 +325,7 @@ function _deleteAction(self, event, alwaysBackspace)
 		self:playSound("WINDOWHIDE")
 		self:hide()
 	else
-		if _delete(self, alwaysBackspace) then
+		if _delete(self, true) then
 			self:playSound("CLICK")
 		else
 			self:playSound("BUMP")
@@ -364,8 +368,13 @@ function _goAction(self, _, bumpAtEnd)
 		end
 	elseif self.cursor <= #tostring(self.value) then
 		_moveCursor(self, 1)
+		if self.cursor-1 == #tostring(self.value) then 
+			self.numberLetterAccel:stopCurrentCharacter()
+			_scroll(self, 1)
+		end
 		self:reDraw()
 	else
+		_scroll(self, 2)
 		self:playSound("BUMP")
 		self:getWindow():bumpRight()
 	end
@@ -428,6 +437,12 @@ end
 
 
 function _doneAction(self)
+	-- _getChars() is empty when we reached the maximum allowed number of characters
+	local v = self:_getChars()
+	-- Only cut the last char in case we have not yet reached the maximum
+	if #v > 0 then
+		self:setValue(string.sub(tostring(self.value), 1, #tostring(self.value)-1))
+	end
 	self:_goToEndAction()
 	return self:_goAction()
 end
@@ -491,13 +506,14 @@ function _eventHandler(self, event)
 		--play is delete, add is insert, just like jive
 		if event:isIRCode("play") then
 			self.numberLetterAccel:stopCurrentCharacter()
-			return _goAction(self)
+			return _doneAction(self)
 		end
+--[[
 		if event:isIRCode("add") then
 			self.numberLetterAccel:stopCurrentCharacter()
 			return _insertAction(self)
 		end
-
+]]--
 	elseif type == EVENT_IR_UP and self.upHandlesCursor and (event:isIRCode("arrow_left") or event:isIRCode("arrow_right")) then
 		self.upHandlesCursor = false
 
@@ -508,11 +524,11 @@ function _eventHandler(self, event)
 		if event:isIRCode("arrow_right") and self:_cursorAtEnd() then
 			self:_goAction()
 		end
-
 		return EVENT_CONSUME
 
 	elseif type == EVENT_IR_DOWN or type == EVENT_IR_REPEAT or type == EVENT_IR_HOLD then
 		local irCode = event:getIRCode()
+--[[
 		if type == EVENT_IR_HOLD then
 			if event:isIRCode("rew") then
 				return _goToStartAction(self)
@@ -520,7 +536,7 @@ function _eventHandler(self, event)
 				return _goToEndAction(self)
 			end
 		end
-
+]]--
 		if type == EVENT_IR_DOWN or type == EVENT_IR_REPEAT then
 
 			--IR left/right
@@ -628,7 +644,7 @@ function _eventHandler(self, event)
 		local s1 = string.sub(tostring(self.value), 1, self.cursor - 1)
 		local s3 = string.sub(tostring(self.value), self.cursor)
 		if self:setValue(s1 .. keyboardEntry .. s3) then
-			_moveCursor(self, 1)
+			_moveCursor(self, self.cursor)
 		else
 			self:playSound("BUMP")
 			self:getWindow():bumpRight()
@@ -643,15 +659,16 @@ function _eventHandler(self, event)
 	elseif type == EVENT_KEY_PRESS then
 		self.numberLetterAccel:stopCurrentCharacter()
 		local keycode = event:getKeycode()
-
+--[[
 		if keycode == KEY_REW then
 			return _cursorLeftAction(self)
 		elseif keycode == KEY_FWD then
 			return _cursorRightAction(self)
-		elseif keycode == KEY_BACK then
+]]--
+		if keycode == KEY_BACK then
 			return _deleteAction(self)
-
 		end
+--[[
 	elseif type == EVENT_KEY_HOLD then
 		self.numberLetterAccel:stopCurrentCharacter()
 		local keycode = event:getKeycode()
@@ -661,6 +678,7 @@ function _eventHandler(self, event)
 		elseif keycode == KEY_FWD then
 			return _goToEndAction(self)
 		end
+]]--
 	end
 
 	return EVENT_UNUSED
@@ -720,27 +738,34 @@ function __init(self, style, value, closure, allowedChars)
 						obj:reDraw()
 					end
 	)
-	obj:addActionListener("play", obj, _goAction)
-	obj:addActionListener("add", obj, _insertAction)
+	obj:addActionListener("play", obj, _doneAction)
+	--obj:addActionListener("add", obj, _insertAction)
 	obj:addActionListener("go", obj, _goAction)
 
 	--only touch back action will be handled this way (as escape), other back sources are use _cursorBackAction, and are handled directly in the main listener
-	obj:addActionListener("back", obj, _escapeAction)
+	--obj:addActionListener("back", obj, _escapeAction)
 
 	obj:addActionListener("finish_operation", obj, _doneAction)
-	obj:addActionListener("cursor_left", obj, _cursorLeftAction)
-	obj:addActionListener("cursor_right", obj, _cursorRightAction)
-	obj:addActionListener("clear", obj, _clearAction)
-	obj:addActionListener("jump_rew", obj, _cursorLeftAction)
-	obj:addActionListener("jump_fwd", obj, _cursorRightAction)
-	obj:addActionListener("scanner_rew", obj, _goToStartAction)
-	obj:addActionListener("scanner_fwd", obj, _goToEndAction)
+	--obj:addActionListener("cursor_left", obj, _cursorLeftAction)
+	--obj:addActionListener("cursor_right", obj, _cursorRightAction)
+	--obj:addActionListener("clear", obj, _clearAction)
+	--obj:addActionListener("jump_rew", obj, _cursorLeftAction)
+	--obj:addActionListener("jump_fwd", obj, _cursorRightAction)
+	--obj:addActionListener("scanner_rew", obj, _goToStartAction)
+	--obj:addActionListener("scanner_fwd", obj, _goToEndAction)
 
 	obj:addListener(EVENT_CHAR_PRESS| EVENT_KEY_PRESS | EVENT_KEY_HOLD | EVENT_SCROLL | EVENT_WINDOW_RESIZE | EVENT_IR_ALL,
 			function(event)
 				return _eventHandler(obj, event)
 			end)
 
+	obj.cursorWidth = 1
+	local v = obj:_getChars()
+	if tostring(obj.value) == "" then
+		obj:setValue(string.sub(v, 2, 2))
+	else 
+		obj:setValue(tostring(obj.value) .. string.sub(v, 2, 2))
+	end
 	return obj
 end
 

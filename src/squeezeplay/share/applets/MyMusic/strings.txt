@@ -1,0 +1,79 @@
+#
+# The two letter codes are defined by ISO 639-1
+# http://en.wikipedia.org/wiki/List_of_ISO_639_codes
+
+MYMUSIC_MY_MUSIC
+	CS	Moje hudba
+	DA	Musik
+	DE	Eigene Musik
+	EN	My Music
+	ES	Mi música
+	FI	Oma musiikki
+	FR	Ma musique
+	IT	Musica
+	NL	Mijn muziek
+	NO	Min musikk
+	PL	Moja muzyka
+	RU	Моя музыка
+	SV	Min musik
+
+MYMUSIC_SERVERS
+	CS	Knihovny
+	DA	Biblioteker
+	DE	Musiksammlungen
+	EN	Libraries
+	ES	Bibliotecas
+	FI	Kirjastot
+	FR	Bibliothèques
+	IT	Librerie
+	NL	Bibliotheken
+	NO	Bibliotek
+	PL	Biblioteki
+	RU	Медиатеки
+	SV	Bibliotek
+
+MYMUSIC_HINT
+	CS	Pro přehrávání hudby z vašeho počítače stáhněte a nainstalujte software UE Music Library ze stránky www.uesmartradio.com.
+	DA	Hent og installer UE Music Library fra www.uesmartradio.com for at få adgang til din lokale musik.
+	DE	Um auf Ihre lokal gespeicherte Musik zuzugreifen, laden Sie die UE Music Library herunter und installieren Sie sie.
+	EN	To play music from your computer, download and install the UE Music Library software from www.uesmartradio.com.
+	ES	Para reproducir música desde su ordenador, descargue e instale el software UE Music Library desde www.uesmartradio.com.
+	FI	Lataa ja asenna UE Music Library -ohjelmisto osoitteesta www.uesmartradio.com, jotta voit soittaa musiikkia omalta tietokoneeltasi.
+	FR	Pour lire de la musique depuis votre ordinateur, téléchargez et installez le logiciel UE Music Library depuis www.uesmartradio.com.
+	IT	Per riprodurre musica dal computer, scaricare e installare il software della UE Music Library da www.uesmartradio.com.
+	NL	Download en installeer de UE Music Library-software van www.uesmartradio.com om muziek af te spelen via je computer.
+	NO	Hvis du vil spille musikk fra datamaskinen din, må du laste ned og installere UE Music Library-programmet fra www.uesmartradio.com.
+	PL	Aby odtwarzać muzykę z komputera, pobierz i zainstaluj oprogramowanie UE Music Library z witryny www.uesmartradio.com.
+	RU	Чтобы прослушивать музыку на компьютере,зайдите на веб-сайт www.uesmartradio.com, загрузите ПО UE Music Library и установите его.
+	SV	För att spela upp musik från din dator kan du ladda ner och installera UE Music Library från www.uesmartradio.com.
+
+MYMUSIC_MUSIC_LIBRARY_VERSION
+	CS	Aktualizovat software
+	DA	Opdater software
+	DE	Software aktualisieren
+	EN	Update Software
+	ES	Actualizar software
+	FI	Päivitä ohjelma
+	FR	Mise à jour logicielle
+	IT	Aggiorna il software
+	NL	Software bijwerken
+	NO	Oppdater programvare
+	PL	Aktualizuj oprogramowanie
+	RU	Обновить ПО
+	SV	Uppgradera
+
+MYMUSIC_MUSIC_LIBRARY_VERSION_HELP
+	CS	%s vyžaduje aktualizaci na novější verzi UE Music Library.\n\nPro stažení nejnovější verze navštivte laskavě UEsmartradio.com/downloads.
+	DA	%s skal opdateres til en nyere version af UE Music Library.\n\nGå til uesmartradio.com/downloads, og hent den nyeste version.
+	DE	%s muss auf eine neue Version von UE Music Library aktualisiert werden.\n\nLaden Sie unter UEsmartradio.com/downloads die neueste Version herunter.
+	EN	%s needs to be updated to a newer version of the UE Music Library.\n\nPlease visit UEsmartradio.com/downloads to download the latest version.
+	ES	%s debe actualizarse a una versión nueva de UE Music Library.\n\nVisite uesmartradio.com/downloads para descargar la versión más reciente.
+	FI	%s on päivitettävä UE Music Libraryn uudempaan versioon.\n\nLataa uusin versio osoitteesta uesmartradio.com/downloads.
+	FR	Vous devez mettre %s à jour à la dernière version d'UE Music Library.\n\nVisitez UEsmartradio.com/downloads pour télécharger la dernière version.
+	IT	È necessario aggiornare %s a una versione più recente di UE Music Library.\n\nVisitare UEsmartradio.com/downloads per scaricarla.
+	NL	%s moet worden bijgewerkt naar een recentere versie van de UE Music Library.\n\nGa naar uesmartradio.com/downloads om de nieuwste versie te downloaden.
+	NO	%s må oppdateres til en nyere versjon av UE Music Library.\n\nGå til UEsmartradio.com/downloads for å laste ned den nyeste versjonen.
+	PL	%s wymaga aktualizacji do nowszej wersji programu UE Music Library.\n\nOdwiedź witrynę UEsmartradio.com/downloads, aby pobrać najnowszą wersję.
+	RU	%s необходимо обновить до более новой версии UE Music Library.\n\nПосетите UEsmartradio.com/downloads, чтобы загрузить последнюю версию.
+	SV	%s måste uppdateras till en senare version av UE Music Library.\n\nGå till uesmartradio.com/downloads för att ladda ner den senaste versionen.
+

@@ -21,7 +21,7 @@ local ipairs, pairs, assert, io, string, tonumber = ipairs, pairs, assert, io, s
 
 local oo               = require("loop.simple")
 local os               = require("os")
-
+local System           = require("jive.System")
 local Applet           = require("jive.Applet")
 local RadioGroup       = require("jive.ui.RadioGroup")
 local RadioButton      = require("jive.ui.RadioButton")
@@ -47,6 +47,7 @@ local debug            = require("jive.utils.debug")
 local locale           = require("jive.utils.locale")
 local string           = require("jive.utils.string")
 local table            = require("jive.utils.table")
+local iconbar          = iconbar
 
 local appletManager    = appletManager
 
@@ -144,7 +145,7 @@ function _setupComplete(self, gohome)
 	self:_enableNormalEscapeMechanisms()
 
 	if gohome then
-		jiveMain:closeToHome(true, Window.transitionPushLeft)
+		jiveMain:closeToHomeAfterSetup(true, Window.transitionPushLeft)
 	end
 end
 
@@ -154,12 +155,21 @@ function step1(self)
 	log:debug('step1')
 	self:_addReturnToSetupToHomeMenu()
 	self:_disableNormalEscapeMechanisms()
-
+	iconbar:hideBatteryIcon("ON")
 	-- choose language
 	appletManager:callService("setupShowSetupLanguage",
 		function()
-			self:step3()
+			self:step2()
 		end, false)
+end
+
+function step2(self)
+	iconbar:hideBatteryIcon("OFF")
+	log:debug('step2')
+	appletManager:callService("isBatteryTabThere",
+		function()
+			self:step3()
+		end)
 end
 
 
@@ -169,11 +179,47 @@ function step3(self, transition)
 	-- network connection type
 	appletManager:callService("setupNetworking", 
 		function()
-			self:step6(iface)
+			self:step3a(iface)
 		end,
 	transition)
 end
 
+
+function step3a(self)
+	log:info("step3a")
+
+-- TODO: need to retest first
+--	-- Add a dummy window to prevent old content (like wireless PW entry window)
+--	--  to show when all popup windows are removed again
+--	local window = Window("help_list", self:string("PLEASE_WAIT"))
+--	self:tieAndShowWindow(window)
+
+	-- Waiting popup
+	local popup = Popup("waiting_popup")
+	local icon  = Icon("icon_connecting")
+	popup:addWidget(icon)
+	popup:addWidget(Label("text", self:string("CHECK_FIRMWARE_UPDATE")))
+	popup:addWidget(Label("subtext", self:string("PLEASE_WAIT")))
+	popup:setAllowScreensaver(false)
+	popup:ignoreAllInputExcept()
+	popup:addTimer(1000, function()
+		-- Contact config server, set correct SN, do not yet register
+		if appletManager:hasService("fetchConfigServerData") then
+			appletManager:callService("fetchConfigServerData",
+				true,	-- set SN
+				false,	-- do not register (yet)
+				false,  -- don't do firmware upgrade (yet)
+				function()
+					self:step6()
+				end)
+		else
+			self:step6()
+		end
+	end,
+	true)	--once
+
+	self:tieAndShowWindow(popup)
+end
 
 function step6(self)
 	log:info("step6")
@@ -197,7 +243,9 @@ end
 
 -- we are connected when we have a pin and upgrade url
 function _squeezenetworkConnected(self, squeezenetwork)
-	return squeezenetwork:getPin() ~= nil and squeezenetwork:getUpgradeUrl() and squeezenetwork:isConnected() 
+-- Defect 98: disable firmware upgrade from SN or LMS
+--	return squeezenetwork:getPin() ~= nil and squeezenetwork:getUpgradeUrl() and squeezenetwork:isConnected()
+	return squeezenetwork:getPin() ~= nil and squeezenetwork:isConnected()
 end
 
 function _anySqueezeCenterWithUpgradeFound(self)
@@ -253,10 +301,34 @@ function step7(self)
 		return
 	end
 
+	-- Check if there is a required firmware update, if yes, do it
+	if appletManager:hasService("checkRequiredFirmwareUpgrade") then
+		if appletManager:callService("checkRequiredFirmwareUpgrade") then
+			-- above returns true if there was a required firmware upgrade
+			-- return as the player will reboot anyways
+			return
+		end
+	end
+
 	if UPGRADE_FROM_SCS_ENABLED then
 		_squeezenetworkWait(self, squeezenetwork)
 	else
-		self:_registerRequest(squeezenetwork)
+
+-- Defect: 47 - [Belsonic] Language selection screen appear(momentarily) again after FW check
+-- We need to wait until we are connected to SN before sending the register request.
+-- If we don't wait the register request will trigger a (re-)connect event which by
+--  default does a disconnect first, leading to a (re-)connection spinny which goes
+--  away too early, exposing the last real window (language screen) on the window stack.
+-- The reason this is different than before is that before the device did connect
+--  to SN as soon as the network was established and that was long enough before the
+--  register request was sent so that no (re-)connect event was triggered.
+-- Now the first thing after the network is established is the call to the config
+--  server to get the SN channel to connect to and only then the connection to
+--  SN happens and that's not early enough for the register request to succeed w/o
+--  (re-)connect event so we wait until we are connected ok.
+
+--		self:_registerRequest(squeezenetwork)
+		_squeezenetworkWait(self, squeezenetwork)
 	end
 end
 
@@ -264,38 +336,35 @@ end
 function _squeezenetworkWait(self, squeezenetwork)
 	log:info("Looking for upgrade, waiting to connect to SqueezeNetwork and find any compatible SCs")
 
+	self.timer = nil
+
 	-- Waiting popup
 	local popup = Popup("waiting_popup")
 
 	local icon  = Icon("icon_connecting")
 	popup:addWidget(icon)
 	popup:addWidget(Label("text", self:string("CONNECTING_TO_SN")))
-	popup:addWidget(Label("subtext", self:string("MYSQUEEZEBOX_DOT_COM")))
+	popup:addWidget(Label("subtext", self:string("MYSERVICE_DOT_COM")))
 	popup:setAllowScreensaver(false)
 	popup:ignoreAllInputExcept()
 
 	local timeout = 0
 	--Wait until SN is connected before going to step 8. Also if SN isn't being found, use available SCs. Allow 10 seconds to go by to give all SCs a chacne to be discovered.
-	popup:addTimer(1000, function()
+	self.timer = popup:addTimer(1000, function()
 		-- wait until we know if the player is linked
 		if _squeezenetworkConnected(self, squeezenetwork) then
+			self.timer:stop()
 			step8(self, squeezenetwork)
 		else
 			log:info("SN not available, Waited: ", timeout + 1)
-			--allow 10 seconds to go by before doing SC check to allow SCs to be discovered
-			if timeout >= 9 and _anySqueezeCenterWithUpgradeFound(self) then
-				step8(self, squeezenetwork)
-			else
-				log:info("Looking for compatible SCs with an upgrade, Waited: ", timeout + 1)
-			end
 		end
-
 
 		timeout = timeout + 1
 
 		--try for 30 seconds
 		if timeout >= 30 then
 			log:info("Can't find any SC or connect to SqueezeNetwork after ", timeout, " seconds")
+			self.timer:stop()
 			_squeezenetworkFailed(self, squeezenetwork)
 		end
 	end)
@@ -413,23 +482,7 @@ end
 
 function step8(self, squeezenetwork)
 	log:info("step8")
-	if not squeezenetwork:isConnected() then
-		log:info("get SC from one of discovered SCs")
-		appletManager:callService("firmwareUpgrade", nil)
-		return
-	end
-
-	local url, force = squeezenetwork:getUpgradeUrl()
-	local pin = squeezenetwork:getPin()
-
-	log:info("squeezenetwork pin=", pin, " url=", url)
-
-	if force then
-		log:info("firmware upgrade from SN")
-		appletManager:callService("firmwareUpgrade", squeezenetwork)
-	else
-		self:_registerRequest(squeezenetwork)
-	end
+	self:_registerRequest(squeezenetwork)
 end
 
 
@@ -443,10 +496,37 @@ function _registerRequest(self, squeezenetwork)
 	local successCallback = function(requireAlreadyLinked)
 		self.registerRequest = true
 		self.registerRequestRequireAlreadyLinked = requireAlreadyLinked
+		local filePath = "/mnt/storage/etc/factoryresetState"
+		if System:findFile(filePath) then
+			os.remove(filePath)
+		end
 	end
 
 	log:info("registration on SN")
-	appletManager:callService("squeezeNetworkRequest", { 'register', 0, 100, 'service:SN' }, true, successCallback )
+	local factoryResetFile = "/mnt/storage/etc/factoryresetState"
+	local wipeFlag = "wipeFlag:0"
+	if System:findFile(factoryResetFile) then
+		log:info('located factoryreset file')
+		factoryFile = io.open(factoryResetFile)
+		if factoryFile == nil then
+			log:error("Err in openeing factoryResetFile")
+		else
+			local line = factoryFile:read()
+			if line ~= nil then
+				if string.match(line, "factory_reset") then
+					wipeFlag = "wipeFlag:1"
+				end
+				log:debug("wipeFlag read as: ", wipeFlag)
+				log:debug("line read as: ", line)
+			end
+			factoryFile:close()
+		end
+		--read the data
+	else
+		log:info('No factory reset info')
+	end
+	appletManager:callService("squeezeNetworkRequest", { 'register', 0, 100, 'service:SN', wipeFlag }, true, successCallback )
+
 
 	self.locked = true -- don't free applet
 	jnt:subscribe(self)
@@ -462,7 +542,7 @@ function step9(self)
 	self.locked = true -- free applet
 	jnt:unsubscribe(self)
 
-	jiveMain:goHome()
+	jiveMain:closeToHomeAfterSetup(true, Window.transitionPushLeft)
 
 end
 
@@ -544,6 +624,71 @@ function _setupDone(self, setupDone, registerDone)
 
 	-- FIXME: workaround until filesystem write issue resolved
 	os.execute("sync")
+end
+
+function _getPowerSysValue(self, param)
+
+	local f = io.open("/sys/devices/platform/i2c-adapter:i2c-1/1-0010/" .. param)
+	log:warn("opening: ", param)
+
+	local value = f:read("*all")
+	f:close()
+
+	return value
+end
+
+function _isBatteryTabThere(self)
+	local batteryTemperature = tonumber(self:_getPowerSysValue("battery_temperature"))
+	local batteryVoltage = tonumber(self:_getPowerSysValue("battery_voltage"))
+	local batteryMonitor1 = tonumber(self:_getPowerSysValue("battery_vmon1_voltage"))
+	local batteryMonitor2 = tonumber(self:_getPowerSysValue("battery_vmon2_voltage"))
+	-- read batv twice for correct value
+	batteryVoltage = tonumber(self:_getPowerSysValue("battery_voltage"))
+	--Bogus values -> bat values temp=679 v=17971 v1=20 v2=20
+	if batteryTemperature < 65000 and batteryMonitor1 < 50 and batteryMonitor2 < 50 and (batteryVoltage < 50 or batteryVoltage > 17000) then
+		return true
+	end
+	return false
+end
+
+function isBatteryTabThere(self, f)
+	local showBatWindow = self:_isBatteryTabThere()
+	self.timer = nil
+
+	if showBatWindow == true then
+		local window = Window("Battery tab", self:string("BATTERY_TITLE"))
+		window:setAllowScreensaver(false)
+
+		local menu = SimpleMenu("menu")
+		menu:addItem({
+			text = self:string("CONTINUE"),
+			sound = "WINDOWSHOW",
+			callback = function()
+				if self.timer then
+					self.timer:stop()
+				end
+				window:hide(Window.transitionPushLeft)
+				f()
+			end,
+			weight = 1
+		})
+		menu:setHeaderWidget(Textarea("help_text", self:string("BATTERY_HELP")))
+
+		window:addWidget(menu)
+
+		self.timer = window:addTimer(1000, function()
+			local showBatWindow = self:_isBatteryTabThere()
+			if showBatWindow == false then
+				self.timer:stop()
+				window:hide(Window.transitionPushLeft)
+				f()
+			end
+		end)
+
+		self:tieAndShowWindow(window)
+	else
+		f()
+	end
 end
 
 

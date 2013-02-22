@@ -24,6 +24,7 @@ Notifications:
  serverDelete (performed by SlimServers)
  serverConnected(self)
  serverDisconnected(self, numUserRequests)
+ serverCurrent(self, current)
 
 =head1 FUNCTIONS
 
@@ -118,6 +119,12 @@ function getServerByAddress(self, address)
 end
 
 
+-- class method
+function getServerById(self, id)
+	return serverList[id]
+end
+
+
 -- class method to return current server
 function getCurrentServer(class)
 	return currentServer
@@ -141,6 +148,10 @@ function setCurrentServer(class, server)
 	lastCurrentServer = currentServer
 
 	currentServer = server
+
+	if lastCurrentServer ~= currentServer then
+		jnt:notify("serverCurrent", currentServer)
+	end
 
 	-- is the current server still active, it not clean up?
 	if lastCurrentServer and lastCurrentServer.lastSeen == 0 then
@@ -305,7 +316,7 @@ function _serverstatusSink(self, event, err)
 	for k,v in pairs(selfPlayers) do
 		player = self.players[k]
 		-- wave player bye bye
-		player:free(self)
+		player:free(self, player:isLocal())
 		self.players[k] = nil
 	end
 	
@@ -447,7 +458,7 @@ function __init(self, jnt, id, name, version)
 		players = {},
 
 		-- our comet connection, initially not connected
-		comet = Comet(jnt, name),
+		comet = Comet(jnt, id),
 
 		-- are we connected to the server?
 		-- 'disconnected' = not connected
@@ -478,6 +489,8 @@ function __init(self, jnt, id, name, version)
 	})
 
 	obj.state.version = version
+	
+	_setControllingServerAddress(obj, getCurrentServer())
 
 	-- subscribe to server status, max 50 players every 60 seconds.
 	-- FIXME: what if the server has more than 50 players?
@@ -490,21 +503,22 @@ function __init(self, jnt, id, name, version)
 
 	local inSetup = jnt.inSetupHack and 1 or 0
 
-	local machine = System:getMachine()
-	-- this is not relevant to desktop SP
-	if machine ~= 'squeezeplay' then
-		obj.comet:subscribe('/slim/firmwarestatus',
-			_getSink(obj, '_upgradeSink'),
-			nil,
-			{
-				'firmwareupgrade',
-				'firmwareVersion:' .. JIVE_VERSION,
-				'inSetup:' .. tostring(inSetup),
-				'machine:' .. machine,
-				'subscribe:0'
-			}
-		)
-	end
+-- Defect 98: disable firmware upgrade from SN or LMS
+--	local machine = System:getMachine()
+--	-- this is not relevant to desktop SP
+--	if machine ~= 'squeezeplay' then
+--		obj.comet:subscribe('/slim/firmwarestatus',
+--			_getSink(obj, '_upgradeSink'),
+--			nil,
+--			{
+--				'firmwareupgrade',
+--				'firmwareVersion:' .. JIVE_VERSION,
+--				'inSetup:' .. tostring(inSetup),
+--				'machine:' .. machine,
+--				'subscribe:0'
+--			}
+--		)
+--	end
 
 
 	setmetatable(obj.imageCache, { __mode = "kv" })
@@ -520,6 +534,22 @@ function __init(self, jnt, id, name, version)
 	return obj
 end
 
+function _setControllingServerAddress(self, server)
+	if server and server ~= self then
+		local ip, port = server:getIpPort()
+		if (ip and port) then
+			self.comet:setControllingServerAddress(ip .. ':' .. tostring(port))
+		end
+	end
+end
+
+-- Only notified if current-server actually changes, possibly to nil
+-- or changes its address
+function notify_serverCurrent(self, server)
+	if server ~= self then
+		_setControllingServerAddress(self, server)
+	end
+end
 
 -- Update server on start up
 function updateInit(self, init)
@@ -592,6 +622,10 @@ function updateAddress(self, ip, port, name)
 		-- reconnect, if we were already connected
 		if oldstate ~= 'disconnected' then
 			self:connect()
+		end
+		
+		if (self == getCurrentServer()) then
+			self.jnt:notify('serverCurrent', self)
 		end
 	end
 
@@ -808,7 +842,7 @@ end
 
 -- Returns true if the server is SqueezeNetwork
 function isSqueezeNetwork(self)
-	return self.name == "mysqueezebox.com"
+	return self.id == "ID_mysqueezebox.com"
 end
 
 
@@ -1077,6 +1111,12 @@ function fetchArtwork(self, iconId, icon, size, imgFormat)
 
 	assert(size)
 
+	-- Extract artwork path
+	local path = string.match(iconId, "^lms://[%x%-]*/(.*)")
+	if path then
+		iconId = path
+	end
+
 	local cacheKey = iconId .. "@" .. size .. "/" .. (imgFormat or '')
 
 	-- do we have an image already cached?
@@ -1217,7 +1257,7 @@ if I<aSlimServer> is a L<jive.slim.SlimServer>, prints
 =cut
 --]]
 function __tostring(self)
-	return "SlimServer {" .. tostring(self.name) .. "}"
+	return "SlimServer {" .. tostring(self.name) .. " - " .. tostring(self.ip) .. "}"
 end
 
 
@@ -1248,6 +1288,10 @@ function isCompatible(self)
 		return nil
 	end
 	
+	if self.state.version == minimumVersion then
+		return true
+	end
+
 	return self:isMoreRecent(self.state.version, minimumVersion)
 end
 
@@ -1258,6 +1302,8 @@ function isMoreRecent(self, new, old)
 	for i,v in ipairs(newVer) do
 		if oldVer[i] and tonumber(v) > tonumber(oldVer[i]) then
 			return true
+		elseif oldVer[i] and tonumber(v) < tonumber(oldVer[i]) then
+			return false
 		end
 	end
 

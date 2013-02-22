@@ -39,7 +39,7 @@ LARGE_ART
 	DE	Große Plattenhüllen
 	EN	Large Artwork
 	ES	Carátula de álbum grande
-	FI	Suuri kuva
+	FI	Suuri kansikuva
 	FR	Grandes pochettes
 	IT	Copertina grande
 	NL	Grote hoesafbeeldingen

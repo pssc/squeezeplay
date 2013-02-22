@@ -117,7 +117,7 @@ end
 -- defines a new style that inherrits from an existing style
 function _uses(parent, value)
 	if parent == nil then
-		log:warn("nil parent in _uses at:\n", debug.traceback())
+		log:warn("nil parent in _uses at: \n", debug.traceback())
 	end
 	local style = {}
 	setmetatable(style, { __index = parent })
@@ -189,6 +189,7 @@ function skin(self, s, reload, useDefaultSize)
 	-- textinputs should be able to not have cursor and right arrow assets if not defined
 	s.img.textinputCursor     = Tile:loadImage(imgpath .. "Text_Entry/text_bar_vert_fill.png")
 	s.img.textinputEnterImg   = Tile:loadImage(imgpath .. "Icons/selection_right_textentry.png")
+	s.img.textinputHintImg   = Tile:loadImage(imgpath .. "Icons/keyboard_hints.png")
 	s.img.textareaBackground  = Tile:loadImage(imgpath .. "Titlebar/tb_dropdwn_bkrgd.png")
 
 	s.img.textareaBackgroundBottom  = 
@@ -337,6 +338,7 @@ function skin(self, s, reload, useDefaultSize)
 
 		TEXT_COLOR = { 0xE7, 0xE7, 0xE7 },
         	TEXT_COLOR_TEAL = { 0, 0xbe, 0xbe },
+		TEXT_COLOR_BLUE = { 0x14, 0x5a, 0xa0 },
 		TEXT_COLOR_BLACK = { 0x00, 0x00, 0x00 },
 		TEXT_SH_COLOR = { 0x37, 0x37, 0x37 },
 
@@ -815,6 +817,7 @@ function skin(self, s, reload, useDefaultSize)
 		cursorImg  = s.img.textinputCursor,
 		enterImg   = s.img.textinputEnterImg,
 		wheelImg   = s.img.textinputWheel,
+		hintImg   = s.img.textinputHintImg,
 		cursorColor = c.TEXTINPUT_WHEEL_SELECTED_COLOR,
 		charOffsetY = 13,
 		wheelCharOffsetY = 6,
@@ -917,7 +920,7 @@ function skin(self, s, reload, useDefaultSize)
 	}
 
 	s.waiting_popup.subtext_connected = _uses(s.waiting_popup.subtext, {
-		fg = c.TEXT_COLOR_TEAL,
+		fg = c.TEXT_COLOR_BLUE,
 	})
 
 	s.black_popup = _uses(s.waiting_popup)
@@ -1521,7 +1524,7 @@ function skin(self, s, reload, useDefaultSize)
 	}
 
 	s.waiting_popup.subtext_connected = _uses(s.waiting_popup.subtext, {
-		fg = c.TEXT_COLOR_TEAL,
+		fg = c.TEXT_COLOR_BLUE,
 	})
 
 
@@ -2147,10 +2150,10 @@ function skin(self, s, reload, useDefaultSize)
 		img = _loadImage(self, "IconsResized/icon_settings_adv" .. skinSuffix),
 	})
 	s.hm_radio = _uses(s._buttonicon, {
-		img = _loadImage(self, "IconsResized/icon_tunein" .. skinSuffix),
+		img = _loadImage(self, "IconsResized/icon_internet_radio" .. skinSuffix),
 	})
 	s.hm_radios = _uses(s._buttonicon, {
-		img = _loadImage(self, "IconsResized/icon_tunein" .. skinSuffix),
+		img = _loadImage(self, "IconsResized/icon_internet_radio" .. skinSuffix),
 	})
 	s.hm_myApps = _uses(s._buttonicon, {
 		img = _loadImage(self, "IconsResized/icon_my_apps" .. skinSuffix),
@@ -2170,14 +2173,8 @@ function skin(self, s, reload, useDefaultSize)
 	s.hm_settingsAlarm = _uses(s._buttonicon, {
 		img = _loadImage(self, "IconsResized/icon_alarm" .. skinSuffix),
 	})
-	s.hm_settingsPlayerNameChange = _uses(s._buttonicon, {
-		img = _loadImage(self, "IconsResized/icon_settings_name" .. skinSuffix),
-	})
 	s.hm_settingsBrightness = _uses(s._buttonicon, {
 		img = _loadImage(self, "IconsResized/icon_settings_brightness" .. skinSuffix),
-	})
-	s.hm_settingsSync = _uses(s._buttonicon, {
-		img = _loadImage(self, "IconsResized/icon_sync" .. skinSuffix),
 	})
 	s.hm_selectPlayer = _uses(s._buttonicon, {
 		img = _loadImage(self, "IconsResized/icon_choose_player" .. skinSuffix),
@@ -2258,6 +2255,48 @@ function skin(self, s, reload, useDefaultSize)
 	-- ??
 	s.hm_settingsPlugin = _uses(s._buttonicon, {
 		img = _loadImage(self, "IconsResized/icon_settings_plugin" .. skinSuffix),
+	})
+	s.hm_settingsTime = _uses(s._buttonicon, {
+		img = _loadImage(self, "IconsResized/icon_settings_time" .. skinSuffix),
+	})
+	s.hm_settingsSmartRadio = _uses(s._buttonicon, {
+		img = _loadImage(self, "IconsResized/icon_settings_smartradio" .. skinSuffix),
+	})
+	s.hm_settingsAboutJive = _uses(s._buttonicon, {
+		img = _loadImage(self, "IconsResized/icon_settings_about" .. skinSuffix),
+	})
+	s.hm_settingsLanguage = _uses(s._buttonicon, {
+		img = _loadImage(self, "IconsResized/icon_settings_language" .. skinSuffix),
+	})
+	s.hm_appGallery = _uses(s._buttonicon, {
+		img = _loadImage(self, "IconsResized/icon_app_gallery" .. skinSuffix),
+	})
+	s.hm_swUpload = _uses(s._buttonicon, {
+		img = _loadImage(self, "IconsResized/icon_swupload" .. skinSuffix),
+	})
+	s.hm_settingsDeveloper = _uses(s._buttonicon, {
+		img = _loadImage(self, "IconsResized/icon_settings_developer" .. skinSuffix),
+	})
+	s.hm_settingsDiagnostics = _uses(s._buttonicon, {
+		img = _loadImage(self, "IconsResized/icon_settings_diagnostics" .. skinSuffix),
+	})
+	s.hm_settingsNetworking = _uses(s._buttonicon, {
+		img = _loadImage(self, "IconsResized/icon_settings_networking" .. skinSuffix),
+	})
+	s.hm_settingsFactoryReset = _uses(s._buttonicon, {
+		img = _loadImage(self, "IconsResized/icon_settings_factoryreset" .. skinSuffix),
+	})
+	s.hm_settingsRestoreDefaults = _uses(s._buttonicon, {
+		img = _loadImage(self, "IconsResized/icon_settings_restoredefaults" .. skinSuffix),
+	})
+	s.hm_settingsNetworkTest = _uses(s._buttonicon, {
+		img = _loadImage(self, "IconsResized/icon_settings_networktest" .. skinSuffix),
+	})
+	s.hm_settingsAccount = _uses(s._buttonicon, {
+		img = _loadImage(self, "IconsResized/icon_settings_account" .. skinSuffix),
+	})
+	s.hm_settingsGeneratePin = _uses(s._buttonicon, {
+		img = _loadImage(self, "IconsResized/icon_settings_generatepin" .. skinSuffix),
 	})
 
 	-- indicator icons, on right of menus
@@ -2410,14 +2449,21 @@ function skin(self, s, reload, useDefaultSize)
 	s.button_battery_NONE = _uses(s._button_battery, {
 		img = false,
 	})
-
 	s.button_sleep_ON = _uses(s._iconbar_icon, {
 		img = _loadImage(self, "Icons/icon_mode_sleep_on.png"),
 	})
 	s.button_sleep_OFF = _uses(s.button_sleep_ON, {
 		img = false,
 	})
-
+	s.button_battery_DEAD = _uses(s._button_battery, {
+		img = _loadImage(self, "Icons/icon_battery_dead.png"),
+	})
+	s.button_battery_WARNING = _uses(s._button_battery, {
+		img = _loadImage(self, "Icons/icon_battery_warning.png"),
+	})
+	s.button_battery_ERROR = _uses(s._button_battery, {
+		img = _loadImage(self, "Icons/icon_battery_error.png"),
+	})
 	s._button_wireless = _uses(s._iconbar_icon, {
 		w = 16,
 		border = { 5, 0, 10, 0 },

@@ -27,7 +27,8 @@ function registerApplet(meta)
 	meta:registerService("setupNetworking")
 	meta:registerService("settingsNetworking")
 
-	jiveMain:addItem(meta:menuItem('chooseNetwork', 'networkSettings', "NETWORK_WIRELESS_NETWORKS", function(applet, ...) applet:settingsNetworking(...) end, 2))
+	jiveMain:addItem(meta:menuItem('chooseNetwork', 'networkSettings', "NETWORK_WIRELESS_NETWORKS", function(applet, ...) applet:settingsNetworking(...) end, 20))
+	jiveMain:addItem(meta:menuItem('resetWirelessSettings', 'networkSettings', "NETWORK_RESET_WIRELESS_SETTINGS", function(applet, ...) applet:resetWirelessSettings(...) end, 25))
 end
 
 

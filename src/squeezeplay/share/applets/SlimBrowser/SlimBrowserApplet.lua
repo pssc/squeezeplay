@@ -1,4 +1,3 @@
-
 --[[
 =head1 NAME
 
@@ -20,6 +19,7 @@ TODO
 -- stuff we use
 local tostring, tonumber, type, sort = tostring, tonumber, type, sort
 local pairs, ipairs, select, _assert = pairs, ipairs, select, _assert
+local collectgarbage = collectgarbage
 
 local oo                     = require("loop.simple")
 local math                   = require("math")
@@ -31,6 +31,7 @@ local Applet                 = require("jive.Applet")
 local System                 = require("jive.System")
 local Player                 = require("jive.slim.Player")
 local SlimServer             = require("jive.slim.SlimServer")
+local Task                   = require("jive.ui.Task")
 local Framework              = require("jive.ui.Framework")
 local Window                 = require("jive.ui.Window")
 local Popup                  = require("jive.ui.Popup")
@@ -102,7 +103,6 @@ local _string
 -- The player we're browsing and it's server
 local _player = false
 local _server = false
-
 local _networkError = false
 local _serverError  = false
 local _diagWindow   = false
@@ -132,6 +132,11 @@ local styleMap = {
 	albumitemplay = 'item_play',
 }
 
+
+local _serverLinkFlag = false
+
+-- current playlist
+local _statusStep = false
 
 --==============================================================================
 -- Local functions
@@ -354,6 +359,26 @@ local function _popStep()
 
 	local popped = table.remove(_stepStack)
 
+	if not (_statusStep and popped == _statusStep) then
+		-- Explicitly mark step element db as not used anymore to help GC cleanup
+		popped["db"] = nil
+	end
+
+	-- Run GC explicitly to speed up process
+	Task("SlimBrowserPopStepGC", nil, function()
+		log:debug("Lua memory usage (before cleanup): ", collectgarbage("count"))
+
+		local i
+		-- Experiments show that despite the collectgarbage return value is reported as true
+		--  indicating the clean up is done it takes at least three rounds to actually
+		--  do all the clean up. (Note: A single round with a higher step value doesn't work.)
+		for i = 0, 2, 1 do
+			collectgarbage("step", 10000)
+		end
+
+		log:debug("Lua memory usage (after cleanup): ", collectgarbage("count"))
+	end):addTask()
+
 	if log:isDebug() then
 		log:debug("Popped")
 		_dumpStepStack()
@@ -473,29 +498,39 @@ local function _artworkItem(step, item, group, menuAccel)
 	local icon = group and group:getWidget("icon")
 	local iconSize
 
+	local server = step.server
+
 	local THUMB_SIZE = jiveMain:getSkinParam("THUMB_SIZE")
 	iconSize = THUMB_SIZE
 	
 	local iconId = item["icon-id"] or item["icon"]
 
 	if iconId then
-		if menuAccel and not _server:artworkThumbCached(iconId, iconSize) then
-			-- Don't load artwork while accelerated
-			_server:cancelArtwork(icon)
-		else
-			-- Fetch an image from SlimServer
-			_server:fetchArtwork(iconId, icon, iconSize)
+		-- Extract server from artwork path
+		local serverId = string.match(iconId, "^lms://([%x%-]*)/")
+		if serverId then
+			server = SlimServer:getServerById(serverId)
+		end
+
+		if server then
+			if menuAccel and not step.server:artworkThumbCached(iconId, iconSize) then
+				-- Don't load artwork while accelerated
+				server:cancelArtwork(icon)
+			else
+				-- Fetch an image from SlimServer
+				server:fetchArtwork(iconId, icon, iconSize)
+			end
 		end
 	elseif item["trackType"] == 'radio' and item["params"] and item["params"]["track_id"] then
-		if menuAccel and not _server:artworkThumbCached(item["params"]["track_id"], iconSize) then
+		if menuAccel and not step.server:artworkThumbCached(item["params"]["track_id"], iconSize) then
 			-- Don't load artwork while accelerated
-			_server:cancelArtwork(icon)
+			server:cancelArtwork(icon)
                	else
 			-- workaround: this needs to be png not jpg to allow for transparencies
-			_server:fetchArtwork(item["params"]["track_id"], icon, iconSize, 'png')
+			server:fetchArtwork(item["params"]["track_id"], icon, iconSize, 'png')
 		end
 	else
-		_server:cancelArtwork(icon)
+		server:cancelArtwork(icon)
 
 	end
 end
@@ -814,7 +849,14 @@ local function _performJSONAction(jsonAction, from, qty, step, sink, itemType, c
 
 	if not useCachedResponse then
 		-- send the command
-		_server:userRequest(sink, playerid, request)
+		if step and step.server then
+			log:info("step.server available: ", step.server)
+			step.server:userRequest(sink, playerid, request)
+		else
+			log:info("step.server not available - using _server: ", _server)
+			_server:userRequest(sink, playerid, request)
+		end
+
 	else
                 log:info("using cachedResponse")
 		sink(cachedResponse)
@@ -849,7 +891,7 @@ local function _refreshJSONAction(step)
 		return
 	end
 
-	_server:userRequest(step.sink, playerid, step.jsonAction)
+	step.server:userRequest(step.sink, playerid, step.jsonAction)
 
 end
 
@@ -1168,24 +1210,40 @@ local function _devnull(chunk, err)
 end
 
 
---destination that does nothing, but handles step.cancelled and step.loaded
-local function _emptyDestination(step)
+local function _basicStep(currentStep)
 	local step = {}
+	
+	if currentStep and currentStep.server then
+		step.server = currentStep.server
+	end
+	
+	return step
+end
 
+
+local function _emptySink(step)
 	step.sink = function(chunk, err)
 		-- are we cancelled?
 		if step.cancelled then
 			log:debug("_devnull(): , action cancelled...")
 			return
 		end
-
+		
 		if step.loaded then
 			step.loaded()
 			step.loaded = nil
 		end
 	end
+	
+	return step.sink
+end
 
-	return step, step.sink
+
+--destination that does nothing, but handles step.cancelled and step.loaded
+local function _emptyDestination(currentStep)
+	local step = _basicStep(currentStep)
+	
+	return step, _emptySink(step)
 end
 
 
@@ -1930,7 +1988,7 @@ _actionHandler = function(menu, menuItem, db, dbIndex, event, actionName, item, 
 		end
 
 		-- XXX: After an input box is used, chunk is nil, so base can't be used
-	
+
 		if iAction or bAction or choiceAction or nextWindow then
 			-- the resulting action, if any
 			local jsonAction
@@ -2029,34 +2087,25 @@ _actionHandler = function(menu, menuItem, db, dbIndex, event, actionName, item, 
 					menuItem:playSound("WINDOWSHOW")
 				end
 
-				local skipNewWindowPush = false
+				local skipNewWindowPush = true
 				-- set good or dummy sink as needed
 				-- prepare the window if needed
-				local step, sink
+				local step = _basicStep(_getCurrentStep())
+				local sink
 				local from, qty
 				-- cover all our "special cases" first, custom navigation, artwork popup, etc.
 				if nextWindow == 'nowPlaying' then
-					skipNewWindowPush = true
-
-					step, sink = _emptyDestination(step)
+					sink = _emptySink(step)
 					_stepLockHandler(step, function () _goNowPlaying(nil, true, true ) end)
 
 				elseif actionName == 'preview' then
-					skipNewWindowPush = true
-
-					step, sink = _emptyDestination(step)
+					sink = _emptySink(step)
 					_stepLockHandler(step, function () _alarmPreviewWindow(iAction and iAction.title) end )
 
 				elseif nextWindow == 'playlist' then
 					_goPlaylist(true)
 				elseif nextWindow == 'home' then
-					-- bit of a hack to notify serverLinked after factory reset SN menu
-					if item['serverLinked'] then
-						log:info("serverlinked: pin: ", _server:getPin())
-						_server.jnt:notify('serverLinked', _server, true)
-					end
 					goHome()
-					
 				elseif nextWindow == 'parentNoRefresh' then
 					_hideMe(true, _, setSelectedIndex)
 				elseif nextWindow == 'parent' then
@@ -2089,8 +2138,6 @@ _actionHandler = function(menu, menuItem, db, dbIndex, event, actionName, item, 
 				elseif itemType == "slideshow" or (item and item["slideshow"]) then
 					from, qty = 0, 200
 					
-					skipNewWindowPush = true
-
 				elseif item["showBigArtwork"] then
 					sink = _bigArtworkPopup
 				elseif actionName == 'go' or actionName == 'play-hold' then
@@ -2098,6 +2145,7 @@ _actionHandler = function(menu, menuItem, db, dbIndex, event, actionName, item, 
 					if step.menu then
 						from, qty = _decideFirstChunk(step, jsonAction)
 					end
+					skipNewWindowPush = false
 				-- context menu handler
 				elseif actionName == 'more' or
 					actionName == "add" and (item['addAction'] == 'more' or
@@ -2116,6 +2164,7 @@ _actionHandler = function(menu, menuItem, db, dbIndex, event, actionName, item, 
 					if step.menu then
 						from, qty = _decideFirstChunk(step, jsonAction)
 					end
+					skipNewWindowPush = false
 				end
 
 				if jsonAction then
@@ -2643,7 +2692,8 @@ end
 -- data is generic data that is stored in the step; it is used f.e. to keep the json action between the
 --  first incantation and the subsequent ones needed to capture all data (see _browseSink).
 -- containerContextMenu is the json action of the more command (if any) from the previous menu item
-_newDestination = function(origin, item, windowSpec, sink, data, containerContextMenu)
+-- server is an optional server to use instead of the default _server
+_newDestination = function(origin, item, windowSpec, sink, data, containerContextMenu, server)
 	log:debug("_newDestination():")
 	log:debug(windowSpec)
 
@@ -2738,8 +2788,7 @@ _newDestination = function(origin, item, windowSpec, sink, data, containerContex
 		end
 
 	end
-	
-	
+
 	-- a step for our enlightenment path
 	local step = {
 		origin          = origin,   -- origin step
@@ -2750,8 +2799,9 @@ _newDestination = function(origin, item, windowSpec, sink, data, containerContex
 		sink            = false,    -- sink closure embedding this step
 		data            = data,     -- data (generic)
 		actionModifier  = false,    -- modifier
+		server          = server or (origin and origin.server or _server)
 	}
-	
+
 	log:debug("new step: " , step)
 
 
@@ -2950,31 +3000,23 @@ function squeezeNetworkRequest(self, request, inSetup, successCallback)
 	self.inSetup = inSetup
 
 	_server = squeezenetwork
-
-	-- create a window for SN signup
-	local step, sink = _newDestination(
-		nil,
-		nil,
-		{
-			text = self:string("SN_SIGNUP"),
-			menuStyle = 'menu',
-			labelItemStyle   = "item",
-			windowStyle = 'text_list',
-			disableBackButton = true,
-		},
-		_browseSink
-	)
-	local sinkWrapper = sink
+	local sinkWrapper
 	if successCallback then
 		sinkWrapper =  function(...)
-				sink(...)
-				log:info("Calling successCallback after initial SN request succeeded")
-				--first request is always a welcome screen. return success callback including whether this is an already registered SP 
-				successCallback(squeezenetwork:isSpRegisteredWithSn())
-			end
+					log:info("Calling successCallback after initial SN request succeeded")
+					--first request is always a welcome screen. return success callback including whether this is an already registered SP
+					successCallback(squeezenetwork:isSpRegisteredWithSn())
+					_serverLinkFlag = true
+					local timer = Timer(2000, function()
+								log:debug("Serverlinked update called from callback")
+								if _serverLinkFlag == true then
+									_updateServerLinked()
+								end
+								end,true)
+					timer:start()
+				end
 	end
-	_pushToNewWindow(step)
-        squeezenetwork:userRequest( sinkWrapper, nil, request )
+	squeezenetwork:userRequest( sinkWrapper, nil, request )
 
 end
 
@@ -3042,7 +3084,9 @@ function browserActionRequest(self, server, v, loadedCallback)
 					v,
 					_newWindowSpec(nil, v),
 					_browseSink,
-					jsonAction
+					jsonAction,
+					nil,
+					server
 				)
 
 				if v.input then
@@ -3051,7 +3095,15 @@ function browserActionRequest(self, server, v, loadedCallback)
 				else
 					from, qty = _decideFirstChunk(step, jsonAction)
 
+					-- Store step which is in progress, but not yet pushed to the stack
+					self.stepInProgress = step
+					-- Store callback which removes the little spinny when called
+					self.loadedCallback = loadedCallback
+
 					step.loaded = function()
+						self.stepInProgress = nil
+						self.loadedCallback = nil
+
 						--if lastBrowseIndex then defer callback until lastBrowseIndex chunk received.
 						local lastBrowseIndex = _player:getLastBrowseIndex(step.commandString)
 						if not lastBrowseIndex and loadedCallback then
@@ -3101,34 +3153,80 @@ function notify_networkAndServerOK(self, iface)
 	end
 end
 
-
-function notify_serverConnected(self, server)
-	if _server ~= server then
+function _updateServerLinked(self)
+	log:debug("_updateServerLinked is called _serverLinkFlag: ", _serverLinkFlag)
+	if _serverLinkFlag == false then
 		return
 	end
+	_server.jnt:notify('serverLinked', _server, true)
+	_serverLinkFlag = false
+	goHome()
+end
 
-	iconbar:setServerError("OK")
+function notify_serverConnected(self, server)
+	-- connectedServer: server the player is connected to, normally SN
+	-- attachedServer: server we browse w/o connecting the player to it, normally UEML
+	local connectedServer = _server
+	local attachedServer = nil
+	local step = _getCurrentStep()
 
-	-- hide connection error window
-	if self.serverErrorWindow then
-		self.serverErrorWindow:hide(Window.transitionNone)
-		self.serverErrorWindow = false
+	-- No current step, try to use a not yet pushed step
+	if not step and self.stepInProgress then
+		step = self.stepInProgress
+	end
+
+	if step and step.server and step.server != _server then
+		attachedServer = step.server
+	end
+
+	log:info("serverConnected() - ConnectedServer: ", connectedServer)
+	log:info("serverConnected() - AttachedServer: ", attachedServer)
+
+	if connectedServer == server then
+		iconbar:setServerError("OK")
+		_updateServerLinked()
+	end
+
+	if connectedServer == server or attachedServer and attachedServer == server then
+		-- hide connection error window
+		if self.serverErrorWindow then
+			self.serverErrorWindow:hide(Window.transitionNone)
+			self.serverErrorWindow = false
+		end
 	end
 end
 
 
 function notify_serverDisconnected(self, server, numUserRequests)
-	if _server ~= server then
-		return
+	-- connectedServer: server the player is connected to, normally SN
+	-- attachedServer: server we browse w/o connecting the player to it, normally UEML
+	local connectedServer = _server
+	local attachedServer = nil
+	local step = _getCurrentStep()
+
+	-- No current step, try to use a not yet pushed step
+	if not step and self.stepInProgress then
+		step = self.stepInProgress
 	end
 
-	iconbar:setServerError("ERROR")
-
-	if numUserRequests == 0 or self.serverErrorWindow then
-		return
+	if step and step.server and step.server != _server then
+		attachedServer = step.server
 	end
 
-	self:_problemConnectingPopup(server)
+	log:info("serverDisconnected() - connectedServer: ", connectedServer)
+	log:info("serverDisconnected() - attachedServer: ", attachedServer)
+
+	if connectedServer == server then
+		iconbar:setServerError("ERROR")
+	end
+
+	if connectedServer == server or attachedServer and attachedServer == server then
+		if numUserRequests == 0 or self.serverErrorWindow then
+			return
+		end
+
+		self:_problemConnectingPopup(server)
+	end
 end
 
 
@@ -3142,12 +3240,21 @@ function _removeRequestAndUnlock(self, server)
 									currentStep.menu:unlock()
 								end
 							end
-
+							self.stepInProgress = nil
+							self.loadedCallback = nil
 end
 
 
 function _problemConnectingPopup(self, server)
 	log:debug("_problemConnectingPopup")
+
+	-- Calling the callback removes the little spinny
+	if self.loadedCallback then
+		local loadedCallback = self.loadedCallback
+		self.loadedCallback = nil
+		loadedCallback()
+	end
+
 	local successCallback = function()
 					self:_problemConnectingPopupInternal(server)
 				end
@@ -3243,6 +3350,8 @@ function _problemConnectingInternal(self, server)
 			     sound = "WINDOWSHOW",
 		     })
 
+-- Defect 198 - Disable menu options not used / suitable for Belsonic
+--[[
 	if server:isPasswordProtected() then
 		-- password protection has been enabled
 		menu:addItem({
@@ -3324,6 +3433,15 @@ function _problemConnectingInternal(self, server)
 			        sound = "WINDOWSHOW",
 			})
 	end
+--]]
+
+	menu:addItem({
+		text = self:string("SLIMBROWSER_GO_HOME"),
+		callback = function()
+			self:_removeRequestAndUnlock(server)
+			goHome()
+		end,
+	})
 
 	local cancelAction =    function ()
 					self:_removeRequestAndUnlock(server)
@@ -3334,7 +3452,7 @@ function _problemConnectingInternal(self, server)
 	menu:addActionListener("back", self, cancelAction)
 	menu:addActionListener("go_home", self,  cancelAction )
 
-	menu:setHeaderWidget(Textarea("help_text", self:string("SLIMBROWSER_PROBLEM_CONNECTING_HELP", tostring(_server:getName()))))
+	menu:setHeaderWidget(Textarea("help_text", self:string("SLIMBROWSER_PROBLEM_CONNECTING_HELP", tostring(server:getName()))))
 	window:addWidget(menu)
 
 	self.serverErrorWindow = window
@@ -3375,7 +3493,6 @@ This section includes the volume and scanner popups.
 --]]
 
 
-local _statusStep = false
 local _emptyStep = false
 
 -- _requestStatus

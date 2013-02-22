@@ -9,7 +9,7 @@ SHORTCUTS_TITLE
 	DE	Funktionen
 	EN	Shortcuts
 	ES	Métodos abreviados
-	FI	pikatoiminnot
+	FI	Pikatoiminnot
 	FR	Raccourcis
 	IT	Scorciatoie
 	NL	Snelkoppelingen
@@ -39,7 +39,7 @@ SHORTCUTS_RESTORE_DEFAULTS_HELP
 	DE	Wählen Sie 'Weiter', um die Standardwerte für alle benutzerdefinierten Shortcuts wiederherzustellen.
 	EN	Select "Continue" to restore all custom shortcuts to their default value
 	ES	Seleccione "Continuar" para restaurar los métodos abreviados a sus valores predeterminados
-	FI	Palauta kaikki mukautetut pikakuvakkeet oletuksiin valitsemalla Jatka.
+	FI	Palauta kaikki mukautetut pikatoiminnot oletuksiin valitsemalla Jatka
 	FR	Sélectionnez "Continuer" pour réinitialiser les valeurs par défaut de tous les raccourcis personnalisés
 	IT	Selezionare Continua per ripristinare il valore predefinito di tutte le scorciatoie personalizzate
 	NL	Selecteer 'Doorgaan' om de standaardwaarden van alle aangepaste snelkoppelingen te herstellen
@@ -57,7 +57,7 @@ SHORTCUTS_CANCEL
 	FI	Peruuta
 	FR	Annuler
 	IT	Annulla
-	NL	Annuleer
+	NL	Annuleren
 	NO	Avbryt
 	PL	Anuluj
 	RU	Отмена
@@ -496,7 +496,7 @@ SHORTCUTS_OUTPUT_GO_ALARMS
 	DE	Wecker
 	EN	Alarms
 	ES	Alarmas
-	FI	Hälytykset
+	FI	Herätykset
 	FR	Alarmes
 	IT	Sveglie
 	NL	Weksignalen
@@ -571,7 +571,7 @@ SHORTCUTS_OUTPUT_CREATE_MIX
 	DE	Benutzerdefinierter Musik-Mix
 	EN	Custom Mix
 	ES	Mezcla personalizada
-	FI	Mukautettu miksaus
+	FI	Mukautettu sekoitus
 	FR	Mix personnalisé
 	IT	Raccolta personalizzata
 	NL	Aangepaste mix
@@ -626,17 +626,17 @@ SHORTCUTS_OUTPUT_SET_PRESET
 	SV	Ställ in förinställning %s
 
 SHORTCUTS_OUTPUT_SEARCH
-	CS	Vyhledat
+	CS	Hledat
 	DA	Søg
 	DE	Suchen
 	EN	Search
 	ES	Buscar
 	FI	Etsi
-	FR	Recherche
+	FR	Rechercher
 	IT	Cerca
 	NL	Zoeken
 	NO	Søk
-	PL	Wyszukaj
+	PL	Szukaj
 	RU	Поиск
 	SV	Sök
 

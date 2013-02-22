@@ -1,6 +1,5 @@
 
 local assert, ipairs, pairs, type, tostring, tonumber, setmetatable = assert, ipairs, pairs, type, tostring, tonumber, setmetatable
-
 local oo            = require("loop.base")
 local table         = require("jive.utils.table")
 local string        = require("jive.utils.string")
@@ -364,12 +363,8 @@ Close all windows to expose the home menu. By default alwaysOnTop windows
 are not hidden. Also move to root home item.
 
 --]]
-function closeToHome(self, hideAlwaysOnTop, transition)
 
-	--move to root item :bug #14066
-	if self.nodeTable then
-		self.nodeTable["home"].menu:setSelectedIndex(1)
-	end
+local function _closeToHome(self, hideAlwaysOnTop, transition)
 
 	local stack = Framework.windowStack
 
@@ -387,6 +382,21 @@ function closeToHome(self, hideAlwaysOnTop, transition)
 	end
 end
 
+function closeToHome(self, hideAlwaysOnTop, transition)
+	--move to root item :bug #14066
+	if self.nodeTable then
+		self.nodeTable["home"].menu:setSelectedIndex(1)
+	end
+	_closeToHome(self, hideAlwaysOnTop, transition)
+end
+
+function closeToHomeAfterSetup(self, hideAlwaysOnTop, transition)
+	if self.nodeTable then
+		log:info("Selected 3rd item after reset")
+		self.nodeTable["home"].menu:setSelectedIndex(3)
+	end
+	_closeToHome(self, hideAlwaysOnTop, transition)
+end
 
 function _changeNode(self, id, node)
 	-- looks at the node and decides whether it needs to be removed
@@ -415,6 +425,15 @@ function addNode(self, item)
 
 	item.cmCallback = function()
 		appletManager:callService("homeMenuItemContextMenu", item)
+		return EVENT_CONSUME
+	end
+
+	item.devCallback = function()
+		log:info("node add function with item.node as ", item.node)
+		log:info("framework window stack number is ", #Framework.windowStack)
+		if item.node == 'settings' and #Framework.windowStack == 2 then
+			appletManager:callService("developerModeSwitch", item)
+		end
 		return EVENT_CONSUME
 	end
 
@@ -463,7 +482,12 @@ function addNode(self, item)
 
 	if not item.callback then
 		item.callback = function ()
-			window:setTitle(item.text)
+			log:info("item windowTitle is: ", item.windowTitle)
+			if item.windowTitle then
+				window:setTitle(item.windowTitle)
+			else
+				window:setTitle(item.text)
+			end
 			window:show()
 		end
 	end
@@ -513,6 +537,14 @@ function addItemToNode(self, item, node)
 
 			local myItem = _uses(item)
 
+	myItem.devCallback = function()
+		log:info("node add function with item.node as ", item.node)
+		log:info("framework window stack number is ", #Framework.windowStack)
+		if item.node == 'settings' and #Framework.windowStack == 2 then
+			appletManager:callService("developerModeSwitch", item)
+		end
+		return EVENT_CONSUME
+	end
 			-- rewrite the callback for CM to use myItem instead of item
 			myItem.cmCallback = function()
 				appletManager:callService("homeMenuItemContextMenu", myItem)
@@ -535,6 +567,14 @@ function addItem(self, item)
 	assert(item.id)
 	assert(item.node)
 
+	item.devCallback = function()
+		log:info("node add function with item.node as ", item.node)
+		log:info("framework window stack number is ", #Framework.windowStack)
+		if item.node == 'settings' and #Framework.windowStack == 2 then
+			appletManager:callService("developerModeSwitch", item)
+		end
+		return EVENT_CONSUME
+	end
 	item.cmCallback = function()
 		appletManager:callService("homeMenuItemContextMenu", item)
 		return EVENT_CONSUME

@@ -54,6 +54,7 @@ function registerApplet(meta)
 	meta:registerService("startSetup")
 	meta:registerService("startRegister")
 	meta:registerService("isSetupDone")
+	meta:registerService("isBatteryTabThere")
 end
 
 
@@ -62,6 +63,23 @@ function configureApplet(meta)
 
 	if not settings.setupDone then
 		appletManager:callService("startSetup")
+
+	else
+		-- Contact config server, set correct SN, register
+		if appletManager:hasService("fetchConfigServerData") then
+			appletManager:callService("fetchConfigServerData",
+				true,	-- set SN
+				true,	-- register if needed
+				true,	-- firmware upgrade if available
+				false)  -- no callback
+		else
+			-- Fallback - should never be needed
+			jnt:setSNHostname(jnt:getSNDefaultHostname())
+		end
+		appletManager:callService("isBatteryTabThere", function()
+				jiveMain:goHomeWithoutPlaySound()
+			end
+		)
 	end
 
 	if not settings.registerDone then

@@ -57,7 +57,7 @@ oo.class(_M, Applet)
 
 
 -- constants
-local PORT    = 3483             -- port used to discover SqueezeCenters
+local PORT    = 3546             -- port used to discover SqueezeCenters (UEML)
 local DISCOVERY_TIMEOUT = 120000 -- timeout (in milliseconds) before removing SqueezeCenters and Players
 local DISCOVERY_PERIOD = 60000   -- discovery period
 local SEARCHING_PERIOD = 10000   -- searching period
@@ -301,8 +301,10 @@ function _discover(self)
 
 	-- Special case Squeezenetwork
 	if System:getUUID() then
-		squeezenetwork = SlimServer(jnt, "mysqueezebox.com", "mysqueezebox.com")
-		self:_serverUpdateAddress(squeezenetwork, jnt:getSNHostname(), 9000, "mysqueezebox.com")
+		--                               id                     name (visible to user)
+		squeezenetwork = SlimServer(jnt, "ID_mysqueezebox.com", "UEsmartradio.com")
+		--                                        url                  port  name (visible to user)
+		self:_serverUpdateAddress(squeezenetwork, jnt:getSNHostname(), 9000, "UEsmartradio.com")
 	end
 
 	-- Remove SqueezeCenters that have not been seen for a while
@@ -600,17 +602,16 @@ function notify_playerNewName(self, player, playerName)
 end
 
 
---todo:uses serverName but should use uuid when that comes online
 --service method
 function getInitialSlimServer(self)
-	local serverName = self:getSettings().serverName
+	local serverUuid = self:getSettings().serverUuid
 	if self:getSettings().squeezeNetwork then
-		serverName = "mysqueezebox.com"
+		serverUuid = "ID_mysqueezebox.com"
 	end
 
-	if serverName then
+	if serverUuid then
 		for i, server in SlimServer:iterate() do
-			if server:getName() == serverName then
+			if server:getId() == serverUuid then
 				log:debug("found initial server: ", server)
 
 				return server

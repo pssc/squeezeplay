@@ -145,19 +145,59 @@ end
 function settingsNetworking(self)
 	self.mode = "settings"
 
-	local topWindow = Framework.windowStack[1]
 	self.setupNext = function()
-		local stack = Framework.windowStack
-		for i=1,#stack do
-			if stack[i] == topWindow then
-				for j=i-1,1,-1 do
-					stack[j]:hide(Window.transitionPushLeft)
-				end
-			end
-		end
+		jiveMain:goHome()
 	end
 
 	_wirelessRegion(self, self.wlanIface)
+end
+
+
+function resetWirelessSettings(self)
+	local window = Window("text_list", self:string("NETWORK_RESET_WIRELESS_SETTINGS"), "setup")
+	local menu = SimpleMenu("menu")
+
+	menu:addItem({
+		text = (self:string("SETUP_NETWORKING_CONTINUE")),
+		sound = "WINDOWSHOW",
+		callback = function()
+			local popup = Popup("toast_popup_text")
+			local textarea = Textarea("toast_popup_textarea", self:string("NETWORK_RESET_WIRELESS_SETTINGS_DONE"))
+			local infoGroup = Group("group", {
+				text = textarea,
+			})
+			popup:addWidget(infoGroup)
+			popup:showBriefly(1500,
+				function()
+					window:hide()
+				end,
+				Window.transitionNone,
+				Window.transitionNone
+			)
+
+			Task("resetWirelessSettings", nil, function()
+				local ifObj = self.wlanIface
+				local networkResults = ifObj:request("LIST_NETWORKS")
+				for nid, nssid, nbssid, nflags in string.gmatch(networkResults, "([%d]+)\t([^\t]*)\t([^\t]*)\t(.-)\n") do
+					_removeNetworkTask(self, ifObj, nssid)
+				end
+			end):addTask()
+		end,
+		weight = 1
+	})
+	menu:addItem({
+		text = (self:string("NETWORK_CANCEL")),
+		sound = "WINDOWHIDE",
+		callback = function()
+			window:hide()
+		end,
+		weight = 2
+	})
+
+	window:addWidget(menu)
+	menu:setHeaderWidget(Textarea("help_text", self:string("NETWORK_RESET_WIRELESS_SETTINGS_HINT")))
+	menu:setSelectedIndex(1, true, true)
+	self:tieAndShowWindow(window)
 end
 
 
@@ -188,7 +228,7 @@ function _connectionType(self)
 					--  delays while trying to resolve mysb.com
 					if self.ethIface:pingServer(status.ip_dns) then
 						-- Then ping mysb.com
-						pingOK = self.ethIface:pingServer(jnt:getSNHostname())
+						pingOK = self.ethIface:pingServer(jnt:getSNDefaultHostname())
 					end
 				end
 

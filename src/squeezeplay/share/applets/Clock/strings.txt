@@ -298,7 +298,7 @@ SCREENSAVER_CLOCK_DAY_1
 	FR	Lundi
 	IT	Lunedì
 	NL	Maandag
-	NO	Mandag
+	NO	mandag
 	PL	Poniedziałek
 	RU	Понедельник
 	SV	Måndag
@@ -313,7 +313,7 @@ SCREENSAVER_CLOCK_DAY_2
 	FR	Mardi
 	IT	Martedì
 	NL	Dinsdag
-	NO	Tirsdag
+	NO	tirsdag
 	PL	Wtorek
 	RU	Вторник
 	SV	Tisdag
@@ -328,7 +328,7 @@ SCREENSAVER_CLOCK_DAY_3
 	FR	Mercredi
 	IT	Mercoledì
 	NL	Woensdag
-	NO	Onsdag
+	NO	onsdag
 	PL	Środa
 	RU	Среда
 	SV	Onsdag
@@ -358,7 +358,7 @@ SCREENSAVER_CLOCK_DAY_5
 	FR	Vendredi
 	IT	Venerdì
 	NL	Vrijdag
-	NO	Fredag
+	NO	fredag
 	PL	Piątek
 	RU	Пятница
 	SV	Fredag
@@ -373,7 +373,7 @@ SCREENSAVER_CLOCK_DAY_6
 	FR	Samedi
 	IT	Sabato
 	NL	Zaterdag
-	NO	Lørdag
+	NO	lørdag
 	PL	Sobota
 	RU	Суббота
 	SV	Lördag
@@ -464,7 +464,7 @@ SCREENSAVER_CLOCK_DAYSHORT_SATURDAY
 	IT	S
 	NL	Z
 	NO	l
-	PL	S
+	PL	N
 	RU	Сб
 	SV	S
 

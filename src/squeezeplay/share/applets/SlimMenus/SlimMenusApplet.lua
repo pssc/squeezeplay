@@ -83,6 +83,17 @@ local itemMap = {
 	-- items
 	settingsPlaylistMode = { "settingsPlaylistMode", "advancedSettingsBetaFeatures", 100 },
 	playerDisplaySettings = { "playerDisplaySettings", "settingsBrightness", 105 },
+
+	-- Belsonic menu nodes/items reordering
+	-- Delivered from backend but currently hidden on player
+	globalSearch = { "globalSearch", "hidden" },
+	opmlmyapps = { "opmlmyapps", "hidden" },
+	opmlappgallery = { "opmlappgallery", "hidden" },
+	audioscrobbler = { "audioscrobbler", "hidden" },
+
+	-- TODO: This list can be removed as soon as the server side has been fixed
+	-- Delivered from backend but wrong order / location
+	favorites = { "favorites", "home", 1},
 }
 
 
@@ -141,6 +152,9 @@ function notify_serverLinked(self, server)
 		local currentPlayer = appletManager:callService("getCurrentPlayer")
 		if currentPlayer and not (currentPlayer:getSlimServer() and currentPlayer:getSlimServer():isSqueezeNetwork()) then
 			self:_addSwitchToSnMenuItem()
+			-- delete existing menu items and fetch the new menu items from the backend
+			self:_removeStaleHomeMenus()
+			self:_fetchServerMenu(server)
 		end
 	end
 end
@@ -227,7 +241,6 @@ function notify_serverConnected(self, server)
 		_server:userRequest(_sinkSetServerMenuChunk(self, server, true) , _player:getId(), { 'menu', 0, 100, "direct:1" })
 	end
 end
-
 
 
 -- goHome
@@ -358,17 +371,10 @@ function  _addNode(self, node, isCurrentServer)
 	end
 end
 --add item to home menu only if this is for the current server or it doesn't exist. Only current server responses may replace existing items.
-function  _addItem(self, item, isCurrentServer, addToHome)
+function  _addItem(self, item, isCurrentServer)
 	if isCurrentServer or not _playerMenus[item.id] then
 		 _playerMenus[item.id] = item
 		 jiveMain:addItem(item)
-		if addToHome then
-			local customHomeItem = _uses(item, {
-				id = 'hm_' .. item.id,
-				node = 'home',
-			})
-			jiveMain:addItem(customHomeItem)
-		end
 	else
 		log:debug("item already present: ", item.id)
 	end
@@ -442,19 +448,6 @@ function _getAppType(request)
 end
 
 
-function _addMyAppsNode(self)
-	local version = _player and _player:getSlimServer() and _player:getSlimServer():getVersion()
-	local myApps = { id = 'myApps', iconStyle = 'hm_myApps', node = 'home', text = self:string('MENUS_MY_APPS'), weight = 30  } 
-	jiveMain:addNode( myApps )
-	_playerMenus['myApps'] = myApps
-
-	-- remove the old style My Apps item, if it exists
-	jiveMain:removeItemById('opmlmyapps')
-	self.myAppsNode = true
-	return
-end
-
-
 -- _menuSink
 -- returns a sink with a closure to self
 -- cmd is passed in so we know what process function to call
@@ -503,7 +496,6 @@ local function _menuSink(self, isCurrentServer, server)
 
 		for k, v in pairs(menuItems) do
 
-			local addAppToHome = false
 			local item = {
 					id = v.id,
 					node = v.node,
@@ -518,14 +510,11 @@ local function _menuSink(self, isCurrentServer, server)
 					screensavers = v.screensavers
 			}
 
+			-- TODO: remove when server sends correct sorting order
 			if item.isApp == 1 then
-				if not self.myAppsNode then
-					self:_addMyAppsNode()
-				end
-				if item.node == 'home' then
-					addAppToHome = true
-				end
-				item.node = 'myApps'
+				-- sorting of apps (Music Services) is sent incorrect by the server
+				--  set all weights to the same and let the menu do the alpha sorting
+				item.weight = 25
 			end
 
 			local itemIcon
@@ -603,8 +592,22 @@ local function _menuSink(self, isCurrentServer, server)
 
 			if not item.id then
 				log:info("no id for menu item: ", item.text)
-			elseif item.id == 'opmlmyapps' and self.myAppsNode then
-				--ignore, if self.myAppsNode is set that means we're delivering My Apps via a node and opml home menu items
+			elseif item.id == 'opmlmyapps' then
+				--ignore, not shown anymore
+			elseif item.id == 'opmlappgallery' then
+				--If opmlappgallery is present replace with hint
+				local itemMusicServices = {
+					id = 'menuMusicServices',
+					node = 'home',
+					iconStyle = 'hm_appGallery',
+					text = self:string('MUSIC_SERVICES_ADD'),
+					sound = 'WINDOWSHOW',
+					weight = 90,
+					callback = function(event, menuItem)
+						self:_menuMusicServices(menuItem)
+					end
+				}
+				self:_addItem(itemMusicServices, isCurrentServer)
 			elseif item.id == "playerpower" and System:hasSoftPower() and System:getMachine() ~= 'squeezeplay' then
 				--ignore, playerpower no longer shown to users since we use power button, unless this is a device without a power button
 			elseif item.id == "settingsPIN" then
@@ -660,7 +663,7 @@ local function _menuSink(self, isCurrentServer, server)
 				item.removeOnServerChange = true
 
 				--add the item to the menu
-				self:_addItem(item, isCurrentServer, addAppToHome)
+				self:_addItem(item, isCurrentServer)
 
 			else
 				local actionInternal = function (noLocking)
@@ -689,112 +692,10 @@ local function _menuSink(self, isCurrentServer, server)
 				end
 
 				item.callback = function(_, _, noLocking)
-					local action = function () actionInternal(noLocking) end
-					local switchToSn =
-						function()
-							local lastSc
-							if _server and not _server:isSqueezeNetwork() then
-								lastSc = _server
-							elseif _player then
-								lastSc = _player:getLastSqueezeCenter()
-							end
-							self:_selectMusicSource(action, self:_getSqueezeNetwork(), lastSc, true)
-						end
-
-					local switchToSc =
-						function()
-							self:_selectMusicSource(action, _player and _player:getLastSqueezeCenter() or nil,
-							  self:_getSqueezeNetwork(), true)
-						end
-
-					local switchToSnForSnOnlyItem =
-						function()
-							self:_selectMusicSource(action, self:_getSqueezeNetwork(),
-							 nil, true)
-						end
-
-					local switchToScForScOnlyItem =
-						function()
-							self:_selectMusicSource(action, _player and  _player:getLastSqueezeCenter() or nil,
-							  nil, true)
-						end
-
-					local currentPlayer = appletManager:callService("getCurrentPlayer")
-
-					-- if we know there is a network error condition, push on a diags window immediately
-					-- Bug 16552: don't push to diags window if player has tinySC and tinySC is running
-					if self.networkError and not ( System:hasTinySC() and appletManager:callService("isBuiltInSCRunning") ) then
-						log:warn('Network reported as not OK')
-						self.diagWindow = appletManager:callService("networkTroubleshootingMenu", self.networkError)
-						-- make sure we got a window generated to confirm we can leave this method
-						if self.diagWindow then
-							log:warn("we've pushed a diag window, so we're done here")
-							return
-						end
-					end
-
-					if not _server then
-						--should only happen if we load SN disconnected items and user selects one prior to _server being set on notify_playerCurrent
-						-- maybe we should wait in this case until it is loaded, but for how long, and then what after timeout?
-						--this case is a bit ugly. We don't know if SC will be able to serve it, so we shouldn't switch to SC
-						local initServer = appletManager:callService("getInitialSlimServer")
-						if not initServer  or (initServer and not initServer:isSqueezeNetwork() and  self:_canSqueezeNetworkServe(item)) then
-							log:info("Switch to SN when _server is nil")
-							switchToSn()
-						else
-							log:info("Switch to SC when _server is nil")
-							switchToSc()
-						end
-					else
-						--_server exists
-						if self.playerOrServerChangeInProgress then
-							--happens on failed attempt to chose a different server, re-connect to same
-							if _server:isSqueezeNetwork() then
-								log:info("switching to SN from SC, server change failure: ", _server)
-								if _player then
-									_player:setServerRefreshInProgress(true)
-								end
-								_server:disconnect()
-								switchToSn()
-							else
-								log:info("switching to SC from SN, server change failure: ", _server)
-								if _player then
-									_player:setServerRefreshInProgress(true)
-								end
-								_server:disconnect()
-								switchToSc()
-							end
-						else
-							if not _server:isConnected() then
-								if not _server:isSqueezeNetwork() and self:_canSqueezeNetworkServe(item) then
-									log:info("switching to SN from SC, connection issue: ", _server)
-									switchToSn()
-								elseif _server:isSqueezeNetwork() and self:_canSqueezeCenterServe(item) then
-									log:info("switching to SC from SN, connection issue: ", _server)
-									switchToSc()
-								else
-									log:info("only the current server can serve, let slim browse handle the connection issue")
-									action()
-								end
-							else
-								--server is connected
-								if _server:isSqueezeNetwork() and not self:_canSqueezeNetworkServe(item) then
-									log:debug("switching to SC for SC-only item: ", _server)
-									switchToScForScOnlyItem()
-								elseif not _server:isSqueezeNetwork() and not self:_canSqueezeCenterServe(item) then
-									log:debug("switching to SN for SN-only item ")
-									switchToSnForSnOnlyItem()
-								else
-									log:debug("Current server can serve: ", server)
-									action()
-								end
-							end
-
-						end
-					end
+					actionInternal(noLocking)
 				end
 
-				self:_addItem(item, isCurrentServer, addAppToHome)
+				self:_addItem(item, isCurrentServer)
 			end
 		end
 
@@ -959,7 +860,7 @@ function _addServerHomeMenuItems(self, server, menuItems)
 end
 
 
-function _updateMyMusicTitle(self, serverName)
+function _updateMyMusicTitle(self, server)
 	local myMusicNode = jiveMain:getMenuTable()["_myMusic"]
 	-- it is possible on some branches for there to be no myMusicNode
 	if not myMusicNode then
@@ -971,10 +872,10 @@ function _updateMyMusicTitle(self, serverName)
 		--todo: this doesn't handle on-the-fly language change well
 	end
 
-	if not serverName or serverName == "mysqueezebox.com" then
+	if not server or server:getId() == "ID_mysqueezebox.com" then
 		myMusicNode.text = myMusicNode.originalNodeText
 	else
-		myMusicNode.text =  serverName
+		myMusicNode.text =  server:getName()
 	end
 end
 
@@ -1100,21 +1001,21 @@ function myMusicSelector(self)
 		end
 		self:_selectMusicSource(function()
 						jiveMain:goHome()
-						self:_updateMyMusicTitle(_server and _server.name or nil)
+						self:_updateMyMusicTitle(_server)
 						jiveMain:openNodeById('_myMusic', true)
 					end,
 					connectServer)
 	elseif not _server then
 		self:_selectMusicSource(function()
 						jiveMain:goHome()
-						self:_updateMyMusicTitle(_server and _server.name or nil)
+						self:_updateMyMusicTitle(_server)
 						jiveMain:openNodeById('_myMusic', true)
 					end)
 
 	elseif _server:isSqueezeNetwork() then
 		--offer switch back to SC
 		self:_selectMusicSource(function()
-						self:_updateMyMusicTitle(_server and _server.name or nil)
+						self:_updateMyMusicTitle(_server)
 						jiveMain:openNodeById('_myMusic', true)
 					end,
 					_player:getLastSqueezeCenter(), nil, true)
@@ -1128,17 +1029,17 @@ function myMusicSelector(self)
 
 					appletManager:callService("showConnectToServer",
 								function()
-									self:_updateMyMusicTitle(_server and _server.name or nil)
+									self:_updateMyMusicTitle(_server)
 									jiveMain:openNodeById('_myMusic', true)
 								end,
 								_server)
 				else
-					self:_updateMyMusicTitle(_server and _server.name or nil)
+					self:_updateMyMusicTitle(_server)
 					jiveMain:openNodeById('_myMusic')
 				end
 			else
 				self:_selectMusicSource(function()
-								self:_updateMyMusicTitle(_server and _server.name or nil)
+								self:_updateMyMusicTitle(_server)
 								jiveMain:openNodeById('_myMusic', true)
 							end,
 							_server)
@@ -1150,7 +1051,7 @@ end
 function otherLibrarySelector(self)
 	self:_selectMusicSource(function()
 					jiveMain:goHome()
-					self:_updateMyMusicTitle(_server and _server.name or nil)
+					self:_updateMyMusicTitle(_server)
 					jiveMain:openNodeById('_myMusic', true)
 				end, false)
 end
@@ -1168,9 +1069,6 @@ function notify_playerCurrent(self, player)
 				log:debug("player and server didn't change , not changing menus: ", player)
 				return
 			else
-				-- Bug 17172
-				self.myAppsNode = false
-
 				-- server changed, ergo playerMenus may also be different. Remove the existing ones
 				for id, v in pairs(_playerMenus) do
 					jiveMain:removeItem(v)
@@ -1179,7 +1077,7 @@ function notify_playerCurrent(self, player)
 				_server = player:getSlimServer()
 
 				local playerName = _player:getName()
-				self:_updateMyMusicTitle(_server and _server.name or nil)
+				self:_updateMyMusicTitle(_server)
 
 				jiveMain:setTitle(playerName)
 
@@ -1274,7 +1172,7 @@ function notify_playerCurrent(self, player)
 
 		local playerName = _player:getName()
 --		playerName = self:_addServerNameToHomeTitle(playerName)
-		self:_updateMyMusicTitle(_server.name)
+		self:_updateMyMusicTitle(_server)
 
 		jiveMain:setTitle(playerName)
 
@@ -1314,7 +1212,6 @@ function notify_playerDelete(self, player)
 		self.playerOrServerChangeInProgress = true
 	end
 end
-
 
 function _fetchServerMenu(self, server)
 	log:debug("Fetching menu for server: ", server)
@@ -1374,6 +1271,47 @@ function _mergeServerMenuToHomeMenu(self, server, menuItems, isConnectedServer)
 end
 
 
+function _menuMusicServices(self)
+	local window = Window("text_list", self:string("MUSIC_SERVICES_ADD"), 'settingstitle')
+
+	local menu = SimpleMenu("menu", {
+					{
+						text = self:string("MUSIC_SERVICES_GO_BACK"),
+						sound = "WINDOWHIDE",
+						callback = function()
+								   window:hide()
+							   end
+					},
+				})
+
+	menu:setHeaderWidget(Textarea("help_text", self:string("MUSIC_SERVICES_HINT")))
+
+	window:addWidget(menu)
+
+	window:show()
+	return window
+end
+
+function _removeStaleHomeMenus(self)
+	if self.serverHomeMenuItems or _playerMenus then
+		self.serverHomeMenuItems = {}
+		self.waitingForPlayerMenuStatus = true
+		jiveMain:setTitle(nil)
+
+		for id, v in pairs(_playerMenus) do
+			jiveMain:removeItem(v)
+		end
+		_playerMenus = {}
+		-- make sure any home menu items are unlocked
+		if _lockedItem then
+			jiveMain:unlockItem(_lockedItem)
+			_lockedItem = false
+		end
+
+		_hidePlayerUpdating()
+	end
+end
+
 function free(self)
 
 	self.serverHomeMenuItems = {}
@@ -1387,9 +1325,6 @@ function free(self)
 
 	-- remove player menus
 	jiveMain:setTitle(nil)
-
-	-- Bug 17172
-	self.myAppsNode = false
 
 	for id, v in pairs(_playerMenus) do
 		jiveMain:removeItem(v)

@@ -54,7 +54,9 @@ local brightnessTable        = {}
 
 local UPDATE_WIRELESS        = 0x01
 local UPDATE_POWER           = 0x02
-
+local VOLTAGE_ALMOST_ZERO    = 1000
+local MAX_VALID_BATT_TEMP    = 100
+local MAX_SAFE_BATT_TEMP     = 47
 
 module(..., Framework.constants)
 oo.class(_M, SqueezeboxApplet)
@@ -129,7 +131,7 @@ local brightTarget = -1
 local brightMin = MIN_BRIGHTNESS_LEVEL_INIT
 local brightLast = -1
 local brightReadRateDivider = 1
-
+local initialState = false
 
 function init(self)
 	settings = self:getSettings()
@@ -180,7 +182,10 @@ function init(self)
 	sysOpen(self, "/sys/devices/platform/i2c-adapter:i2c-1/1-0010/", "battery_capacity")
 	sysOpen(self, "/sys/devices/platform/i2c-adapter:i2c-1/1-0010/", "charger_state")
 	sysOpen(self, "/sys/bus/i2c/devices/1-0010/", "alarm_time", "rw")
-
+	sysOpen(self, "/sys/devices/platform/i2c-adapter:i2c-1/1-0010/", "battery_temperature")
+	sysOpen(self, "/sys/devices/platform/i2c-adapter:i2c-1/1-0010/", "battery_vmon1_voltage")
+	sysOpen(self, "/sys/devices/platform/i2c-adapter:i2c-1/1-0010/", "battery_vmon2_voltage")
+	sysOpen(self, "/sys/devices/platform/i2c-adapter:i2c-1/1-0010/", "battery_voltage")
 	-- register wakeup/sleep functions
 	Framework:registerWakeup(function() wakeup(self) end)
 	Framework:addListener(EVENT_ALL_INPUT,
@@ -527,7 +532,7 @@ function _setBrightness(self, level)
 	end
 
 	-- Gradually reduce display brightness in IDLE mode when over half brightness
-	if self.powerState == "IDLE" then
+	if  self.powerState == "IDLE" then
 		if level > (MAX_BRIGHTNESS_LEVEL / 2) then
 			level = level - math.floor(10 * (level - (MAX_BRIGHTNESS_LEVEL / 2)) / (MAX_BRIGHTNESS_LEVEL / 2))
 		end
@@ -601,16 +606,16 @@ end
 
 --service method
 function getDefaultWallpaper(self)
-	local wallpaper = "bb_encore.png" -- default, if none found examining serial
+	local wallpaper = "bb_blue_en.png" -- default, if none found examining serial
 	if self._serial then
 		local colorCode = self._serial:sub(11,12)
 
 		if colorCode == "00" then
 			log:debug("case is black")
-			wallpaper = "bb_encore.png"
+			wallpaper = "bb_blue_en.png"
 		elseif colorCode == "01" then
 			log:debug("case is red")
-			wallpaper = "bb_encorered.png"
+			wallpaper = "bb_blue_en.png"
 		else
 			log:warn("No case color found (assuming black) examining serial: ", self._serial )
 		end
@@ -814,68 +819,114 @@ function isBatteryLow(self)
 	end
 end
 
-
 local function _updatePower(self)
 	local isLowBattery = false
 	local chargerState = sysReadNumber(self, "charger_state")
 	local batteryState = false
+	local battStatus = true
+	local battVmon1 =  sysReadNumber(self, "battery_vmon1_voltage")
+	local battVmon2 =  sysReadNumber(self, "battery_vmon2_voltage")
+	local battVmonP =  sysReadNumber(self, "battery_voltage")
+	local battTemp =  sysReadNumber(self, "battery_temperature")
 
 	if chargerState == nil then
 		return
 	end
 
-	if chargerState == 1 then
-		-- no battery is installed, we must be on ac!
-		log:debug("no battery")
-		batteryState = "battery"
-		iconbar:setBattery(nil)
-
-	elseif chargerState == 2 then
-		log:debug("on ac, fully charged")
-		batteryState = "ac"
-		iconbar:setBattery("AC")
-
-	elseif chargerState == 3 then
-		-- running on battery
-		batteryState = "battery"
-
-		local batteryCharge = sysReadNumber(self, "battery_charge")
-		local batteryCapacity = sysReadNumber(self, "battery_capacity")
-
-		local batteryRemain = (batteryCharge / batteryCapacity) * 100
-		log:debug("on battery power ", batteryRemain, "%")
-
-		iconbar:setBattery(math.min(math.floor(batteryRemain / 25) + 1, 4))
-
-	elseif chargerState == (3| (1<<5)) then
-		log:debug("low battery")
-		isLowBattery = true
-		batteryState = "battery"
-		iconbar:setBattery(0)
-
-	elseif (chargerState & 8) == 8 then
-		log:debug("on ac, charging")
-		batteryState = "ac"
-		iconbar:setBattery("CHARGING")
-
-	else
-		log:warn("invalid chargerState")
-		iconbar:setBattery(nil)
+	if battVmon1 == nil then
+		log:error("Unable to read Vmon1")
+		return
+	elseif battVmon2 == nil then
+		log:error("Unable to read Vmon2")
+		return
+	elseif battVmonP == nil then
+		log:error("Unable to read Vmon+")
+		return
+	elseif battTemp == nil then
+		log:error("Unable to read battery temperature")
+		return
 	end
 
-	-- wake up on ac power changes
-	if batteryState and batteryState ~= self.batteryState then
-		self:wakeup()
-		if batteryState == "ac" then                                                                            
-			iconbar.iconBattery:playSound("DOCKING")                            
-		end                                                                                       
+	battTemp =  battTemp /32.0 -- convert to celcius
+	log:debug("Vbat+ : " .. tostring(battVmonP) .. "  Vmon2 : " .. tostring(battVmon2) .. "  Vmon1 : " .. tostring(battVmon1) .. "  Temp : " .. tostring(battTemp))
+
+	-- Check battery against errors
+	if battVmon1 >=  VOLTAGE_ALMOST_ZERO and battVmon2 >= VOLTAGE_ALMOST_ZERO and battVmonP < VOLTAGE_ALMOST_ZERO then
+		log:info("Vbat+ fuse is broken ")
+		iconbar:setBattery("dead")
+		battStatus = false
+	elseif battVmon1 >=  VOLTAGE_ALMOST_ZERO and battVmon2 >= VOLTAGE_ALMOST_ZERO and battVmonP >= VOLTAGE_ALMOST_ZERO and battTemp > MAX_VALID_BATT_TEMP then
+		log:info("Temperature sensor is broken")
+		iconbar:setBattery("dead")
+		battStatus = false
+	elseif battVmon1 <  VOLTAGE_ALMOST_ZERO and battVmon2 < VOLTAGE_ALMOST_ZERO and battVmonP < VOLTAGE_ALMOST_ZERO and battTemp < MAX_VALID_BATT_TEMP then
+		log:info("Battery tab detected")
+		iconbar:setBattery("warning")
+		battStatus = false
+	elseif battVmon1 >=  VOLTAGE_ALMOST_ZERO and battVmon2 >= VOLTAGE_ALMOST_ZERO and battVmonP >= VOLTAGE_ALMOST_ZERO and battTemp >= MAX_SAFE_BATT_TEMP then
+		log:info("Battery is very hot")
+		iconbar:setBattery("error")
+		battStatus = false
+	elseif battVmon1 >= VOLTAGE_ALMOST_ZERO and battVmon2 <= VOLTAGE_ALMOST_ZERO and battVmonP <= VOLTAGE_ALMOST_ZERO then
+		log:info("Thermal fuse tripped")
+		iconbar:setBattery("error")
+		battStatus = false
 	end
 
-	if batteryState then
-		self.batteryState = batteryState
-	end
+	if battStatus then
+		if chargerState == 1 then
+			-- no battery is installed, we must be on ac!
+			log:debug("no battery")
+			batteryState = "battery"
+			iconbar:setBattery(nil)
 
-	self:_lowBattery(isLowBattery or self.testLowBattery)
+		elseif chargerState == 2 then
+			log:debug("on ac, fully charged")
+			batteryState = "ac"
+			iconbar:setBattery("AC")
+
+		elseif chargerState == 3 then
+			-- running on battery
+			batteryState = "battery"
+
+			local batteryCharge = sysReadNumber(self, "battery_charge")
+			local batteryCapacity = sysReadNumber(self, "battery_capacity")
+
+			local batteryRemain = (batteryCharge / batteryCapacity) * 100
+			log:debug("on battery power ", batteryRemain, "%")
+
+			iconbar:setBattery(math.min(math.floor(batteryRemain / 25) + 1, 4))
+
+		elseif chargerState == (3| (1<<5)) then
+			log:debug("low battery")
+			isLowBattery = true
+			batteryState = "battery"
+			iconbar:setBattery(0)
+
+		elseif (chargerState & 8) == 8 then
+			log:debug("on ac, charging")
+			batteryState = "ac"
+			iconbar:setBattery("CHARGING")
+		else
+			log:warn("invalid chargerState")
+			iconbar:setBattery(nil)
+		end
+
+		-- wake up on ac power changes
+		if batteryState and batteryState ~= self.batteryState then
+			self:wakeup()
+			if batteryState == "ac" and initialState then
+				iconbar.iconBattery:playSound("DOCKING")
+			end
+		end
+
+		if batteryState then
+			self.batteryState = batteryState
+			initialState = true
+		end
+
+		self:_lowBattery(isLowBattery or self.testLowBattery)
+	end
 end
 
 
@@ -1004,8 +1055,8 @@ function setPowerState(self, state)
 
 	self.powerState = state
 
-	-- Bug 16100, only setEndpoint if alarm is not in state: active, snooze or active_fallback
-	if self.player and (self.player:getAlarmState() == 'active' or self.player:getAlarmState() == 'snooze' or self.player:getAlarmState() == 'active_fallback') then
+	-- Bug 16100, only setEndpoint if alarm is not in state: active, snooze
+	if self.player and (self.player:getAlarmState() == 'active' or self.player:getAlarmState() == 'snooze') then
 		-- leave audio coming out speaker when alarm is active or in snooze (alarm forces output out speaker)
 		log:info('Alarm either in progress or snooze, do not call _setEndpoint()')
 	else
