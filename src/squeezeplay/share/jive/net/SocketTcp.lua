@@ -30,9 +30,8 @@ therefore is not fully useful as is.
 -- Convention: functions/methods starting with t_ are executed in the thread
 -----------------------------------------------------------------------------
 
-
 -- stuff we use
-local _assert, tostring = _assert, tostring
+local _assert, ipairs, pairs, setmetatable, tostring, tonumber, type = _assert, ipairs, pairs, setmetatable, tostring, tonumber, type
 
 local debug    = require("debug")
 
@@ -40,8 +39,16 @@ local socket   = require("socket")
 local oo       = require("loop.simple")
 
 local Socket   = require("jive.net.Socket")
+local ltn12       = require("ltn12")
 
 local log      = require("jive.utils.log").logger("net.http")
+
+local string      = require("string")
+local table       = require("table")
+
+local Proxy	= require("jive.net.Proxy")
+local Task        = require("jive.ui.Task")
+
 
 
 -- jive.net.SocketTcp is a subclass of jive.net.Socket
@@ -62,7 +69,7 @@ Must be called by subclasses.
 =cut
 --]]
 function __init(self, jnt, address, port, name)
-	--log:debug("SocketTcp:__init(", name, ", ", address, ", ", port, ")")
+	log:debug("SocketTcp:__init(", name, ", ", address, ", ", port, ")") --FIXME
 
 	_assert(address, "Cannot create SocketTcp without hostname/ip address - " .. debug.traceback())
 	_assert(port, "Cannot create SocketTcp without port")
@@ -73,6 +80,7 @@ function __init(self, jnt, address, port, name)
 		address = address,
 		port = port,
 		connected = false,
+		proxy = Proxy(jnt, address, port, name)
 	}
 
 	return obj
@@ -82,22 +90,31 @@ end
 -- t_connect
 -- connects our socket
 function t_connect(self)
-	--log:debug(self, ":t_connect()")
+	log:debug(self, ":t_connect()") 
 	
 	-- create a tcp socket
 	self.t_sock = socket.tcp()
 
-	-- set a long timeout for connection
+	-- set no timeout ie non blocking...
 	self.t_sock:settimeout(0)
-	local err = socket.skip(1, self.t_sock:connect(self.t_tcp.address, self.t_tcp.port))
 
+	if self.t_tcp.proxy:isProxied() then
+	   	self.t_tcp.address = self.t_tcp.proxy:getProxyIpOrServer()
+	   	self.t_tcp.port = self.t_tcp.proxy:getProxyPort()
+	end
+
+	local err = socket.skip(1, self.t_sock:connect(self.t_tcp.address, self.t_tcp.port))
+        
 	if err and err ~= "timeout" then
-	
-		log:error("SocketTcp:t_connect: ", err)
+		log:error(self,":t_connect: ", err)
 		return nil, err
-	
 	end
 	
+	if self.t_tcp.proxy:isProxied() then
+		-- Do proxy negotiation
+		self.t_addWrite(self,function(...) log:debug(self," Proxy W pump") end,self.t_tcp.proxy:getTimeOut())
+		self.t_addRead(self,function(...) log:debug(self," Proxy R pump") end,self.t_tcp.proxy:getTimeOut())
+	end
 	return 1
 end
 
@@ -105,7 +122,7 @@ end
 -- t_setConnected
 -- changes the connected state. Mutexed because main thread clients might care about this status
 function t_setConnected(self, state)
-	--log:debug(self, ":t_setConnected(", state, ")")
+	log:debug(self, ":t_setConnected(", state, ")") --FIXME
 
 	local stcp = self.t_tcp
 
@@ -146,7 +163,11 @@ end
 -- t_getIpPort
 -- returns the Address and port
 function t_getAddressPort(self)
-	return self.t_tcp.address, self.t_tcp.port
+	if self.proxyIsProxied() then
+	   return self.t_tcp.proxy:getHostIp(), self.t_tcp.proxy:getHostPort()
+	else
+	   return self.t_tcp.address, self.t_tcp.port
+	end
 end
 
 
@@ -183,11 +204,56 @@ function __tostring(self)
 end
 
 
--- Overrides to manage connected state
+-- Overrides to manage connected state and proxy connection
 
 -- t_add/read/write
 function t_addRead(self, pump, timeout)
 	local newpump = function(...)
+		local ps = self.t_tcp.proxy:getState()
+		if ps then
+		  local source = function()
+                                local line, err, partial = self.t_sock:receive('*l', partial)
+                                while partial do
+                                    line, err, partial = self.t_sock:receive('*l', partial)
+                                    if err and err ~= 'timeout' then -- nonblocking...
+                                        log:error(self, ":_addRead:proxy read status:", err)
+                                        self:close(err)
+                                        return nil, err
+                                    else
+                                        log:debug(self, ":_addRead:proxy read status:", err)
+                                    end
+                                    _, networkErr = Task:yield(false)
+
+                                    if networkErr then
+                                                log:warn(self, ":_addRead: yeild on read error: ", networkErr)
+                                        	self:close(networkErr)
+						return line, networkErr
+                                    end
+                                end
+
+                                log:debug(self,":_addRead:source=",line," err=",err)
+                                return line, err
+                  end
+		 
+                  while ps > 0 do
+			line, err = source()
+			if err then
+			   log:error(err)
+			   self:close(err)
+			   return
+			end
+			ps, data = self.t_tcp.proxy:step(line)
+	  	  end
+		  -- Yeild to write real request
+                                    _, networkErr = Task:yield(false)
+
+                                    if networkErr then
+                                                log:warn(self, ":_addRead: yeild for write on connect error: ", networkErr)
+                                        	self:close(networkErr)
+						return line,  networkErr
+                                    end
+		end
+
 		if not self.t_tcp.connected then self:t_setConnected(true) end
 		pump(...)
 	end
@@ -196,6 +262,38 @@ end
 
 function t_addWrite(self, pump, timeout)
 	local newpump = function(...)
+		local ps = self.t_tcp.proxy:getState()
+		if ps then 
+		   local sink = function(data)
+			       local err = socket.skip(1, self.t_sock:send(data))
+
+                		if err then
+                      			log:error(self, ":t_connect: proxy send: ", data, err)
+                       			self:close(err)
+                      			return 
+				end
+                                log:debug(self,":_addWrite:source=",line," err=",err)
+		   end
+
+		   while ps > 0 do
+			ps, data = self.t_tcp.proxy:step(nil)
+			if data then
+				sink(data)
+				if err then
+					log:error(err)
+					self:close(err)
+					return
+				end
+				
+			else
+			  _, networkErr = Task:yield(false)
+                          if networkErr then
+                                      log:warn(self, ":_addWead: yeild on write error: ", networkErr)
+                                      self:close()
+                          end
+			end
+		   end
+		end
 		if not self.t_tcp.connected then self:t_setConnected(true) end
 		pump(...)
 	end

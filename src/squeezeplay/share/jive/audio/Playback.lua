@@ -1,5 +1,5 @@
 
-local assert, tostring, type, pairs, ipairs, getmetatable, require = assert, tostring, type, pairs, ipairs, getmetatable, require
+local assert, tostring, type, pairs, ipairs, getmetatable, require ,tonumber = assert, tostring, type, pairs, ipairs, getmetatable, require, tonumber
 
 
 local oo                     = require("loop.base")
@@ -11,9 +11,10 @@ local math                   = require("math")
 local hasDecode, decode      = pcall(require, "squeezeplay.decode")
 local hasSprivate, spprivate = pcall(require, "spprivate")
 local Stream                 = require("squeezeplay.stream")
-local socket                 = require("socket") -- for proxy streams
+local socket                 = require("socket") -- for proxy streams and proxied sources
 local SlimProto              = require("jive.net.SlimProto")
 local Player                 = require("jive.slim.Player")
+local Proxy                  = require("jive.net.Proxy")
 
 local Task                   = require("jive.ui.Task")
 local Timer                  = require("jive.ui.Timer")
@@ -22,6 +23,10 @@ local hasNetworking, Networking = pcall(require, "jive.net.Networking")
 
 local debug                  = require("jive.utils.debug")
 local log                    = require("jive.utils.log").logger("audio.decode")
+
+
+local DNS         = require("jive.net.DNS")
+
 
 local iconbar = iconbar
 
@@ -474,13 +479,39 @@ end
 
 
 function _streamConnect(self, serverIp, serverPort, reader, writer, slaves)
-	log:info("connect ", _ipstring(serverIp), ":", serverPort, " ", string.match(self.header, "(.-)\n"))
+	log:info(self,":_streamconnect: ", _ipstring(serverIp), ":", serverPort, " ", string.match(self.header, "(.-)\n"))
 
+	-- FIXME
 	if serverIp ~= self.slimproto:getServerIp() then
-		log:info(self.header)
+		log:info(self,":_streamconnect:headers ", self.header," for ", _ipstring(serverIp),":",serverPort)
+	else
+		log:debug(self,":_streamconnect:headers ", self.header," for ", _ipstring(serverIp),":",serverPort)
 	end
 
 	_setSource(self, "stream")
+
+
+	self.stream_proxy = Proxy(self.jnt, _ipstring(serverIp), serverPort, "stream")
+
+	-- Stream proxy check...
+	if self.stream_proxy:isProxied() then
+		serverIp = self.stream_proxy:getProxyIp()
+		serverPort = self.stream_proxy:getProxyPort()
+		-- stream connect really really only likes Ip's
+		if not serverIp then
+			log:debug(self,"DNS:toip for proxy",self.stream_proxy:getProxyServer())
+			serverIp, err = DNS:toip(self.stream_proxy:getProxyServer())
+			if not serverIp then
+				log:error(self,":_streamconnect:Proxy DNS failure",self.stream_proxy:getProxyServer()," err=",err)
+				self:_streamDisconnect(TCP_CLOSE_LOCAL_RST)
+				return
+			else
+				self.stream_proxy:setProxyIp(serverIp)
+				log:warn(self,":_streamconnect:Proxy DNS Lookup ",self.stream_proxy:getProxyServer(),"(",serverIp,")")
+			end
+		end
+
+	end
 
 	self.stream = Stream:connect(serverIp, serverPort)
 
@@ -785,27 +816,116 @@ end
 
 function _streamWrite(self, networkErr)
 	if networkErr then
-		log:warn("write error: ", networkErr)
+		log:warn(self,":_streamWrite: error: ", networkErr)
 		self:_streamDisconnect(TCP_CLOSE_LOCAL_RST)
 		return
 	end
 
+	local ps = self.stream_proxy:getState()
+	if ps then
+                local sink = function(data)
+			local status, err = self.stream:write(self, data)
+                        if err  then
+                                        log:error(self, ":_streamWrite: proxy error: ", err, " on ", data)
+					self:_streamDisconnect(TCP_CLOSE_LOCAL_RST)
+					return err
+			end
+			return nil
+                end
+
+                while ps > 0 do
+                        ps, data = self.stream_proxy:step(nil)
+                        if data then
+                                err = sink(data)
+                                if err then
+                                        log:error(err)
+                                        self:close(err)
+                                        return
+                                end
+
+                        else
+                          _, networkErr = Task:yield(false)
+                          if networkErr then
+                                log:warn(self, ":_StreamWrite: yeild on write error: ", networkErr)
+				self:_streamDisconnect(TCP_CLOSE_LOCAL_RST)
+                          end
+                        end
+                end
+	end
+
+	-- send real headers
 	local status, err = self.stream:write(self, self.header)
+	log:debug(self,":_streamWrite: Sent Stream headers")
+
+	
 	self.jnt:t_removeWrite(self.stream)
 
 	if err then
-		log:warn("write error: ", err)
+		log:warn(self,":_streamWrite: write error: ", err)
 	end
 end
 
 
 function _streamRead(self, networkErr)
 	if networkErr then
-		log:warn("read error: ", networkErr)
+		log:warn(self, ":_streamRead: read error: ", networkErr)
 		self:_streamDisconnect(TCP_CLOSE_LOCAL_RST)
 		return
 	end
 
+
+	local ps = self.stream_proxy:getState()
+	if ps > 0 and self.stream:getfd() then
+		-- Dirty...
+		skt = socket.tcp()
+		-- connect for client socket? ie to proxy then close...at set the fd.... to skip proxy headers...
+		skt:connect(self.stream_proxy:getProxyIp(),self.stream_proxy:getProxyPort())
+		skt:close()
+		skt:setfd(self.stream:getfd())
+	
+       		local source = function()
+                                local line, err, partial = skt:receive('*l', partial)
+				while partial do
+                                    line, err, partial = skt:receive('*l', partial)
+                                    if err  and err ~= 'timeout' then -- nonblocking...
+                                        log:error(self, ":_streamRead:proxy read:", err)
+					self:_streamDisconnect(TCP_CLOSE_LOCAL_RST)
+                                        return false, err
+				    else
+                                        log:debug(self, ":_streamRead:proxy read:", err)
+				    end
+				    	_, networkErr = Task:yield(false)
+					if networkErr then
+						log:warn(self, ":_streamRead: yeild on read error: ", networkErr)
+						self:_streamDisconnect(TCP_CLOSE_LOCAL_RST)
+					end
+				end
+
+                                log:debug(self,":_streamRead:source=",line," err=",err)
+                                return line, err
+		end
+
+
+		while ps > 0 do
+                        line, err = source()
+                        if err then
+                           	log:error(err)
+                          	 self:close(err)
+	 			self:_streamDisconnect(TCP_CLOSE_LOCAL_RST)
+                               return
+                        end
+                        ps, data = self.stream_proxy:step(line)
+                end
+		log:debug(self, ":_streamRead: Proxy done.")
+			-- Yeild to write real request
+				    	_, networkErr = Task:yield(false)
+					if networkErr then
+						log:warn(self, ":_streamRead: yeild on proxy connect error: ", networkErr)
+						self:_streamDisconnect(TCP_CLOSE_LOCAL_RST)
+					end
+
+	end
+	-- and we are off.
 	local n = self.stream:read(self)
 	while n do
 		-- stop reading if the decoder is running. the socket will
@@ -819,6 +939,7 @@ function _streamRead(self, networkErr)
 	end
 
 	self:_streamDisconnect((n == false) and TCP_CLOSE_FIN or TCP_CLOSE_REMOTE_RST)
+    log:debug(self, ":_streamRead:disconnect ",(n == false) and TCP_CLOSE_FIN or TCP_CLOSE_REMOTE_RST)
 end
 
 
@@ -828,6 +949,10 @@ function _streamHttpHeaders(self, headers)
 		opcode = "RESP",
 		headers = headers,
 	})
+	self.stream_headers = headers
+	table.foreach(self, function(k,v)  
+	    log:debug(self,":_stream:HttpHeaders... [",k,"] = ",v)
+	end)
 end
 
 -- Bug 16170

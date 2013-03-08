@@ -108,7 +108,12 @@ function toip(self, address)
 	if err then
 		return nil, err
 	else
-		return hostent.ip[1], hostent
+		if hostent then
+			return hostent.ip[1], hostent
+		else
+			log:error(self,":address ",address," resulted in hostent nil")
+			return nil, "hostent nil"
+		end
 	end
 end
 
