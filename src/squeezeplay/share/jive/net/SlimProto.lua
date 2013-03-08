@@ -48,8 +48,11 @@ local PORT = 3483
 
 local DEVICEID = 7 -- XXXX using recevier device id
 
-local READ_TIMEOUT = 35
-local WRITE_TIMEOUT = 10
+--FIMXE pssc dynamic on if proxying?
+--local READ_TIMEOUT = 35
+local READ_TIMEOUT = 55
+--local WRITE_TIMEOUT = 10
+local WRITE_TIMEOUT = 55
 
 -- connection state
 local UNCONNECTED    = "UNCONNECTED"    -- not connected
@@ -487,12 +490,14 @@ function connectTask(self, serverip)
 
 		local data, err = self.socket.t_sock:receive(2)
 		if err then
+			log:debug(self,":t_sock:receive(2)=",err)
 			return _handleDisconnect(self, err)
 		end
 
 		local len = unpackNumber(data, 1, 2)
 		local data, err = self.socket.t_sock:receive(len)
 		if err then
+			log:debug(self,":t_sock:receive(",len,")=",err)
 			return _handleDisconnect(self, err)
 		end
 
@@ -584,6 +589,7 @@ function connectTask(self, serverip)
 
 	local ip = self.serverip
 	if not DNS:isip(ip) then
+		log:debug(self,"DNS:isip failed", ip)
 		ip = DNS:toip(ip)
 
 		if not ip then

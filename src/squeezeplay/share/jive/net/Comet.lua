@@ -369,8 +369,13 @@ _sendPendingRequests = function(self, data)
 		)
 		-- always use the long lived connection's (chttp) ip address, otherwise the ip address of rhttp can change from chhtp's. 
 		if DNS:isip(self.chttp.t_tcp.address) then
-			log:debug("caching chttp ip address: ", self.chttp.t_tcp.address, " for: ", self.uri)
-			self.rhttp.cachedIp = self.chttp.t_tcp.address
+			-- proxy connections
+			if self.chttp.t_tcp.proxy.proxied then
+			    self.rhttp.cachedIp = self.chttp.t_tcp.proxy:getHostIp()
+			else
+			    self.rhttp.cachedIp = self.chttp.t_tcp.address
+			end
+			log:debug("caching chttp ip address: ", self.rhttp.cachedIp, " for: ", self.uri)
 		end
 		self.rhttp:fetch(req)
 	end

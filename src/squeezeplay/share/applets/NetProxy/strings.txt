@@ -1,0 +1,48 @@
+#
+# The two letter codes are defined by ISO 639-1
+# http://en.wikipedia.org/wiki/List_of_ISO_639_codes
+
+# Meta
+APPLET_NAME
+	EN	Network Proxy
+
+# Applet
+TIMEOUT
+	EN	Timeout
+
+YES
+	EN	Yes
+
+NO
+	EN	No
+
+PROXY
+	EN	Proxy
+
+ADD
+	EN	Add
+
+DEFAULTS
+	EN	Defaults
+
+PORT
+	EN	Port
+
+NOPROXY
+	EN	No Proxy
+
+METHOD
+	EN	Method
+
+HTTP_CONNECT
+	EN	HTTP Connect
+
+LMS_SERVER
+	EN	LMS Proxy
+
+REMOVE
+	EN	Remove
+
+EDIT
+	EN	Edit
+

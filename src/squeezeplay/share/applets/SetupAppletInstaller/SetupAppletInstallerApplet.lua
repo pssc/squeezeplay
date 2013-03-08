@@ -67,7 +67,7 @@ function appletInstallerMenu(self, menuItem, action)
 	self.window = self.window or Window("text_list", self.title)
 	self.auto = action and action == 'auto'
 
-	local v1, v2, v3, v4 = string.match(JIVE_VERSION, "(%d+)%.(%d+)%.(%d+)%sr(%d+)")
+	local v1, v2, v3, v4 = string.match(JIVE_VERSION, "(%d+)%.(%d+)%.(%d+)%sr(%x+)")
 	self.version = v1 .. "." .. v2 .. "." .. v3 .. "." .. v4
 	log:info("requesting applets for version: ", self.version)
 
