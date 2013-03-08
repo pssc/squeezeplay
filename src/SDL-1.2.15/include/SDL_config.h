@@ -303,7 +303,7 @@
 /* #undef SDL_VIDEO_OPENGL_OSMESA_DYNAMIC */
 
 /* Disable screensaver */
-#define SDL_VIDEO_DISABLE_SCREENSAVER 1
+/* #undef SDL_VIDEO_DISABLE_SCREENSAVER */
 
 /* Enable assembly routines */
 #define SDL_ASSEMBLY_ROUTINES 1
