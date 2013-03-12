@@ -13,7 +13,7 @@ Please Feedback to http://forums.slimdevices.com/showthread.php?92101-Raspberry-
 
 [armhf binary release 7.8.0-c8f860c](https://www.dropbox.com/s/bxzznwbd5fszchj/squeezeplay-7.8.0-c8f860c.tgz)
 
-Wiid support from https://github.com/cowboy-coders/squeezeplay-wicd-frontend
+Wicd support from https://github.com/cowboy-coders/squeezeplay-wicd-frontend
 
 Enjoy 
 
