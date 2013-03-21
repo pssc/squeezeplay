@@ -1137,6 +1137,7 @@ function fetchArtwork(self, iconId, icon, size, imgFormat)
 		 	url = url .. "." .. imgFormat
 		end
 	else
+		-- pssc FIXME use active server internal sp resizer...
 		-- Use the SN image resizer on all remote URLs until SP can resize images with better quality
 		if string.find(iconId, "^http") then
 			-- Bug 13937, if URL references a private IP address, don't use imageproxy
