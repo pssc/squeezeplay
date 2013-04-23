@@ -1,0 +1,26 @@
+APPLET_NAME
+	EN	Input Detector
+
+APPLET_DESC
+	EN	Local/Remote HID Differentiator
+
+UNMAPPED
+	EN	Umapped 
+
+LOCAL
+	EN	Local
+
+REMOTE
+	EN	Remote
+
+DEFAULT
+	EN	Default for Unmapped Devices
+
+IGNORE
+	EN	Ignored
+
+APPLET_STATE
+	EN	Last Input Mapped:
+
+UNINIT
+	EN	Initial Value
