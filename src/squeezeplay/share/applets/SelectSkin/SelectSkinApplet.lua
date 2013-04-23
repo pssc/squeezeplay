@@ -55,7 +55,7 @@ end
 
 
 function selectSkinEntryPoint(self, menuItem)
-	if System:hasTouch() and System:isHardware() then
+	if System:hasTouch() and (System:isHardware() or appletManager:hasApplet("InputDetector")) then
 		local window = Window("text_list", menuItem.text, 'settingstitle')
 		local menu = SimpleMenu("menu")
 		menu:addItem({
