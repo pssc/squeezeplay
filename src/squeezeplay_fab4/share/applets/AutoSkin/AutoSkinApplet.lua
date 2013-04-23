@@ -96,10 +96,12 @@ function init(self, ...)
 
 	Framework:addListener(EVENT_MOUSE_ALL,
 		function(event)
+			local mapping = appletManager:callService("getInputDetectorMapping")
+			local skin = mapping =='REMOTE' and remoteSkin or touchSkin
 
 			-- ignore event when switching from remote to touch: we don't know what we're touching
 			-- wake up if in screensaver mode - this is a non critical action
-			if self:changeSkin(touchSkin) and not appletManager:callService("isScreensaverActive") then
+			if self:changeSkin(skin) and not appletManager:callService("isScreensaverActive") then
 				log:warn("ignore me - I don't know what I'm touching!")
 				return EVENT_CONSUME
 			end
@@ -108,12 +110,29 @@ function init(self, ...)
 		end,
 		-100)
 
+	Framework:addListener(EVENT_ALL_INPUT,
+		function(event)
+			local mapping = appletManager:callService("getInputDetectorMapping")
+			local skin = mapping =='REMOTE' and remoteSkin or touchSkin 
+			
+			log:debug(self,":AutoSkin INPUT listener ",event:getType())
+			-- FIXME key blacklist...? and or gnore initial keypress after switching from touch to remote
+			if self:changeSkin(skin) then 
+				return EVENT_CONSUME
+			end
+
+			return EVENT_UNUSED
+		end,
+	-100)
+
 	return self
 end
 
 
 
 function changeSkin(self, skinType)
+	log:debug(self,":changeSkin ",skinType,"==",self.mode)
+
 	if  self.mode == skinType then
 		return false
 	end
