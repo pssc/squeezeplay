@@ -153,7 +153,7 @@ end
 -- _t_select
 -- runs our sockets through select
 local function _t_select(self, timeout)
---	log:debug("_t_select(r", #self.t_readSocks, " w", #self.t_writeSocks, ")")
+--	log:debug("_t_select(r", #self.t_readSocks, " w", #self.t_writeSocks, ") ",timeout)
 
 	local r,w,e = socket.select(self.t_readSocks, self.t_writeSocks, timeout)
 
@@ -194,15 +194,17 @@ end
 local function _run(self, timeout)
 	local ok, err
 
-	log:debug("NetworkThread starting...")
+	log:debug("NetworkThread starting...",timeout)
 
 	while true do
 		local timeoutSecs = timeout / 1000
 		if timeoutSecs < 0 then
 			timeoutSecs = 0
+		elseif timeoutSecs > 0 then
+			log:debug("NetworkThread select timeout ",timeoutSecs)
 		end
 
-		ok, err = pcall(_t_select, self, timeoutSecs)
+		ok, err = pcall(_t_select, self, timeoutSecs) -- Note timeout is effectivly 0 so we are polling as we will block 
 		if not ok then
 			log:error("error in _t_select: " .. err)
 		end

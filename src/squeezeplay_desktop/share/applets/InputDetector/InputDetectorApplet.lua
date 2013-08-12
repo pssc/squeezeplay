@@ -146,6 +146,7 @@ function getInputDetectorMapping(self)
 		end	
 	else
 		log:warn(self,":getInputDetectorMapping task nil")
+		self:monitordevices()
 	end
 	
 	log:info(self,":getInputDetectorMapping ",mappings[mapping])
@@ -157,17 +158,18 @@ function getInputDetectorDevice(self)
 end
 
 function startInputDetector(self)
-	if not task then
-		local settings = self:getSettings()
-		mapping = settings.default_mapping
-		for k,v in pairs(settings) do log:debug(self,":startInputDetector settings [",k,"]=",v) end
-		for k,v in pairs(settings.devicelist) do log:debug(self,":startInputDetector devlist [",k,"]=",v) end
+	local settings = self:getSettings()
+	mapping = settings.default_mapping
+	for k,v in pairs(settings) do log:debug(self,":startInputDetector settings [",k,"]=",v) end
+	for k,v in pairs(settings.devicelist) do log:debug(self,":startInputDetector devlist [",k,"]=",v) end
+	readfds = self:readfdsetup(settings.devicelist)
+
+	if not task and false then
 		task = Task("InputDectector", self, monitordevicesloop)
 			
 		if not task:addTask("InputDectectorLoop") then
 			log:error(":startInputDectector Task add failed")
 		end
-
 	end
 end
 
@@ -283,10 +285,6 @@ function readfdsetup(self,t)
 end
 
 function monitordevicesloop(self)
-	local settings = self:getSettings()
-        settings.devicelist = self:getDeviceList(settings.devicelist)
-        readfds = self:readfdsetup(settings.devicelist)
-
 	-- select over all devices last device matches selected devices?
 	-- run in task thread... this can get called alot so keep small and tight
 	while (true) do
