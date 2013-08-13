@@ -271,7 +271,7 @@ function readfdsetup(self,t)
 		if not (r.mapping and r.mapping == "IGNORE") then
 			local dev, err = io.open(device,"rb")
 			if err then
-				log:error(device, "open error", err)
+				log:warn(device, " open ", err)
 			else
 				readfds[n] = { getfd = function() return dev.fileno and dev:fileno() or lfs.fileno(dev) end, dev = dev, detail = t[n] , file = device }
 			end
