@@ -1,0 +1,379 @@
+#
+# The two letter codes are defined by ISO 639-1
+# http://en.wikipedia.org/wiki/List_of_ISO_639_codes
+#
+
+INVALID_MAC_TITLE
+	CS	Chyba
+	DA	Fejl
+	DE	Fehler
+	EN	Error
+	ES	Error
+	FI	Virhe
+	FR	Erreur
+	IT	Errore
+	NL	Fout
+	NO	Feil
+	PL	Błąd
+	RU	Ошибка
+	SV	Fel
+
+INVALID_MAC_TEXT
+	CS	Neplatná adresa mac nebo uuid. Kontaktujte zákaznickou podporu.
+	DA	Ugyldig MAC-adresse eller UUID. Kontakt supportafdelingen.
+	DE	Ungültige MAC-Adresse oder UUID. Wenden Sie sich an den Kundendienst.
+	EN	Invalid mac address or uuid. Please contact support.
+	ES	Dirección MAC o UUID no válidos. Contacte con asistencia técnica.
+	FI	Virheellinen MAC-osoite tai UUID. Ota yhteyttä tekniseen tukeen.
+	FR	Adresse MAC ou uuid non valide. Veuillez contacter le service de support.
+	IT	Indirizzo MAC o UUID non valido. Contattare il servizio di assistenza.
+	NL	Ongeldig mac-adres of uuid. Neem contact op met ondersteuning.
+	NO	Ugyldig mac-adresse eller uuid. Ta kontakt med kundestøtte.
+	PL	Nieprawidłowy adres MAC lub identyfikator UUID. Skontaktuj się z działem wsparcia.
+	RU	Недопустимый mac-адрес или uuid. Обратитесь в службу поддержки.
+	SV	Ogiltig MAC-adress eller ogiltigt UUID. Kontakta supportavdelningen.
+
+INVALID_MAC_CONTINUE
+	CS	Pokračovat
+	DA	Fortsæt
+	DE	Weiter
+	EN	Continue
+	ES	Continuar
+	FI	Jatka
+	FR	Continuer
+	IT	Continua
+	NL	Verdergaan
+	NO	Fortsett
+	PL	Kontynuuj
+	RU	Продолжить
+	SV	Fortsätt
+
+SCREEN_INPUT_CONTROL_TITLE
+	CS	Řízení vstupu
+	DA	Betjening
+	DE	Eingabesteuerung
+	EN	Input Control
+	ES	Control de entrada
+	FI	Tulon hallinta
+	FR	Contrôle des entrées
+	IT	Controllo input
+	NL	Regeling van ingang
+	NO	Innsignalkontroll
+	PL	Sterowanie wejściem
+	RU	Управление вводом
+	SV	Ingångskontroll
+
+SCREEN_INPUT_CONTROL_BOTH
+	CS	Obojí (dotykové a dálkové)
+	DA	Begge (berøring og fjernbetjening)
+	DE	Drücken und Fernbedienung
+	EN	Both (Touch and Remote)
+	ES	Ambos (táctil y mando a distancia)
+	FI	Molemmat (kosketus ja etä)
+	FR	Toucher et Télécommande
+	IT	Entrambi (tocco e telecomando)
+	NL	Beide (Aanraken en afstandsbediening)
+	NO	Begge (berøring og fjernkontroll)
+	PL	Obydwa (urządzenie Touch i pilot zdalnego sterowania)
+	RU	Оба (сенсорное и пульт)
+	SV	Båda (pekskärm och fjärrkontroll)
+
+SCREEN_INPUT_CONTROL_IR
+	CS	Dálkové ovládání
+	DA	Fjernbetjening
+	DE	Fernbedienung
+	EN	Remote
+	ES	Mando a distancia
+	FI	Kaukosäädin
+	FR	Télécommande
+	IT	Telecomando
+	NL	Afstandsbediening
+	NO	Fjernkontroll
+	PL	Pilot zdalnego sterowania
+	RU	Пульт
+	SV	Fjärr
+
+SCREEN_INPUT_CONTROL_TOUCH
+	CS	Dotyk
+	DA	Berøring
+	DE	Drücken
+	EN	Touch
+	ES	Táctil
+	FI	Kosketa
+	FR	Toucher
+	IT	Tocco
+	NL	Aanraken
+	NO	Berøring
+	PL	Urządzenie Touch
+	RU	Сенсорное
+	SV	Pekskärm
+
+BSP_BRIGHTNESS
+	CS	Jas
+	DA	Lysstyrke
+	DE	Helligkeit
+	EN	Brightness
+	ES	Brillo
+	FI	Kirkkaus
+	FR	Luminosité
+	IT	Luminosità
+	NL	Helderheid
+	NO	Lysstyrke
+	PL	Jasność
+	RU	Яркость
+	SV	Ljusstyrka
+
+BSP_BRIGHTNESS_CTRL
+	CS	Ovládání jasu
+	DA	Lysstyrkeregulering
+	DE	Helligkeitsregelung
+	EN	Brightness Control
+	ES	Control de brillo
+	FI	Kirkkauden säätö
+	FR	Contrôle de luminosité
+	IT	Controllo della luminosità
+	NL	Helderheidscontrole
+	NO	Lysstyrke
+	PL	Regulacja jasności
+	RU	Управление яркостью
+	SV	Ljusstyrka
+
+BSP_BRIGHTNESS_AUTOMATIC
+	CS	Automatický jas
+	DA	Automatisk lysstyrke
+	DE	Automatische Helligkeit
+	EN	Automatic Brightness
+	ES	Brillo automático
+	FI	Automaattinen kirkkaus
+	FR	Luminosité automatique
+	IT	Luminosità automatica
+	NL	Automatische helderheid
+	NO	Automatisk lysstyrke
+	PL	Automatyczna regulacja jasności
+	RU	Автонастройка яркости
+	SV	Automatisk ljusstyrka
+
+BSP_BRIGHTNESS_MANUAL
+	CS	Manuální jas
+	DA	Manuel lysstyrke
+	DE	Manuelle Helligkeit
+	EN	Manual Brightness
+	ES	Brillo manual
+	FI	Manuaalinen kirkkaus
+	FR	Luminosité manuelle
+	IT	Luminosità manuale
+	NL	Handmatige helderheid
+	NO	Manuell lysstyrke
+	PL	Ręczna regulacja jasności
+	RU	Ручная настройка яркости
+	SV	Manuell ljusstyrka
+
+BSP_BRIGHTNESS_MIN
+	CS	Minimální jas
+	DA	Mindste lysstyrke
+	DE	Minimale Helligkeit
+	EN	Minimal Brightness
+	ES	Brillo mínimo
+	FI	Vähimmäiskirkkaus
+	FR	Luminosité minimale
+	IT	Luminosità minima
+	NL	Minimale helderheid
+	NO	Minimal lysstyrke
+	PL	Minimalna jasność
+	RU	Минимальная яркость
+	SV	Minsta ljusstyrka
+
+BSP_BRIGHTNESS_ADJUST_HELP
+	CS	K nastavení jasu použijte kolečko.
+	DA	Brug drejeknappen til at justere lysstyrken.
+	DE	Sie können die Helligkeit mit dem Rad anpassen.
+	EN	Use the wheel to adjust the brightness.
+	ES	Use la rueda para ajustar el brillo.
+	FI	Voit säätää kirkkautta kiekolla.
+	FR	Utilisez la molette pour régler la luminosité.
+	IT	Usare la rotellina per regolare la luminosità.
+	NL	Gebruik het wiel om de helderheid aan te passen.
+	NO	Bruk hjulet til å justere lysstyrken.
+	PL	Użyj pokrętła, aby ustawić jasność.
+	RU	Используйте колесико для регулировки яркости.
+	SV	Justera ljusstyrkan med rullningshjulet.
+
+SERVER_HAS_BEEN_STOPPED
+	CS	Místní hudební služba byla zastavena
+	DA	Den lokale musiktjeneste er stoppet
+	DE	Lokaler Musikdienst wurde beendet
+	EN	Local music service stopped
+	ES	Servicio de música local detenido
+	FI	Paikallinen musiikkipalvelu keskeytetty
+	FR	Le service de musique local s'est arrêté
+	IT	Servizio locale di musica interrotto
+	NL	Lokale muziekservice gestopt
+	NO	Den lokale musikktjenesten stoppet
+	PL	Lokalna usługa muzyczna została zatrzymana
+	RU	Локальная музыкальная служба остановлена
+	SV	Lokal musiktjänst stoppades
+
+SERVER_HAS_BEEN_STOPPED_INFO
+	CS	Místní hudební služba byla zastavena kvůli problému.
+	DA	Den lokale musiktjeneste er stoppet pga. et problem.
+	DE	Lokaler Musikdienst wurde aufgrund eines Problems beendet.
+	EN	Local music service has been stopped due to a problem.
+	ES	El servicio de música local se ha detenido debido a un problema.
+	FI	Paikallinen musiikkipalvelu on keskeytetty ongelman takia.
+	FR	Le service de musique local a été arrêté en raison d'un problème.
+	IT	Il servizio locale di musica è stato interrotto a causa di un problema.
+	NL	Lokale muziekservice is vanwege een probleem gestopt.
+	NO	Den lokale musikktjenesten ble stoppet pga. et problem.
+	PL	Lokalna usługa muzyczna została zatrzymana ze względu na problem.
+	RU	Локальная музыкальная служба остановлена из-за неполадок.
+	SV	Lokal musiktjänst har stoppats på grund av problem.
+	
+BSP_BRIGHTNESS_SCREENSAVER
+	CS	Reduce on screen saver
+	DA	Reduce on screen saver
+	DE	Reduce on screen saver
+	EN	Reduce on screen saver
+	ES	Reduce on screen saver
+	FI	Reduce on screen saver
+	FR	Reduce on screen saver
+	IT	Reduce on screen saver
+	NL	Verminder bij schermbeveiliging
+	NO	Reduce on screen saver
+	PL	Reduce on screen saver
+	RU	Reduce on screen saver
+	SV	Reduce on screen saver
+
+BSP_BRIGHTNESS_DIMWHENPLAYING
+	CS	Při přehrávání
+	DA	Under afspilning
+	DE	Bei Wiedergabe
+	EN	When playing
+	ES	Al reproducir
+	FI	Toistettaessa
+	FR	Pendant la lecture
+	IT	Durante la riproduzione
+	NL	Tijdens afspelen
+	NO	Under avspilling
+	PL	Podczas odtwarzania
+	RU	При воспроизведении
+	SV	Vid uppspelning
+
+BSP_BRIGHTNESS_DIMWHENSTOPPED
+	CS	Při zastavení
+	DA	Når den er stoppet
+	DE	Wenn angehalten
+	EN	When stopped
+	ES	Al detener
+	FI	Keskeytettynä
+	FR	A l'arrêt
+	IT	Quando la riproduzione è interrotta
+	NL	Wanneer gestopt
+	NO	Ved stopp
+	PL	Po zatrzymaniu
+	RU	При остановке
+	SV	I stoppat läge
+
+BSP_BRIGHTNESS_DIMWHENOFF
+	CS	Při vypnutí
+	DA	Når den er slukket
+	DE	Wenn aus
+	EN	When off
+	ES	Al apagar
+	FI	Laitteen ollessa pois päältä
+	FR	En état éteint
+	IT	Se disattivato
+	NL	Wanneer uit
+	NO	Av
+	PL	Po wyłączeniu
+	RU	При выкл.
+	SV	I avstängt läge
+
+BSP_BRIGHTNESS_ACTIVE_MAXIMUM
+	CS	Maximum brightness (active)
+	DA	Maximum brightness (active)
+	DE	Maximum brightness (active)
+	EN	Maximum brightness (active)
+	ES	Maximum brightness (active)
+	FI	Maximum brightness (active)
+	FR	Maximum brightness (active)
+	IT	Maximum brightness (active)
+	NL	Maximale helderheid (actief)
+	NO	Maximum brightness (active)
+	PL	Maximum brightness (active)
+	RU	Maximum brightness (active)
+	SV	Maximum brightness (active)
+	
+BSP_BRIGHTNESS_ACTIVE_MINIMUM
+	CS	Minimum brightness (active)
+	DA	Minimum brightness (active)
+	DE	Minimum brightness (active)
+	EN	Minimum brightness (active)
+	ES	Minimum brightness (active)
+	FI	Minimum brightness (active)
+	FR	Minimum brightness (active)
+	IT	Minimum brightness (active)
+	NL	Minimale helderheid (actief)
+	NO	Minimum brightness (active)
+	PL	Minimum brightness (active)
+	RU	Minimum brightness (active)
+	SV	Minimum brightness (active)
+	
+BSP_BRIGHTNESS_SCREENSAVER_MAXIMUM
+	CS	Maximum brightness (screen saver)
+	DA	Maximum brightness (screen saver)
+	DE	Maximum brightness (screen saver)
+	EN	Maximum brightness (screen saver)
+	ES	Maximum brightness (screen saver)
+	FI	Maximum brightness (screen saver)
+	FR	Maximum brightness (screen saver)
+	IT	Maximum brightness (screen saver)
+	NL	Maximale helderheid (schermbeveiliging)
+	NO	Maximum brightness (screen saver)
+	PL	Maximum brightness (screen saver)
+	RU	Maximum brightness (screen saver)
+	SV	Maximum brightness (screen saver)
+	
+BSP_BRIGHTNESS_SCREENSAVER_MINIMUM
+	CS	Minimum brightness (screen saver)
+	DA	Minimum brightness (screen saver)
+	DE	Minimum brightness (screen saver)
+	EN	Minimum brightness (screen saver)
+	ES	Minimum brightness (screen saver)
+	FI	Minimum brightness (screen saver)
+	FR	Minimum brightness (screen saver)
+	IT	Minimum brightness (screen saver)
+	NL	Minimale helderheid (schermbeveiliging)
+	NO	Minimum brightness (screen saver)
+	PL	Minimum brightness (screen saver)
+	RU	Minimum brightness (screen saver)
+	SV	Minimum brightness (screen saver)
+	
+BSP_BRIGHTNESS_ACTIVE_WHEN_PLAYING
+	CS	Use active brightness when playing
+	DA	Use active brightness when playing
+	DE	Use active brightness when playing
+	EN	Use active brightness when playing
+	ES	Use active brightness when playing
+	FI	Use active brightness when playing
+	FR	Use active brightness when playing
+	IT	Use active brightness when playing
+	NL	Gebruik actieve helderheid bij afspelen
+	NO	Use active brightness when playing
+	PL	Use active brightness when playing
+	RU	Use active brightness when playing
+	SV	Use active brightness when playing
+
+BSP_BRIGHTNESS_DISABLE_SCREEN_SAFE
+	CS	Disable gradual dim when idle (not recommended!)
+	DA	Disable gradual dim when idle (not recommended!)
+	DE	Disable gradual dim when idle (not recommended!) 
+	EN	Disable gradual dim when idle (not recommended!) 
+	ES	Disable gradual dim when idle (not recommended!) 
+	FI	Disable gradual dim when idle (not recommended!) 
+	FR	Disable gradual dim when idle (not recommended!) 
+	IT	Disable gradual dim when idle (not recommended!) 
+	NL	Helderheid voor scherm niet aanpassen (niet aanbevolen!)
+	NO	Disable gradual dim when idle (not recommended!) 
+	PL	Disable gradual dim when idle (not recommended!) 
+	RU	Disable gradual dim when idle (not recommended!) 
+	SV	Disable gradual dim when idle (not recommended!) 

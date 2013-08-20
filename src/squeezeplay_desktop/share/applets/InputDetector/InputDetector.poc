@@ -1,0 +1,103 @@
+#!/usr/bin/lua
+-- egrep "^N:|^H:|^$" /proc/bus/input/devices
+
+-- loads the socket module 
+local socket = require("socket")
+
+local devices =  io.open("/proc/bus/input/devices", "r")
+local t = {}
+
+if not io.fileno then
+	local posix  = require("posix")
+	print("No file no io.fileno() loadind posix")
+end
+
+
+--[[
+N: Name="e2i Technology, Inc. USB Touchpanel"
+H: Handlers=mouse3 event9
+
+N: Name="libcec-daemon"
+H: Handlers=kbd event0
+--]]
+
+local name
+for line in devices:lines() do
+	local tag, s = string.match(line, "^(.*): (.*)")
+
+	-- print(line,"\n",tag,str)
+	if tag and s then
+		if tag == "N" then
+			name = string.match(s, "Name=(.*)")
+		elseif tag == "H" then
+			local event = string.match(s, "(event[0-9]+)")
+
+			local kbd = string.match(s, "(kbd)")
+			local mouse = string.match(s, "(mouse[0-9])")
+			local hander = "other"
+			
+			if mouse and kbd then 
+				handler = "combind"
+			elseif mouse then
+				handler = mouse
+			elseif kbd then
+				handler = kbd
+			end
+
+			if event and name then
+				t[#t+1] = { name = name, event = event , handler = handler }
+			end
+		end
+	else
+	    name = nil
+	end
+end
+
+local remote = { }
+local readfds = {}
+
+
+for n,r in pairs(t) do 
+	local device = "/dev/input/"..t[n].event
+	print(n, r.name, r.event, r.handler) 
+	print(device)
+	local dev, err = io.open(device,"rb")
+
+	
+	if err then
+		print(device, "open error", err)
+	else
+		readfds[n] = { getfd = function() return dev.fileno and dev:fileno() or posix.fileno(dev) end, dev = dev, detail = t[n] }
+
+	end
+	
+end
+
+print("readfds",#readfds)
+
+while (true) do
+	local r,w,err = socket.select(readfds,nil,-1)
+
+	if err then
+		print(device, "select error", err)
+	end
+
+	for n,fd in ipairs(r) do
+		print(n,fd.detail.name,fd.detail.handler)
+		for i, k in pairs(fd) do print(i,k) end
+		fd.dev:seek("end") -- char dev seems not to be seekable
+
+		local consume = {fd}
+		--consume data
+		while(#r > 0) do
+			r,w,err = socket.select(consume,nil,0)
+			if #r > 0 then
+				fd.dev:read(1) -- FIXME SIZE of event no eof 48
+			end
+		end
+	end
+end
+
+-- local dev  = io.open(device)
+-- select over all devices last device mateches selected devices?
+

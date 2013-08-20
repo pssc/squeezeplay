@@ -1,0 +1,2397 @@
+Only in /usr/src/sp/src/SDL-1.2.13: build
+Only in /usr/src/sp/src/SDL-1.2.13: build-deps
+Only in /usr/src/sp/src/SDL-1.2.13/build-scripts: fatbuild-10.6.sh
+diff -ru /home/pc188/Downloads/SDL-1.2.13/build-scripts/fatbuild.sh /usr/src/sp/src/SDL-1.2.13/build-scripts/fatbuild.sh
+--- /home/pc188/Downloads/SDL-1.2.13/build-scripts/fatbuild.sh	2007-12-31 04:47:51.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/build-scripts/fatbuild.sh	2012-09-03 13:39:20.000000000 +0100
+@@ -1,7 +1,7 @@
+ #!/bin/sh
+ #
+ # Build a fat binary on Mac OS X, thanks Ryan!
+-
++prefix=$PREFIX
+ # Number of CPUs (for make -j)
+ NCPU=`sysctl -n hw.ncpu`
+ NJOB=$NCPU
+@@ -202,7 +202,7 @@
+ #
+ if test x$configure_ppc = xyes; then
+     (cd build/ppc && \
+-     sh ../../configure $CONFIG_PPC CC="$CC_PPC" CXX="$CXX_PPC" CFLAGS="$CFLAGS $CFLAGS_PPC" CPPFLAGS="$CPPFLAGS_PPC" LDFLAGS="$LFLAGS_PPC") || exit 2
++     sh ../../configure $CONFIGURE_FLAGS_EXTRA --prefix=$PREFIX $CONFIG_PPC CC="$CC_PPC" CXX="$CXX_PPC" CFLAGS="$CFLAGS $CFLAGS_PPC" CPPFLAGS="$CPPFLAGS_PPC" LDFLAGS="$LFLAGS_PPC") || exit 2
+ fi
+ if test x$make_ppc = xyes; then
+     (cd build/ppc && ls include && make -j$NJOB) || exit 3
+@@ -213,7 +213,7 @@
+ #
+ if test x$configure_x86 = xyes; then
+     (cd build/x86 && \
+-     sh ../../configure $CONFIG_X86 CC="$CC_X86" CXX="$CXX_X86" CFLAGS="$CFLAGS $CFLAGS_X86" CPPFLAGS="$CPPFLAGS_X86" LDFLAGS="$LFLAGS_X86") || exit 2
++     sh ../../configure $CONFIGURE_FLAGS_EXTRA --prefix=$PREFIX $CONFIG_X86 CC="$CC_X86" CXX="$CXX_X86" CFLAGS="$CFLAGS $CFLAGS_X86" CPPFLAGS="$CPPFLAGS_X86" LDFLAGS="$LFLAGS_X86") || exit 2
+ fi
+ if test x$make_x86 = xyes; then
+     (cd build/x86 && make -j$NJOB) || exit 3
+Only in /usr/src/sp/src/SDL-1.2.13: config.log
+Only in /usr/src/sp/src/SDL-1.2.13: config.status
+diff -ru /home/pc188/Downloads/SDL-1.2.13/configure /usr/src/sp/src/SDL-1.2.13/configure
+--- /home/pc188/Downloads/SDL-1.2.13/configure	2007-12-31 05:09:39.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/configure	2012-09-03 13:39:20.000000000 +0100
+@@ -865,7 +865,6 @@
+ ARTSCONFIG
+ NASM
+ NASMFLAGS
+-XMKMF
+ X_CFLAGS
+ X_PRE_LIBS
+ X_LIBS
+@@ -907,8 +906,7 @@
+ CCC
+ CXXCPP
+ F77
+-FFLAGS
+-XMKMF'
++FFLAGS'
+ 
+ 
+ # Initialize some variables set by options.
+@@ -1546,6 +1544,7 @@
+                           enable X11 Xrandr extension for fullscreen
+                           [default=yes]
+   --enable-video-x11-dpms enable X11 DPMS extension [default=yes]
++  --enable-video-x11-xf86-keysyms   use XFree86's Internet-Keyboard keysymsdefault=yes
+   --enable-video-photon   use QNX Photon video driver [default=yes]
+   --enable-video-carbon   use Carbon/QuickDraw video driver [default=no]
+   --enable-video-cocoa    use Cocoa/Quartz video driver [default=yes]
+@@ -1610,7 +1609,6 @@
+   CXXCPP      C++ preprocessor
+   F77         Fortran 77 compiler command
+   FFLAGS      Fortran 77 compiler flags
+-  XMKMF       Path to xmkmf, Makefile generator for X Window System
+ 
+ Use these variables to override the choices made by `configure' or to help
+ it to find libraries and programs with nonstandard names/locations.
+@@ -1927,7 +1925,7 @@
+ # Let the site file select an alternate cache file if it wants to.
+ # Prefer explicitly selected file to automatically selected ones.
+ if test -n "$CONFIG_SITE"; then
+-  set x "$CONFIG_SITE"
++  set x $CONFIG_SITE
+ elif test "x$prefix" != xNONE; then
+   set x "$prefix/share/config.site" "$prefix/etc/config.site"
+ else
+@@ -4589,7 +4587,7 @@
+   ;;
+ *-*-irix6*)
+   # Find out which ABI we are using.
+-  echo '#line 4592 "configure"' > conftest.$ac_ext
++  echo '#line 4590 "configure"' > conftest.$ac_ext
+   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+   (eval $ac_compile) 2>&5
+   ac_status=$?
+@@ -7033,11 +7031,11 @@
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:7036: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:7034: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>conftest.err)
+    ac_status=$?
+    cat conftest.err >&5
+-   echo "$as_me:7040: \$? = $ac_status" >&5
++   echo "$as_me:7038: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s "$ac_outfile"; then
+      # The compiler can only warn and ignore the option if not recognized
+      # So say no if there are warnings other than the usual output.
+@@ -7301,11 +7299,11 @@
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:7304: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:7302: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>conftest.err)
+    ac_status=$?
+    cat conftest.err >&5
+-   echo "$as_me:7308: \$? = $ac_status" >&5
++   echo "$as_me:7306: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s "$ac_outfile"; then
+      # The compiler can only warn and ignore the option if not recognized
+      # So say no if there are warnings other than the usual output.
+@@ -7405,11 +7403,11 @@
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:7408: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:7406: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>out/conftest.err)
+    ac_status=$?
+    cat out/conftest.err >&5
+-   echo "$as_me:7412: \$? = $ac_status" >&5
++   echo "$as_me:7410: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s out/conftest2.$ac_objext
+    then
+      # The compiler can only warn and ignore the option if not recognized
+@@ -9715,7 +9713,7 @@
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<EOF
+-#line 9718 "configure"
++#line 9716 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -9815,7 +9813,7 @@
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<EOF
+-#line 9818 "configure"
++#line 9816 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -12155,11 +12153,11 @@
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:12158: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:12156: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>conftest.err)
+    ac_status=$?
+    cat conftest.err >&5
+-   echo "$as_me:12162: \$? = $ac_status" >&5
++   echo "$as_me:12160: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s "$ac_outfile"; then
+      # The compiler can only warn and ignore the option if not recognized
+      # So say no if there are warnings other than the usual output.
+@@ -12259,11 +12257,11 @@
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:12262: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:12260: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>out/conftest.err)
+    ac_status=$?
+    cat out/conftest.err >&5
+-   echo "$as_me:12266: \$? = $ac_status" >&5
++   echo "$as_me:12264: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s out/conftest2.$ac_objext
+    then
+      # The compiler can only warn and ignore the option if not recognized
+@@ -13831,11 +13829,11 @@
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:13834: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:13832: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>conftest.err)
+    ac_status=$?
+    cat conftest.err >&5
+-   echo "$as_me:13838: \$? = $ac_status" >&5
++   echo "$as_me:13836: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s "$ac_outfile"; then
+      # The compiler can only warn and ignore the option if not recognized
+      # So say no if there are warnings other than the usual output.
+@@ -13935,11 +13933,11 @@
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:13938: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:13936: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>out/conftest.err)
+    ac_status=$?
+    cat out/conftest.err >&5
+-   echo "$as_me:13942: \$? = $ac_status" >&5
++   echo "$as_me:13940: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s out/conftest2.$ac_objext
+    then
+      # The compiler can only warn and ignore the option if not recognized
+@@ -16139,11 +16137,11 @@
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:16142: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:16140: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>conftest.err)
+    ac_status=$?
+    cat conftest.err >&5
+-   echo "$as_me:16146: \$? = $ac_status" >&5
++   echo "$as_me:16144: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s "$ac_outfile"; then
+      # The compiler can only warn and ignore the option if not recognized
+      # So say no if there are warnings other than the usual output.
+@@ -16407,11 +16405,11 @@
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:16410: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:16408: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>conftest.err)
+    ac_status=$?
+    cat conftest.err >&5
+-   echo "$as_me:16414: \$? = $ac_status" >&5
++   echo "$as_me:16412: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s "$ac_outfile"; then
+      # The compiler can only warn and ignore the option if not recognized
+      # So say no if there are warnings other than the usual output.
+@@ -16511,11 +16509,11 @@
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:16514: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:16512: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>out/conftest.err)
+    ac_status=$?
+    cat out/conftest.err >&5
+-   echo "$as_me:16518: \$? = $ac_status" >&5
++   echo "$as_me:16516: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s out/conftest2.$ac_objext
+    then
+      # The compiler can only warn and ignore the option if not recognized
+@@ -27024,81 +27022,9 @@
+ else
+   # One or both of the vars are not set, and there is no cached value.
+ ac_x_includes=no ac_x_libraries=no
+-rm -f -r conftest.dir
+-if mkdir conftest.dir; then
+-  cd conftest.dir
+-  cat >Imakefile <<'_ACEOF'
+-incroot:
+-	@echo incroot='${INCROOT}'
+-usrlibdir:
+-	@echo usrlibdir='${USRLIBDIR}'
+-libdir:
+-	@echo libdir='${LIBDIR}'
+-_ACEOF
+-  if (export CC; ${XMKMF-xmkmf}) >/dev/null 2>/dev/null && test -f Makefile; then
+-    # GNU make sometimes prints "make[1]: Entering...", which would confuse us.
+-    for ac_var in incroot usrlibdir libdir; do
+-      eval "ac_im_$ac_var=\`\${MAKE-make} $ac_var 2>/dev/null | sed -n 's/^$ac_var=//p'\`"
+-    done
+-    # Open Windows xmkmf reportedly sets LIBDIR instead of USRLIBDIR.
+-    for ac_extension in a so sl; do
+-      if test ! -f "$ac_im_usrlibdir/libX11.$ac_extension" &&
+-	 test -f "$ac_im_libdir/libX11.$ac_extension"; then
+-	ac_im_usrlibdir=$ac_im_libdir; break
+-      fi
+-    done
+-    # Screen out bogus values from the imake configuration.  They are
+-    # bogus both because they are the default anyway, and because
+-    # using them would break gcc on systems where it needs fixed includes.
+-    case $ac_im_incroot in
+-	/usr/include) ac_x_includes= ;;
+-	*) test -f "$ac_im_incroot/X11/Xos.h" && ac_x_includes=$ac_im_incroot;;
+-    esac
+-    case $ac_im_usrlibdir in
+-	/usr/lib | /lib) ;;
+-	*) test -d "$ac_im_usrlibdir" && ac_x_libraries=$ac_im_usrlibdir ;;
+-    esac
+-  fi
+-  cd ..
+-  rm -f -r conftest.dir
+-fi
+-
+ # Standard set of common directories for X headers.
+ # Check X11 before X11Rn because it is often a symlink to the current release.
+-ac_x_header_dirs='
+-/usr/X11/include
+-/usr/X11R6/include
+-/usr/X11R5/include
+-/usr/X11R4/include
+-
+-/usr/include/X11
+-/usr/include/X11R6
+-/usr/include/X11R5
+-/usr/include/X11R4
+-
+-/usr/local/X11/include
+-/usr/local/X11R6/include
+-/usr/local/X11R5/include
+-/usr/local/X11R4/include
+-
+-/usr/local/include/X11
+-/usr/local/include/X11R6
+-/usr/local/include/X11R5
+-/usr/local/include/X11R4
+-
+-/usr/X386/include
+-/usr/x386/include
+-/usr/XFree86/include/X11
+-
+-/usr/include
+-/usr/local/include
+-/usr/unsupported/include
+-/usr/athena/include
+-/usr/local/x11r5/include
+-/usr/lpp/Xamples/include
+-
+-/usr/openwin/include
+-/usr/openwin/share/include'
++ac_x_header_dirs=''
+ 
+ if test "$ac_x_includes" = no; then
+   # Guess where to find include files, by looking for Xlib.h.
+@@ -28802,6 +28728,69 @@
+ 
+                 fi
+             fi
++            # Check whether --enable-video-x11-xf86-keysyms was given.
++if test "${enable_video_x11_xf86_keysyms+set}" = set; then
++  enableval=$enable_video_x11_xf86_keysyms;
++else
++  enable_video_x11_xf86_keysyms=yes
++fi
++
++            if test x$enable_video_x11_xf86_keysyms = xyes; then
++                { echo "$as_me:$LINENO: checking for XFree86 Internet/MultiMedia Keyboard keysym support" >&5
++echo $ECHO_N "checking for XFree86 Internet/MultiMedia Keyboard keysym support... $ECHO_C" >&6; }
++                video_x11_xf86_keysyms=no
++                cat >conftest.$ac_ext <<_ACEOF
++/* confdefs.h.  */
++_ACEOF
++cat confdefs.h >>conftest.$ac_ext
++cat >>conftest.$ac_ext <<_ACEOF
++/* end confdefs.h.  */
++
++                 #include <X11/XF86keysym.h>
++
++int
++main ()
++{
++
++
++  ;
++  return 0;
++}
++_ACEOF
++rm -f conftest.$ac_objext
++if { (ac_try="$ac_compile"
++case "(($ac_try" in
++  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
++  *) ac_try_echo=$ac_try;;
++esac
++eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
++  (eval "$ac_compile") 2>conftest.er1
++  ac_status=$?
++  grep -v '^ *+' conftest.er1 >conftest.err
++  rm -f conftest.er1
++  cat conftest.err >&5
++  echo "$as_me:$LINENO: \$? = $ac_status" >&5
++  (exit $ac_status); } && {
++	 test -z "$ac_c_werror_flag" ||
++	 test ! -s conftest.err
++       } && test -s conftest.$ac_objext; then
++
++                video_x11_xf86_keysyms=yes
++
++else
++  echo "$as_me: failed program was:" >&5
++sed 's/^/| /' conftest.$ac_ext >&5
++
++
++fi
++
++rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
++                { echo "$as_me:$LINENO: result: $video_x11_xf86_keysyms" >&5
++echo "${ECHO_T}$video_x11_xf86_keysyms" >&6; }
++                if test x$video_x11_xf86_keysyms = xyes; then
++                    EXTRA_CFLAGS="$EXTRA_CFLAGS -DXFREE86_KEYSYMS"
++                fi
++            fi
+         fi
+     fi
+ }
+@@ -35029,7 +35018,6 @@
+ for ac_last_try in false false false false false :; do
+   cat >conf$$subs.sed <<_ACEOF
+ NASMFLAGS!$NASMFLAGS$ac_delim
+-XMKMF!$XMKMF$ac_delim
+ X_CFLAGS!$X_CFLAGS$ac_delim
+ X_PRE_LIBS!$X_PRE_LIBS$ac_delim
+ X_LIBS!$X_LIBS$ac_delim
+@@ -35058,7 +35046,7 @@
+ LTLIBOBJS!$LTLIBOBJS$ac_delim
+ _ACEOF
+ 
+-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 28; then
++  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 27; then
+     break
+   elif $ac_last_try; then
+     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
+diff -ru /home/pc188/Downloads/SDL-1.2.13/configure.in /usr/src/sp/src/SDL-1.2.13/configure.in
+--- /home/pc188/Downloads/SDL-1.2.13/configure.in	2007-12-31 04:48:39.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/configure.in	2012-09-03 13:39:20.000000000 +0100
+@@ -1103,6 +1103,23 @@
+                     AC_DEFINE(SDL_VIDEO_DRIVER_X11_DPMS)
+                 fi
+             fi
++            AC_ARG_ENABLE(video-x11-xf86-keysyms,
++[  --enable-video-x11-xf86-keysyms   use XFree86's Internet-Keyboard keysyms[default=yes]],
++                          , enable_video_x11_xf86_keysyms=yes)
++            if test x$enable_video_x11_xf86_keysyms = xyes; then
++                AC_MSG_CHECKING(for XFree86 Internet/MultiMedia Keyboard keysym support)
++                video_x11_xf86_keysyms=no
++                AC_TRY_COMPILE([
++                 #include <X11/XF86keysym.h>
++                ],[
++                ],[
++                video_x11_xf86_keysyms=yes
++                ])
++                AC_MSG_RESULT($video_x11_xf86_keysyms)
++                if test x$video_x11_xf86_keysyms = xyes; then
++                    EXTRA_CFLAGS="$EXTRA_CFLAGS -DXFREE86_KEYSYMS"
++                fi
++            fi
+         fi
+     fi
+ }
+diff -ru /home/pc188/Downloads/SDL-1.2.13/include/SDL_config.h /usr/src/sp/src/SDL-1.2.13/include/SDL_config.h
+--- /home/pc188/Downloads/SDL-1.2.13/include/SDL_config.h	2007-12-31 06:17:05.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/include/SDL_config.h	2012-10-01 10:27:24.000000000 +0100
+@@ -1,3 +1,4 @@
++/* include/SDL_config.h.  Generated from SDL_config.h.in by configure.  */
+ /*
+     SDL - Simple DirectMedia Layer
+     Copyright (C) 1997-2006 Sam Lantinga
+@@ -23,23 +24,284 @@
+ #ifndef _SDL_config_h
+ #define _SDL_config_h
+ 
++/* This is a set of defines to configure the SDL features */
++
++/* General platform specific identifiers */
+ #include "SDL_platform.h"
+ 
+-/* Add any platform that doesn't build using the configure system */
+-#if defined(__DREAMCAST__)
+-#include "SDL_config_dreamcast.h"
+-#elif defined(__MACOS__)
+-#include "SDL_config_macos.h"
+-#elif defined(__MACOSX__)
+-#include "SDL_config_macosx.h"
+-#elif defined(__SYMBIAN32__)
+-#include "SDL_config_symbian.h"  /* must be before win32! */
+-#elif defined(__WIN32__)
+-#include "SDL_config_win32.h"
+-#elif defined(__OS2__)
+-#include "SDL_config_os2.h"
++/* Make sure that this isn't included by Visual C++ */
++#ifdef _MSC_VER
++#error You should copy include/SDL_config.h.default to include/SDL_config.h
++#endif
++
++/* C language features */
++/* #undef const */
++/* #undef inline */
++/* #undef volatile */
++
++/* C datatypes */
++/* #undef size_t */
++/* #undef int8_t */
++/* #undef uint8_t */
++/* #undef int16_t */
++/* #undef uint16_t */
++/* #undef int32_t */
++/* #undef uint32_t */
++/* #undef int64_t */
++/* #undef uint64_t */
++/* #undef uintptr_t */
++#define SDL_HAS_64BIT_TYPE 1
++
++/* Endianness */
++#define SDL_BYTEORDER 1234
++
++/* Comment this if you want to build without any C library requirements */
++#define HAVE_LIBC 1
++#if HAVE_LIBC
++
++/* Useful headers */
++#define HAVE_ALLOCA_H 1
++#define HAVE_SYS_TYPES_H 1
++#define HAVE_STDIO_H 1
++#define STDC_HEADERS 1
++#define HAVE_STDLIB_H 1
++#define HAVE_STDARG_H 1
++#define HAVE_MALLOC_H 1
++#define HAVE_MEMORY_H 1
++#define HAVE_STRING_H 1
++#define HAVE_STRINGS_H 1
++#define HAVE_INTTYPES_H 1
++#define HAVE_STDINT_H 1
++#define HAVE_CTYPE_H 1
++#define HAVE_MATH_H 1
++#define HAVE_ICONV_H 1
++#define HAVE_SIGNAL_H 1
++/* #undef HAVE_ALTIVEC_H */
++
++/* C library functions */
++#define HAVE_MALLOC 1
++#define HAVE_CALLOC 1
++#define HAVE_REALLOC 1
++#define HAVE_FREE 1
++#define HAVE_ALLOCA 1
++#ifndef _WIN32 /* Don't use C runtime versions of these on Windows */
++#define HAVE_GETENV 1
++#define HAVE_PUTENV 1
++#define HAVE_UNSETENV 1
++#endif
++#define HAVE_QSORT 1
++#define HAVE_ABS 1
++#define HAVE_BCOPY 1
++#define HAVE_MEMSET 1
++#define HAVE_MEMCPY 1
++#define HAVE_MEMMOVE 1
++#define HAVE_MEMCMP 1
++#define HAVE_STRLEN 1
++/* #undef HAVE_STRLCPY */
++/* #undef HAVE_STRLCAT */
++#define HAVE_STRDUP 1
++/* #undef HAVE__STRREV */
++/* #undef HAVE__STRUPR */
++/* #undef HAVE__STRLWR */
++/* #undef HAVE_INDEX */
++/* #undef HAVE_RINDEX */
++#define HAVE_STRCHR 1
++#define HAVE_STRRCHR 1
++#define HAVE_STRSTR 1
++/* #undef HAVE_ITOA */
++/* #undef HAVE__LTOA */
++/* #undef HAVE__UITOA */
++/* #undef HAVE__ULTOA */
++#define HAVE_STRTOL 1
++#define HAVE_STRTOUL 1
++/* #undef HAVE__I64TOA */
++/* #undef HAVE__UI64TOA */
++#define HAVE_STRTOLL 1
++#define HAVE_STRTOULL 1
++#define HAVE_STRTOD 1
++#define HAVE_ATOI 1
++#define HAVE_ATOF 1
++#define HAVE_STRCMP 1
++#define HAVE_STRNCMP 1
++/* #undef HAVE__STRICMP */
++#define HAVE_STRCASECMP 1
++/* #undef HAVE__STRNICMP */
++#define HAVE_STRNCASECMP 1
++#define HAVE_SSCANF 1
++#define HAVE_SNPRINTF 1
++#define HAVE_VSNPRINTF 1
++#define HAVE_ICONV 1
++#define HAVE_SIGACTION 1
++#define HAVE_SETJMP 1
++#define HAVE_NANOSLEEP 1
++/* #undef HAVE_CLOCK_GETTIME */
++#define HAVE_DLVSYM 1
++#define HAVE_GETPAGESIZE 1
++#define HAVE_MPROTECT 1
++
+ #else
+-#include "SDL_config_minimal.h"
+-#endif /* platform config */
++/* We may need some replacement for stdarg.h here */
++#include <stdarg.h>
++#endif /* HAVE_LIBC */
++
++/* Allow disabling of core subsystems */
++/* #undef SDL_AUDIO_DISABLED */
++/* #undef SDL_CDROM_DISABLED */
++/* #undef SDL_CPUINFO_DISABLED */
++/* #undef SDL_EVENTS_DISABLED */
++/* #undef SDL_FILE_DISABLED */
++/* #undef SDL_JOYSTICK_DISABLED */
++/* #undef SDL_LOADSO_DISABLED */
++/* #undef SDL_THREADS_DISABLED */
++/* #undef SDL_TIMERS_DISABLED */
++/* #undef SDL_VIDEO_DISABLED */
++
++/* Enable various audio drivers */
++#define SDL_AUDIO_DRIVER_ALSA 1
++#define SDL_AUDIO_DRIVER_ALSA_DYNAMIC "libasound.so.2"
++/* #undef SDL_AUDIO_DRIVER_ARTS */
++/* #undef SDL_AUDIO_DRIVER_ARTS_DYNAMIC */
++/* #undef SDL_AUDIO_DRIVER_BAUDIO */
++/* #undef SDL_AUDIO_DRIVER_BSD */
++/* #undef SDL_AUDIO_DRIVER_COREAUDIO */
++/* #undef SDL_AUDIO_DRIVER_DART */
++/* #undef SDL_AUDIO_DRIVER_DC */
++#define SDL_AUDIO_DRIVER_DISK 1
++#define SDL_AUDIO_DRIVER_DUMMY 1
++/* #undef SDL_AUDIO_DRIVER_DMEDIA */
++/* #undef SDL_AUDIO_DRIVER_DSOUND */
++/* #undef SDL_AUDIO_DRIVER_PULSE */
++/* #undef SDL_AUDIO_DRIVER_PULSE_DYNAMIC */
++/* #undef SDL_AUDIO_DRIVER_ESD */
++/* #undef SDL_AUDIO_DRIVER_ESD_DYNAMIC */
++/* #undef SDL_AUDIO_DRIVER_MINT */
++/* #undef SDL_AUDIO_DRIVER_MMEAUDIO */
++/* #undef SDL_AUDIO_DRIVER_NAS */
++#define SDL_AUDIO_DRIVER_OSS 1
++/* #undef SDL_AUDIO_DRIVER_OSS_SOUNDCARD_H */
++/* #undef SDL_AUDIO_DRIVER_PAUD */
++/* #undef SDL_AUDIO_DRIVER_QNXNTO */
++/* #undef SDL_AUDIO_DRIVER_SNDMGR */
++/* #undef SDL_AUDIO_DRIVER_SUNAUDIO */
++/* #undef SDL_AUDIO_DRIVER_WAVEOUT */
++
++/* Enable various cdrom drivers */
++/* #undef SDL_CDROM_AIX */
++/* #undef SDL_CDROM_BEOS */
++/* #undef SDL_CDROM_BSDI */
++/* #undef SDL_CDROM_DC */
++/* #undef SDL_CDROM_DUMMY */
++/* #undef SDL_CDROM_FREEBSD */
++#define SDL_CDROM_LINUX 1
++/* #undef SDL_CDROM_MACOS */
++/* #undef SDL_CDROM_MACOSX */
++/* #undef SDL_CDROM_MINT */
++/* #undef SDL_CDROM_OPENBSD */
++/* #undef SDL_CDROM_OS2 */
++/* #undef SDL_CDROM_OSF */
++/* #undef SDL_CDROM_QNX */
++/* #undef SDL_CDROM_WIN32 */
++
++/* Enable various input drivers */
++#define SDL_INPUT_LINUXEV 1
++/* #undef SDL_INPUT_TSLIB */
++/* #undef SDL_JOYSTICK_BEOS */
++/* #undef SDL_JOYSTICK_DC */
++/* #undef SDL_JOYSTICK_DUMMY */
++/* #undef SDL_JOYSTICK_IOKIT */
++#define SDL_JOYSTICK_LINUX 1
++/* #undef SDL_JOYSTICK_MACOS */
++/* #undef SDL_JOYSTICK_MINT */
++/* #undef SDL_JOYSTICK_OS2 */
++/* #undef SDL_JOYSTICK_RISCOS */
++/* #undef SDL_JOYSTICK_WINMM */
++/* #undef SDL_JOYSTICK_USBHID */
++/* #undef SDL_JOYSTICK_USBHID_MACHINE_JOYSTICK_H */
++
++/* Enable various shared object loading systems */
++/* #undef SDL_LOADSO_BEOS */
++/* #undef SDL_LOADSO_DLCOMPAT */
++#define SDL_LOADSO_DLOPEN 1
++/* #undef SDL_LOADSO_DUMMY */
++/* #undef SDL_LOADSO_LDG */
++/* #undef SDL_LOADSO_MACOS */
++/* #undef SDL_LOADSO_OS2 */
++/* #undef SDL_LOADSO_WIN32 */
++
++/* Enable various threading systems */
++/* #undef SDL_THREAD_BEOS */
++/* #undef SDL_THREAD_DC */
++/* #undef SDL_THREAD_OS2 */
++/* #undef SDL_THREAD_PTH */
++#define SDL_THREAD_PTHREAD 1
++#define SDL_THREAD_PTHREAD_RECURSIVE_MUTEX 1
++/* #undef SDL_THREAD_PTHREAD_RECURSIVE_MUTEX_NP */
++/* #undef SDL_THREAD_SPROC */
++/* #undef SDL_THREAD_WIN32 */
++
++/* Enable various timer systems */
++/* #undef SDL_TIMER_BEOS */
++/* #undef SDL_TIMER_DC */
++/* #undef SDL_TIMER_DUMMY */
++/* #undef SDL_TIMER_MACOS */
++/* #undef SDL_TIMER_MINT */
++/* #undef SDL_TIMER_OS2 */
++/* #undef SDL_TIMER_RISCOS */
++#define SDL_TIMER_UNIX 1
++/* #undef SDL_TIMER_WIN32 */
++/* #undef SDL_TIMER_WINCE */
++
++/* Enable various video drivers */
++/* #undef SDL_VIDEO_DRIVER_AALIB */
++/* #undef SDL_VIDEO_DRIVER_BWINDOW */
++/* #undef SDL_VIDEO_DRIVER_DC */
++/* #undef SDL_VIDEO_DRIVER_DDRAW */
++#define SDL_VIDEO_DRIVER_DGA 1
++/* #undef SDL_VIDEO_DRIVER_DIRECTFB */
++/* #undef SDL_VIDEO_DRIVER_DRAWSPROCKET */
++#define SDL_VIDEO_DRIVER_DUMMY 1
++#define SDL_VIDEO_DRIVER_FBCON 1
++/* #undef SDL_VIDEO_DRIVER_GAPI */
++/* #undef SDL_VIDEO_DRIVER_GEM */
++/* #undef SDL_VIDEO_DRIVER_GGI */
++/* #undef SDL_VIDEO_DRIVER_IPOD */
++/* #undef SDL_VIDEO_DRIVER_NANOX */
++/* #undef SDL_VIDEO_DRIVER_OS2FS */
++/* #undef SDL_VIDEO_DRIVER_PHOTON */
++/* #undef SDL_VIDEO_DRIVER_PICOGUI */
++/* #undef SDL_VIDEO_DRIVER_PS2GS */
++/* #undef SDL_VIDEO_DRIVER_QTOPIA */
++/* #undef SDL_VIDEO_DRIVER_QUARTZ */
++/* #undef SDL_VIDEO_DRIVER_RISCOS */
++/* #undef SDL_VIDEO_DRIVER_SVGALIB */
++/* #undef SDL_VIDEO_DRIVER_TOOLBOX */
++/* #undef SDL_VIDEO_DRIVER_VGL */
++/* #undef SDL_VIDEO_DRIVER_WINDIB */
++/* #undef SDL_VIDEO_DRIVER_WSCONS */
++#define SDL_VIDEO_DRIVER_X11 1
++#define SDL_VIDEO_DRIVER_X11_DGAMOUSE 1
++#define SDL_VIDEO_DRIVER_X11_DPMS 1
++#define SDL_VIDEO_DRIVER_X11_DYNAMIC "libX11.so.6"
++#define SDL_VIDEO_DRIVER_X11_DYNAMIC_XEXT "libXext.so.6"
++#define SDL_VIDEO_DRIVER_X11_DYNAMIC_XRANDR "libXrandr.so.2"
++#define SDL_VIDEO_DRIVER_X11_DYNAMIC_XRENDER "libXrender.so.1"
++#define SDL_VIDEO_DRIVER_X11_VIDMODE 1
++#define SDL_VIDEO_DRIVER_X11_XINERAMA 1
++#define SDL_VIDEO_DRIVER_X11_XME 1
++#define SDL_VIDEO_DRIVER_X11_XRANDR 1
++#define SDL_VIDEO_DRIVER_X11_XV 1
++/* #undef SDL_VIDEO_DRIVER_XBIOS */
++
++/* Enable OpenGL support */
++/* #undef SDL_VIDEO_OPENGL */
++/* #undef SDL_VIDEO_OPENGL_GLX */
++/* #undef SDL_VIDEO_OPENGL_WGL */
++/* #undef SDL_VIDEO_OPENGL_OSMESA */
++/* #undef SDL_VIDEO_OPENGL_OSMESA_DYNAMIC */
++
++/* Enable assembly routines */
++#define SDL_ASSEMBLY_ROUTINES 1
++/* #undef SDL_HERMES_BLITTERS */
++/* #undef SDL_ALTIVEC_BLITTERS */
+ 
+ #endif /* _SDL_config_h */
+diff -ru /home/pc188/Downloads/SDL-1.2.13/include/SDL_events.h /usr/src/sp/src/SDL-1.2.13/include/SDL_events.h
+--- /home/pc188/Downloads/SDL-1.2.13/include/SDL_events.h	2007-12-31 04:48:36.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/include/SDL_events.h	2012-09-03 13:39:20.000000000 +0100
+@@ -328,6 +328,12 @@
+ extern DECLSPEC Uint8 SDLCALL SDL_EventState(Uint8 type, int state);
+ 
+ 
++/*
++  Added for jive - return number of events in the event queue
++*/
++extern DECLSPEC int SDLCALL SDL_EventQueueLength(void);
++
++
+ /* Ends C function definitions when using C++ */
+ #ifdef __cplusplus
+ }
+diff -ru /home/pc188/Downloads/SDL-1.2.13/include/SDL.h /usr/src/sp/src/SDL-1.2.13/include/SDL.h
+--- /home/pc188/Downloads/SDL-1.2.13/include/SDL.h	2007-12-31 04:48:36.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/include/SDL.h	2012-09-03 13:39:20.000000000 +0100
+@@ -57,6 +57,7 @@
+ #define SDL_INIT_VIDEO		0x00000020
+ #define SDL_INIT_CDROM		0x00000100
+ #define SDL_INIT_JOYSTICK	0x00000200
++#define SDL_INIT_EVENTLOOP	0x00000400
+ #define SDL_INIT_NOPARACHUTE	0x00100000	/* Don't catch fatal signals */
+ #define SDL_INIT_EVENTTHREAD	0x01000000	/* Not supported on all OS's */
+ #define SDL_INIT_EVERYTHING	0x0000FFFF
+diff -ru /home/pc188/Downloads/SDL-1.2.13/include/SDL_keysym.h /usr/src/sp/src/SDL-1.2.13/include/SDL_keysym.h
+--- /home/pc188/Downloads/SDL-1.2.13/include/SDL_keysym.h	2007-12-31 04:48:36.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/include/SDL_keysym.h	2012-09-03 13:39:20.000000000 +0100
+@@ -281,6 +281,71 @@
+ 	SDLK_EURO		= 321,		/* Some european keyboards */
+ 	SDLK_UNDO		= 322,		/* Atari keyboard has Undo */
+ 
++    /* "Internet"/"MultiMedia" keyboards */
++    SDLK_Standby            = 323,
++    SDLK_AudioLowerVolume   = 324,
++    SDLK_AudioMute          = 325,
++    SDLK_AudioRaiseVolume   = 326,
++    SDLK_AudioPlay          = 327,
++    SDLK_AudioStop          = 328,
++    SDLK_AudioPrev          = 329,
++    SDLK_AudioNext          = 330,
++    SDLK_HomePage           = 331,
++    SDLK_Mail               = 332,
++    SDLK_Start              = 333,
++    SDLK_Search             = 334,
++    SDLK_AudioRecord        = 325,
++
++    SDLK_Calculator         = 326,
++    SDLK_Memo               = 327,
++    SDLK_ToDoList           = 328,
++    SDLK_Calendar           = 329,
++    SDLK_PowerDown          = 330,
++    SDLK_ContrastAdjust     = 331,
++    SDLK_RockerUp           = 332,
++    SDLK_RockerDown         = 333,
++    SDLK_RockerEnter        = 334,
++
++    SDLK_Back               = 335,
++    SDLK_Forward            = 336,
++    SDLK_Stop               = 337,
++    SDLK_Refresh            = 338,
++    SDLK_PowerOff           = 339,
++    SDLK_WakeUp             = 340,
++    SDLK_Eject              = 341,
++    SDLK_ScreenSaver        = 342,
++    SDLK_WWW                = 343,
++    SDLK_Sleep              = 344,
++    SDLK_Favorites          = 345,
++    SDLK_AudioPause         = 346,
++    SDLK_AudioMedia         = 347,
++    SDLK_MyComputer         = 348,
++    SDLK_VendorHome         = 349,
++    SDLK_LightBulb          = 350,
++    SDLK_Shop               = 351,
++    SDLK_History            = 352,
++    SDLK_OpenURL            = 353,
++    SDLK_AddFavorite        = 354,
++    SDLK_HotLinks           = 355,
++    SDLK_BrightnessAdjust   = 356,
++
++    SDLK_Launch0            = 357,
++    SDLK_Launch1            = 358,
++    SDLK_Launch2            = 359,
++    SDLK_Launch3            = 360,
++    SDLK_Launch4            = 361,
++    SDLK_Launch5            = 362,
++    SDLK_Launch6            = 363,
++    SDLK_Launch7            = 364,
++    SDLK_Launch8            = 365,
++    SDLK_Launch9            = 366,
++    SDLK_LaunchA            = 367,
++    SDLK_LaunchB            = 368,
++    SDLK_LaunchC            = 369,
++    SDLK_LaunchD            = 370,
++    SDLK_LaunchE            = 371,
++    SDLK_LaunchF            = 372,
++
+ 	/* Add any other keys here */
+ 
+ 	SDLK_LAST
+Only in /usr/src/sp/src/SDL-1.2.13: libtool
+Only in /usr/src/sp/src/SDL-1.2.13: Makefile
+diff -ru /home/pc188/Downloads/SDL-1.2.13/Makefile.in /usr/src/sp/src/SDL-1.2.13/Makefile.in
+--- /home/pc188/Downloads/SDL-1.2.13/Makefile.in	2007-12-31 05:09:33.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/Makefile.in	2012-09-03 13:39:20.000000000 +0100
+@@ -75,7 +75,7 @@
+ 
+ include $(depend)
+ 
+-$(objects)/$(TARGET): $(OBJECTS)
++$(objects)/$(TARGET): $(OBJECTS) $(objects)
+ 	$(LIBTOOL) --mode=link $(CC) -o $@ $(OBJECTS) $(LDFLAGS) $(EXTRA_LDFLAGS) $(LT_LDFLAGS)
+ 
+ $(objects)/$(SDLMAIN_TARGET): $(SDLMAIN_OBJECTS)
+Only in /usr/src/sp/src/SDL-1.2.13: sdl-config
+Only in /usr/src/sp/src/SDL-1.2.13: sdl.pc
+Only in /usr/src/sp/src/SDL-1.2.13: SDL.qpg
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/cdrom/macosx/CDPlayer.h /usr/src/sp/src/SDL-1.2.13/src/cdrom/macosx/CDPlayer.h
+--- /home/pc188/Downloads/SDL-1.2.13/src/cdrom/macosx/CDPlayer.h	2007-12-31 04:48:00.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/cdrom/macosx/CDPlayer.h	2012-09-03 13:39:20.000000000 +0100
+@@ -34,6 +34,10 @@
+ #include "SDL_thread.h"
+ #include "SDL_mutex.h"
+ 
++#if __MAC_OS_X_VERSION_MIN_REQUIRED < 1050
++typedef SInt16 FSIORefNum;
++#endif
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/events/SDL_events.c /usr/src/sp/src/SDL-1.2.13/src/events/SDL_events.c
+--- /home/pc188/Downloads/SDL-1.2.13/src/events/SDL_events.c	2007-12-31 04:47:59.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/events/SDL_events.c	2012-09-03 13:39:20.000000000 +0100
+@@ -240,16 +240,19 @@
+ 	SDL_ProcessEvents[SDL_SYSWMEVENT] = SDL_IGNORE;
+ 
+ 	/* Initialize event handlers */
+-	retcode = 0;
+-	retcode += SDL_AppActiveInit();
+-	retcode += SDL_KeyboardInit();
+-	retcode += SDL_MouseInit();
+-	retcode += SDL_QuitInit();
+-	if ( retcode < 0 ) {
+-		/* We don't expect them to fail, but... */
+-		return(-1);
++	if (flags & SDL_INIT_VIDEO) {
++		retcode = 0;
++		retcode += SDL_AppActiveInit();
++		retcode += SDL_KeyboardInit();
++		retcode += SDL_MouseInit();
++		retcode += SDL_QuitInit();
++		if ( retcode < 0 ) {
++			/* We don't expect them to fail, but... */
++			return(-1);
++		}
+ 	}
+ 
++
+ 	/* Create the lock and event thread */
+ 	if ( SDL_StartEventThread(flags) < 0 ) {
+ 		SDL_StopEventLoop();
+@@ -498,3 +501,13 @@
+ 	/* Update internal event state */
+ 	return(posted);
+ }
++
++
++/* Added for jive - return number of events in the event queue
++*/
++int SDL_EventQueueLength(void)
++{
++	return (SDL_EventQ.tail - SDL_EventQ.head + MAXEVENTS) % MAXEVENTS;
++}
++
++
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/SDL.c /usr/src/sp/src/SDL-1.2.13/src/SDL.c
+--- /home/pc188/Downloads/SDL-1.2.13/src/SDL.c	2007-12-31 04:48:16.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/SDL.c	2012-09-03 13:39:20.000000000 +0100
+@@ -95,6 +95,17 @@
+ 	}
+ #endif
+ 
++
++	/* if we have want the event loop but no Video then we still need the event loop */
++	if (!(flags & SDL_INIT_VIDEO) && (flags & SDL_INIT_EVENTLOOP)) {
++		/* Start the event loop */
++		if ( SDL_StartEventLoop(flags) < 0 ) {
++			return(-1);
++		}
++		SDL_initialized |= SDL_INIT_EVENTLOOP;
++	}
++
++
+ #if !SDL_TIMERS_DISABLED
+ 	/* Initialize the timer subsystem */
+ 	if ( ! ticks_started ) {
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/thread/pthread/SDL_systhread.c /usr/src/sp/src/SDL-1.2.13/src/thread/pthread/SDL_systhread.c
+--- /home/pc188/Downloads/SDL-1.2.13/src/thread/pthread/SDL_systhread.c	2007-12-31 04:48:15.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/thread/pthread/SDL_systhread.c	2012-09-03 13:39:20.000000000 +0100
+@@ -52,6 +52,7 @@
+ int SDL_SYS_CreateThread(SDL_Thread *thread, void *args)
+ {
+ 	pthread_attr_t type;
++	size_t stacksize;
+ 
+ 	/* Set the thread attributes */
+ 	if ( pthread_attr_init(&type) != 0 ) {
+@@ -60,6 +61,10 @@
+ 	}
+ 	pthread_attr_setdetachstate(&type, PTHREAD_CREATE_JOINABLE);
+ 
++	/* set stack size to 128k */
++	stacksize = 128 * 1024;
++	pthread_attr_setstacksize(&type, stacksize);
++
+ 	/* Create the thread and go! */
+ 	if ( pthread_create(&thread->handle, &type, RunThread, args) != 0 ) {
+ 		SDL_SetError("Not enough resources to create thread");
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/timer/SDL_timer.c /usr/src/sp/src/SDL-1.2.13/src/timer/SDL_timer.c
+--- /home/pc188/Downloads/SDL-1.2.13/src/timer/SDL_timer.c	2007-12-31 04:47:52.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/timer/SDL_timer.c	2012-09-03 13:39:20.000000000 +0100
+@@ -108,6 +108,12 @@
+ 	SDL_bool removed;
+ 
+ 	SDL_mutexP(SDL_timer_mutex);
++
++	if ( !SDL_timer_running ) {
++		SDL_mutexV(SDL_timer_mutex);
++		return;
++	}
++
+ 	list_changed = SDL_FALSE;
+ 	now = SDL_GetTicks();
+ 	for ( prev = NULL, t = SDL_timers; t; t = next ) {
+@@ -135,23 +141,21 @@
+ 				/* FIXME: what if ms was changed? */
+ 				break;
+ 			}
+-			if ( ms != t->interval ) {
+-				if ( ms ) {
+-					t->interval = ROUND_RESOLUTION(ms);
+-				} else {
+-					/* Remove timer from the list */
++			if ( ms ) {
++				t->interval = ROUND_RESOLUTION(ms);
++			} else {
++				/* Remove timer from the list */
+ #ifdef DEBUG_TIMERS
+-					printf("SDL: Removing timer %p\n", t);
++				printf("SDL: Removing timer %p\n", t);
+ #endif
+-					if ( prev ) {
+-						prev->next = next;
+-					} else {
+-						SDL_timers = next;
+-					}
+-					SDL_free(t);
+-					--SDL_timer_running;
+-					removed = SDL_TRUE;
++				if ( prev ) {
++					prev->next = next;
++				} else {
++					SDL_timers = next;
+ 				}
++				SDL_free(t);
++				--SDL_timer_running;
++				removed = SDL_TRUE;
+ 			}
+ 		}
+ 		/* Don't update prev if the timer has disappeared */
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/timer/unix/SDL_systimer.c /usr/src/sp/src/SDL-1.2.13/src/timer/unix/SDL_systimer.c
+--- /home/pc188/Downloads/SDL-1.2.13/src/timer/unix/SDL_systimer.c	2007-12-31 04:47:52.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/timer/unix/SDL_systimer.c	2012-09-03 13:39:20.000000000 +0100
+@@ -197,9 +197,7 @@
+ static int RunTimer(void *unused)
+ {
+ 	while ( timer_alive ) {
+-		if ( SDL_timer_running ) {
+-			SDL_ThreadedTimerCheck();
+-		}
++		SDL_ThreadedTimerCheck();
+ 		SDL_Delay(1);
+ 	}
+ 	return(0);
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/video/fbcon/SDL_fbevents.c /usr/src/sp/src/SDL-1.2.13/src/video/fbcon/SDL_fbevents.c
+--- /home/pc188/Downloads/SDL-1.2.13/src/video/fbcon/SDL_fbevents.c	2007-12-31 04:48:08.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/video/fbcon/SDL_fbevents.c	2012-09-03 13:39:20.000000000 +0100
+@@ -61,8 +61,8 @@
+ /* The translation tables from a console scancode to a SDL keysym */
+ #define NUM_VGAKEYMAPS	(1<<KG_CAPSSHIFT)
+ static Uint16 vga_keymap[NUM_VGAKEYMAPS][NR_KEYS];
+-static SDLKey keymap[128];
+-static Uint16 keymap_temp[128]; /* only used at startup */
++static SDLKey keymap[210];
++static Uint16 keymap_temp[210]; /* only used at startup */
+ static SDL_keysym *TranslateKey(int scancode, SDL_keysym *keysym);
+ 
+ /* Ugh, we have to duplicate the kernel's keysym mapping code...
+@@ -989,14 +989,27 @@
+ 	int pressed;
+ 	int scancode;
+ 	SDL_keysym keysym;
+-
+ 	nread = read(keyboard_fd, keybuf, BUFSIZ);
+-	for ( i=0; i<nread; ++i ) {
+-		scancode = keybuf[i] & 0x7F;
+-		if ( keybuf[i] & 0x80 ) {
+-			pressed = SDL_RELEASED;
++	for ( i = 0; i<nread; ++i ) {
++		if ( ((keybuf[i] == 0) || keybuf[i] == 128) && (nread-i >= 2) && keybuf[i + 1] == 129) {
++			/* is extended character (scancode>128), comes in as three codes,
++			first code: 0(pressed) or 128(released), second code:129
++			third code: actual extended scancode value */
++			scancode = keybuf[i + 2];
++			if (keybuf[i] == 0) {
++				pressed = SDL_PRESSED;
++			} else {
++				pressed = SDL_RELEASED;
++			}
++			//push past next 2 since the set of 3 are the extended character representation
++			i += 2;
+ 		} else {
+-			pressed = SDL_PRESSED;
++			scancode = keybuf[i] & 0x7F;
++			if ( keybuf[i] & 0x80 ) {
++				pressed = SDL_RELEASED;
++			} else {
++				pressed = SDL_PRESSED;
++			}
+ 		}
+ 		TranslateKey(scancode, &keysym);
+ 		/* Handle Ctrl-Alt-FN for vt switch */
+@@ -1124,6 +1137,33 @@
+ 	  case 127:
+ 	    keymap[i] = SDLK_MENU;
+ 	    break;
++	  case 113:
++	    keymap[i] = SDLK_AudioMute;
++	    break;
++	  case 114:
++	    keymap[i] = SDLK_AudioLowerVolume;
++	    break;
++	  case 115:
++	    keymap[i] = SDLK_AudioRaiseVolume;
++	    break;
++	  case 116:
++	    keymap[i] = SDLK_POWER;
++	    break;
++	  case 142:
++	    keymap[i] = SDLK_Sleep;
++	    break;
++	  case 163:
++	    keymap[i] = SDLK_AudioNext;
++	    break;
++	  case 164:
++	    keymap[i] = SDLK_AudioPause;
++	    break;
++	  case 165:
++	    keymap[i] = SDLK_AudioPrev;
++	    break;
++	  case 207:
++	    keymap[i] = SDLK_AudioPlay;
++	    break;
+ 	  /* this should take care of all standard ascii keys */
+ 	  default:
+ 	    keymap[i] = KVAL(vga_keymap[0][i]);
+@@ -1190,7 +1230,7 @@
+ 	    case K_NUM:  keymap[i] = SDLK_NUMLOCK;   break;
+ 	    case K_CAPS: keymap[i] = SDLK_CAPSLOCK;  break;
+ 
+-	    case K_F13:   keymap[i] = SDLK_PRINT;     break;
++	    //case K_F13:   keymap[i] = SDLK_PRINT;     break;
+ 	    case K_HOLD:  keymap[i] = SDLK_SCROLLOCK; break;
+ 	    case K_PAUSE: keymap[i] = SDLK_PAUSE;     break;
+ 
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/video/fbcon/SDL_fbvideo.c /usr/src/sp/src/SDL-1.2.13/src/video/fbcon/SDL_fbvideo.c
+--- /home/pc188/Downloads/SDL-1.2.13/src/video/fbcon/SDL_fbvideo.c	2007-12-31 04:48:08.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/video/fbcon/SDL_fbvideo.c	2012-09-03 13:39:20.000000000 +0100
+@@ -80,7 +80,8 @@
+ 	{  0, 0,  640,  400 },		/*  8 bpp: 0x100, or 256 */
+ 	{  0, 0,  512,  384 },
+ 	{  0, 0,  320,  240 },
+-	{  0, 0,  320,  200 }
++	{  0, 0,  320,  200 },
++	{  0, 0,  240,  320 },		/* PAD LCD */
+ };
+ static const struct {
+ 	int xres;
+@@ -1299,6 +1300,13 @@
+ #ifdef FBIOWAITRETRACE /* Heheh, this didn't make it into the main kernel */
+ 	ioctl(console_fd, FBIOWAITRETRACE, 0);
+ #endif
++
++	/* For Freescale MXC kernels */
++#ifndef MXCFB_WAIT_FOR_VSYNC
++#define MXCFB_WAIT_FOR_VSYNC	_IOW('F', 0x20, u_int32_t)
++#endif
++	ioctl(console_fd, MXCFB_WAIT_FOR_VSYNC, 0);
++
+ 	return;
+ }
+ 
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/video/quartz/SDL_QuartzGL.m /usr/src/sp/src/SDL-1.2.13/src/video/quartz/SDL_QuartzGL.m
+--- /home/pc188/Downloads/SDL-1.2.13/src/video/quartz/SDL_QuartzGL.m	2007-12-31 04:48:04.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/video/quartz/SDL_QuartzGL.m	2012-09-03 13:39:20.000000000 +0100
+@@ -45,7 +45,8 @@
+ @implementation NSOpenGLContext (CGLContextAccess)
+ - (CGLContextObj) cglContext;
+ {
+-    return _contextAuxiliary;
++return NULL;  // !!! FIXME
++    //return _contextAuxiliary;
+ }
+ @end
+ 
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/video/quartz/SDL_QuartzVideo.h /usr/src/sp/src/SDL-1.2.13/src/video/quartz/SDL_QuartzVideo.h
+--- /home/pc188/Downloads/SDL-1.2.13/src/video/quartz/SDL_QuartzVideo.h	2007-12-31 04:48:04.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/video/quartz/SDL_QuartzVideo.h	2012-09-03 13:39:20.000000000 +0100
+@@ -93,7 +93,8 @@
+     Uint32             warp_flag;          /* boolean; notify to event loop that a warp just occured */
+     Uint32             warp_ticks;         /* timestamp when the warp occured */
+     NSWindow           *window;            /* Cocoa window to implement the SDL window */
+-    NSQuickDrawView    *view;              /* the window's view; draw 2D and OpenGL into this view */
++    NSView             *view;              /* the window's view; draw 2D and OpenGL into this view */
++    CGContextRef       cg_context;         /* CoreGraphics rendering context */
+     SDL_Surface        *resize_icon;       /* icon for the resize badge, we have to draw it by hand */
+     SDL_GrabMode       current_grab_mode;  /* default value is SDL_GRAB_OFF */
+     SDL_Rect           **client_mode_list; /* resolution list to pass back to client */
+@@ -113,7 +114,8 @@
+     Uint8              *current_buffer;    /* the buffer being copied to the screen */
+     BOOL               quit_thread;        /* used to quit the async blitting thread */
+     SInt32             system_version;     /* used to dis-/enable workarounds depending on the system version */
+-    
++
++#if SDL_LEGACY_QUICKDRAW
+     ImageDescriptionHandle yuv_idh;
+     MatrixRecordPtr        yuv_matrix;
+     DecompressorComponent  yuv_codec;
+@@ -121,6 +123,7 @@
+     PlanarPixmapInfoYUV420 *yuv_pixmap;
+     Sint16                  yuv_width, yuv_height;
+     CGrafPtr                yuv_port;
++#endif
+ 
+     void *opengl_library;    /* dynamically loaded OpenGL library. */
+ } SDL_PrivateVideoData;
+@@ -139,6 +142,7 @@
+ #define mode_flags (this->hidden->flags)
+ #define qz_window (this->hidden->window)
+ #define window_view (this->hidden->view)
++#define cg_context (this->hidden->cg_context)
+ #define video_set (this->hidden->video_set)
+ #define warp_ticks (this->hidden->warp_ticks)
+ #define warp_flag (this->hidden->warp_flag)
+@@ -156,6 +160,7 @@
+ #define cursor_should_be_visible (this->hidden->cursor_should_be_visible)
+ #define cursor_visible (this->hidden->cursor_visible)
+ #define sw_buffers (this->hidden->sw_buffers)
++#define sw_contexts (this->hidden->sw_contexts)
+ #define thread (this->hidden->thread)
+ #define sem1 (this->hidden->sem1)
+ #define sem2 (this->hidden->sem2)
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/video/quartz/SDL_QuartzVideo.m /usr/src/sp/src/SDL-1.2.13/src/video/quartz/SDL_QuartzVideo.m
+--- /home/pc188/Downloads/SDL-1.2.13/src/video/quartz/SDL_QuartzVideo.m	2007-12-31 04:48:04.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/video/quartz/SDL_QuartzVideo.m	2012-09-03 13:39:20.000000000 +0100
+@@ -38,7 +38,8 @@
+ @implementation NSScreen (NSScreenAccess)
+ - (void) setFrame:(NSRect)frame;
+ {
+-    _frame = frame;
++// !!! FIXME
++//    _frame = frame;
+ }
+ @end
+ 
+@@ -52,6 +53,8 @@
+ - (void) doCommandBySelector:(SEL) myselector {}
+ @end
+ 
++/* absent in 10.3.9.  */
++CG_EXTERN CGImageRef CGBitmapContextCreateImage (CGContextRef);
+ 
+ /* Bootstrap functions */
+ static int              QZ_Available ();
+@@ -79,8 +82,6 @@
+ static void         QZ_DoubleBufferUpdate (_THIS, int num_rects, SDL_Rect *rects);
+ 
+ static void         QZ_DirectUpdate     (_THIS, int num_rects, SDL_Rect *rects);
+-static int          QZ_LockWindow       (_THIS, SDL_Surface *surface);
+-static void         QZ_UnlockWindow     (_THIS, SDL_Surface *surface);
+ static void         QZ_UpdateRects      (_THIS, int num_rects, SDL_Rect *rects);
+ static void         QZ_VideoQuit        (_THIS);
+ 
+@@ -362,6 +363,12 @@
+     this->LockHWSurface   = NULL;
+     this->UnlockHWSurface = NULL;
+     
++    if (cg_context) {
++        CGContextFlush (cg_context);
++        CGContextRelease (cg_context);
++        cg_context = nil;
++    }
++    
+     /* Release fullscreen resources */
+     if ( mode_flags & SDL_FULLSCREEN ) {
+ 
+@@ -478,7 +485,8 @@
+     current->flags |= SDL_FULLSCREEN;
+     current->flags |= SDL_HWSURFACE;
+     current->flags |= SDL_PREALLOC;
+-    
++    /* current->hwdata = (void *) CGDisplayGetDrawingContext (display_id); */
++
+     this->UpdateRects     = QZ_DirectUpdate;
+     this->LockHWSurface   = QZ_LockHWSurface;
+     this->UnlockHWSurface = QZ_UnlockHWSurface;
+@@ -529,6 +537,7 @@
+        and with no valid window/view in FULLSCREEN, SDL wouldn't update its cursor. )
+     */
+ 	/* Check for user-specified window and view */
++#if SDL_LEGACY_QUICKDRAW
+     {
+         char *windowPtrString = getenv ("SDL_NSWindowPointer");
+         char *viewPtrString = getenv ("SDL_NSQuickDrawViewPointer");
+@@ -552,12 +561,13 @@
+             [ qz_window retain ];
+         }
+     }
++#endif
+     /* Check if we should recreate the window */
+     if (qz_window == nil) {
+         /* Manually create a window, avoids having a nib file resource */
+         qz_window = [ [ SDL_QuartzWindow alloc ] 
+             initWithContentRect:contentRect
+-                styleMask:nil 
++                styleMask:0
+                     backing:NSBackingStoreBuffered
+                         defer:NO ];
+ 
+@@ -686,6 +696,7 @@
+     }
+     
+     /* Check for user-specified window and view */
++#if SDL_LEGACY_QUICKDRAW
+     {
+         char *windowPtrString = getenv ("SDL_NSWindowPointer");
+         char *viewPtrString = getenv ("SDL_NSQuickDrawViewPointer");
+@@ -718,7 +729,8 @@
+                 current->flags |= SDL_NOFRAME;
+         }
+     }
+-    
++#endif
++
+     /* Check if we should recreate the window */
+     if (qz_window == nil) {
+     
+@@ -800,46 +812,34 @@
+     }
+     /* For 2D, we set the subview to an NSQuickDrawView */
+     else {
+-        short qdbpp = 0;
++        CGColorSpaceRef cgColorspace;
+ 
+         /* Only recreate the view if it doesn't already exist */
+         if (window_view == nil) {
+         
+-            window_view = [ [ NSQuickDrawView alloc ] initWithFrame:contentRect ];
++            window_view = [ [ NSView alloc ] initWithFrame:contentRect ];
+             [ window_view setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable ];
+             [ [ qz_window contentView ] addSubview:window_view ];
+             [ window_view release ];
+             [ qz_window makeKeyAndOrderFront:nil ];
+         }
+         
+-        LockPortBits ( [ window_view qdPort ] );
+-        current->pixels = GetPixBaseAddr ( GetPortPixMap ( [ window_view qdPort ] ) );
+-        current->pitch  = GetPixRowBytes ( GetPortPixMap ( [ window_view qdPort ] ) );
+-        qdbpp           = GetPixDepth ( GetPortPixMap ( [ window_view qdPort ] ) );
+-        UnlockPortBits ( [ window_view qdPort ] );
+-
+-        /* QuickDraw may give a 16-bit shadow surface on 8-bit displays! */
+-        *bpp = qdbpp;
+-
++        cgColorspace = CGColorSpaceCreateDeviceRGB();
++        current->pitch = 4 * current->w;
++        current->pixels = SDL_malloc (current->h * current->pitch);
++        
++        cg_context = CGBitmapContextCreate (current->pixels, current->w, current->h,
++                        8, current->pitch, cgColorspace,
++                        kCGImageAlphaNoneSkipFirst);
++        CGColorSpaceRelease (cgColorspace);
++        
+         current->flags |= SDL_SWSURFACE;
+-        current->flags |= SDL_PREALLOC;
+         current->flags |= SDL_ASYNCBLIT;
++        current->hwdata = (void *) cg_context;
+         
+-        /* 
+-            current->pixels now points to the window's pixels
+-            We want it to point to the *view's* pixels 
+-        */
+-        { 
+-            int vOffset = [ qz_window frame ].size.height - 
+-                [ window_view frame ].size.height - [ window_view frame ].origin.y;
+-            
+-            int hOffset = [ window_view frame ].origin.x;
+-                    
+-            current->pixels = (Uint8 *)current->pixels + (vOffset * current->pitch) + hOffset * (qdbpp/8);
+-        }
+         this->UpdateRects     = QZ_UpdateRects;
+-        this->LockHWSurface   = QZ_LockWindow;
+-        this->UnlockHWSurface = QZ_UnlockWindow;
++        this->LockHWSurface   = QZ_LockHWSurface;
++        this->UnlockHWSurface = QZ_UnlockHWSurface;
+     }
+ 
+     /* Save flags to ensure correct teardown */
+@@ -868,8 +868,8 @@
+     }
+     /* Setup windowed video */
+     else {
+-        /* Force bpp to the device's bpp */
+-        bpp = device_bpp;
++        /* Force bpp to 32 */
++        bpp = 32;
+         current = QZ_SetVideoWindowed (this, current, width, height, &bpp, flags);
+         if (current == NULL)
+             return NULL;
+@@ -894,9 +894,15 @@
+                 return NULL;
+             case 32:   /* (8)-8-8-8 ARGB */
+                 amask = 0x00000000;
++#ifdef __LITTLE_ENDIAN__
++                rmask = 0x0000FF00;
++                gmask = 0x00FF0000;
++                bmask = 0xFF000000;
++#else
+                 rmask = 0x00FF0000;
+                 gmask = 0x0000FF00;
+                 bmask = 0x000000FF;
++#endif
+                 break;
+         }
+ 
+@@ -1053,6 +1059,9 @@
+         /* On error, skip VBL delay */
+         ERROR:
+         
++        /* TODO: use CGContextDrawImage here too!  Create two CGContextRefs the same way we
++           create two buffers, replace current_buffer with current_context and set it
++           appropriately in QZ_FlipDoubleBuffer.  */
+         while ( h-- ) {
+         
+             SDL_memcpy (dst, src, len);
+@@ -1096,253 +1105,6 @@
+ #pragma unused(this,num_rects,rects)
+ }
+ 
+-/*
+-    The obscured code is based on work by Matt Slot fprefect@ambrosiasw.com,
+-    who supplied sample code for Carbon.
+-*/
+-
+-/*#define TEST_OBSCURED 1*/
+-
+-#if TEST_OBSCURED
+-#include "CGS.h"
+-#endif
+-
+-static int QZ_IsWindowObscured (NSWindow *window) {
+-
+-
+-#if TEST_OBSCURED
+-
+-    /*  
+-        In order to determine if a direct copy to the screen is possible,
+-        we must figure out if there are any windows covering ours (including shadows).
+-        This can be done by querying the window server about the on screen
+-        windows for their screen rectangle and window level.
+-        The procedure used below is puts accuracy before speed; however, it aims to call
+-        the window server the fewest number of times possible to keep things reasonable.
+-        In my testing on a 300mhz G3, this routine typically takes < 2 ms. -DW
+-    
+-    Notes:
+-        -Calls into the Window Server involve IPC which is slow.
+-        -Getting a rectangle seems slower than getting the window level
+-        -The window list we get back is in sorted order, top to bottom
+-        -On average, I suspect, most windows above ours are dock icon windows (hence optimization)
+-        -Some windows above ours are always there, and cannot move or obscure us (menu bar)
+-    
+-    Bugs:
+-        -no way (yet) to deactivate direct drawing when a window is dragged,
+-        or suddenly obscured, so drawing continues and can produce garbage
+-        We need some kind of locking mechanism on window movement to prevent this
+-    
+-        -deactivated normal windows use activated normal
+-        window shadows (slight inaccuraccy)
+-    */
+-
+-    /* Cache the connection to the window server */
+-    static CGSConnectionID    cgsConnection = (CGSConnectionID) -1;
+-
+-    /* Cache the dock icon windows */
+-    static CGSWindowID          dockIcons[kMaxWindows];
+-    static int                  numCachedDockIcons = 0;
+-
+-    CGSWindowID                windows[kMaxWindows];
+-    CGSWindowCount             i, count;
+-    CGSWindowLevel             winLevel;
+-    CGSRect                    winRect;
+-
+-    CGSRect contentRect;
+-    int     windowNumber;
+-    int     firstDockIcon;
+-    int     dockIconCacheMiss;
+-    int     windowContentOffset;
+-
+-    int     obscured = SDL_TRUE;
+-
+-    if ( [ window isVisible ] ) {
+-
+-        /*  
+-            walk the window list looking for windows over top of
+-            (or casting a shadow on) ours 
+-        */
+-
+-        /* 
+-           Get a connection to the window server
+-           Should probably be moved out into SetVideoMode() or InitVideo()
+-        */
+-        if (cgsConnection == (CGSConnectionID) -1) {
+-            cgsConnection = (CGSConnectionID) 0;
+-            cgsConnection = _CGSDefaultConnection ();
+-        }
+-
+-        if (cgsConnection) {
+-
+-            if ( ! [ window styleMask ] & NSBorderlessWindowMask )
+-                windowContentOffset = 22;
+-            else
+-                windowContentOffset = 0;
+-
+-            windowNumber = [ window windowNumber ];
+-
+-            /* The window list is sorted according to order on the screen */
+-            count = 0;
+-            CGSGetOnScreenWindowList (cgsConnection, 0, kMaxWindows, windows, &count);
+-            CGSGetScreenRectForWindow (cgsConnection, windowNumber, &contentRect);
+-
+-            /* adjust rect for window title bar (if present) */
+-            contentRect.origin.y    += windowContentOffset;
+-            contentRect.size.height -= windowContentOffset;
+-
+-            firstDockIcon = -1;
+-            dockIconCacheMiss = SDL_FALSE;
+-
+-            /* 
+-                The first window is always an empty window with level kCGSWindowLevelTop
+-                so start at index 1
+-            */
+-            for (i = 1; i < count; i++) {
+-
+-                /* If we reach our window in the list, it cannot be obscured */
+-                if (windows[i] == windowNumber) {
+-
+-                    obscured = SDL_FALSE;
+-                    break;
+-                }
+-                else {
+-
+-                    float shadowSide;
+-                    float shadowTop;
+-                    float shadowBottom;
+-
+-                    CGSGetWindowLevel (cgsConnection, windows[i], &winLevel);
+-
+-                    if (winLevel == kCGSWindowLevelDockIcon) {
+-
+-                        int j;
+-
+-                        if (firstDockIcon < 0) {
+-
+-                            firstDockIcon = i;
+-
+-                            if (numCachedDockIcons > 0) {
+-
+-                                for (j = 0; j < numCachedDockIcons; j++) {
+-
+-                                    if (windows[i] == dockIcons[j])
+-                                        i++;
+-                                    else
+-                                        break;
+-                                }
+-
+-                                if (j != 0) {
+-
+-                                    i--;
+-
+-                                    if (j < numCachedDockIcons) {
+-
+-                                        dockIconCacheMiss = SDL_TRUE;
+-                                    }
+-                                }
+-
+-                            }
+-                        }
+-
+-                        continue;
+-                    }
+-                    else if (winLevel == kCGSWindowLevelMenuIgnore
+-                             /* winLevel == kCGSWindowLevelTop */) {
+-
+-                        continue; /* cannot obscure window */
+-                    }
+-                    else if (winLevel == kCGSWindowLevelDockMenu ||
+-                             winLevel == kCGSWindowLevelMenu) {
+-
+-                        shadowSide = 18;
+-                        shadowTop = 4;
+-                        shadowBottom = 22;
+-                    }
+-                    else if (winLevel == kCGSWindowLevelUtility) {
+-
+-                        shadowSide = 8;
+-                        shadowTop = 4;
+-                        shadowBottom = 12;
+-                    }
+-                    else if (winLevel == kCGSWindowLevelNormal) {
+-
+-                        /* 
+-                            These numbers are for foreground windows,
+-                            they are too big (but will work) for background windows 
+-                        */
+-                        shadowSide = 20;
+-                        shadowTop = 10;
+-                        shadowBottom = 24;
+-                    }
+-                    else if (winLevel == kCGSWindowLevelDock) {
+-
+-                        /* Create dock icon cache */
+-                        if (numCachedDockIcons != (i-firstDockIcon) ||
+-                            dockIconCacheMiss) {
+-
+-                            numCachedDockIcons = i - firstDockIcon;
+-                            SDL_memcpy (dockIcons, &(windows[firstDockIcon]),
+-                                    numCachedDockIcons * sizeof(*windows));
+-                        }
+-
+-                        /* no shadow */
+-                        shadowSide = 0;
+-                        shadowTop = 0;
+-                        shadowBottom = 0;
+-                    }
+-                    else {
+-
+-                        /*
+-                            kCGSWindowLevelDockLabel,
+-                            kCGSWindowLevelDock,
+-                            kOther???
+-                        */
+-
+-                        /* no shadow */
+-                        shadowSide = 0;
+-                        shadowTop = 0;
+-                        shadowBottom = 0;
+-                    }
+-
+-                    CGSGetScreenRectForWindow (cgsConnection, windows[i], &winRect);
+-
+-                    winRect.origin.x -= shadowSide;
+-                    winRect.origin.y -= shadowTop;
+-                    winRect.size.width += shadowSide;
+-                    winRect.size.height += shadowBottom;
+-
+-                    if (NSIntersectsRect (contentRect, winRect)) {
+-
+-                        obscured = SDL_TRUE;
+-                        break;
+-                    }
+-
+-                } /* window was not our window */
+-
+-            } /* iterate over windows */
+-
+-        } /* get cgsConnection */
+-
+-    } /* window is visible */
+-    
+-    return obscured;
+-#else
+-    return SDL_TRUE;
+-#endif
+-}
+-
+-
+-/* Locking functions for the software window buffer */
+-static int QZ_LockWindow (_THIS, SDL_Surface *surface) {
+-    
+-    return LockPortBits ( [ window_view qdPort ] );
+-}
+-
+-static void QZ_UnlockWindow (_THIS, SDL_Surface *surface) {
+-
+-    UnlockPortBits ( [ window_view qdPort ] );
+-}
+ 
+ /* Resize icon, BMP format */
+ static const unsigned char QZ_ResizeIcon[] = {
+@@ -1384,41 +1146,34 @@
+     0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x0b
+ };
+ 
+-static void QZ_DrawResizeIcon (_THIS, RgnHandle dirtyRegion) {
++static void QZ_DrawResizeIcon (_THIS) {
+ 
+     /* Check if we should draw the resize icon */
+     if (SDL_VideoSurface->flags & SDL_RESIZABLE) {
+     
+-        Rect    icon;
+-        SetRect (&icon, SDL_VideoSurface->w - 13, SDL_VideoSurface->h - 13, 
+-                    SDL_VideoSurface->w, SDL_VideoSurface->h);
+-                    
+-        if (RectInRgn (&icon, dirtyRegion)) {
++        SDL_Rect icon_rect;
++        
++        /* Create the icon image */
++        if (resize_icon == NULL) {
+         
+-            SDL_Rect icon_rect;
++            SDL_RWops *rw;
++            SDL_Surface *tmp;
+             
+-            /* Create the icon image */
+-            if (resize_icon == NULL) {
++            rw = SDL_RWFromConstMem (QZ_ResizeIcon, sizeof(QZ_ResizeIcon));
++            tmp = SDL_LoadBMP_RW (rw, SDL_TRUE);
++                                                            
++            resize_icon = SDL_ConvertSurface (tmp, SDL_VideoSurface->format, SDL_SRCCOLORKEY);
++            SDL_SetColorKey (resize_icon, SDL_SRCCOLORKEY, 0xFFFFFF);
+             
+-                SDL_RWops *rw;
+-                SDL_Surface *tmp;
+-                
+-                rw = SDL_RWFromConstMem (QZ_ResizeIcon, sizeof(QZ_ResizeIcon));
+-                tmp = SDL_LoadBMP_RW (rw, SDL_TRUE);
+-                                                                
+-                resize_icon = SDL_ConvertSurface (tmp, SDL_VideoSurface->format, SDL_SRCCOLORKEY);
+-                SDL_SetColorKey (resize_icon, SDL_SRCCOLORKEY, 0xFFFFFF);
+-                
+-                SDL_FreeSurface (tmp);
+-            }
++            SDL_FreeSurface (tmp);
++        }
+             
+-            icon_rect.x = SDL_VideoSurface->w - 13;
+-            icon_rect.y = SDL_VideoSurface->h - 13;
+-            icon_rect.w = 13;
+-            icon_rect.h = 13;
++        icon_rect.x = SDL_VideoSurface->w - 13;
++        icon_rect.y = SDL_VideoSurface->h - 13;
++        icon_rect.w = 13;
++        icon_rect.h = 13;
+             
+-            SDL_BlitSurface (resize_icon, NULL, SDL_VideoSurface, &icon_rect);
+-        }
++        SDL_BlitSurface (resize_icon, NULL, SDL_VideoSurface, &icon_rect);
+     }
+ }
+ 
+@@ -1432,75 +1187,19 @@
+         /* Do nothing if miniaturized */
+     }
+     
+-    else if ( ! QZ_IsWindowObscured (qz_window) ) {
+-
+-        /* Use direct copy to flush contents to the display */
+-        CGrafPtr savePort;
+-        CGrafPtr dstPort, srcPort;
+-        const BitMap  *dstBits, *srcBits;
+-        Rect     dstRect, srcRect;
+-        Point    offset;
+-        int i;
+-
+-        GetPort (&savePort);
+-
+-        dstPort = CreateNewPortForCGDisplayID ((UInt32)display_id);
+-        srcPort = [ window_view qdPort ];
+-
+-        offset.h = 0;
+-        offset.v = 0;
+-        SetPort (srcPort);
+-        LocalToGlobal (&offset);
+-
+-        SetPort (dstPort);
+-
+-        LockPortBits (dstPort);
+-        LockPortBits (srcPort);
+-
+-        dstBits = GetPortBitMapForCopyBits (dstPort);
+-        srcBits = GetPortBitMapForCopyBits (srcPort);
+-
+-        for (i = 0; i < numRects; i++) {
+-
+-            SetRect (&srcRect, rects[i].x, rects[i].y,
+-                     rects[i].x + rects[i].w,
+-                     rects[i].y + rects[i].h);
+-
+-            SetRect (&dstRect,
+-                     rects[i].x + offset.h,
+-                     rects[i].y + offset.v,
+-                     rects[i].x + rects[i].w + offset.h,
+-                     rects[i].y + rects[i].h + offset.v);
+-
+-            CopyBits (srcBits, dstBits,
+-                      &srcRect, &dstRect, srcCopy, NULL);
+-
+-        }
+-
+-        SetPort (savePort);
+-    }
+     else {
+-        /* Use QDFlushPortBuffer() to flush content to display */
+-        int i;
+-        RgnHandle dirty = NewRgn ();
+-        RgnHandle temp  = NewRgn ();
+-
+-        SetEmptyRgn (dirty);
+-
+-        /* Build the region of dirty rectangles */
+-        for (i = 0; i < numRects; i++) {
+-
+-            MacSetRectRgn (temp, rects[i].x, rects[i].y,
+-                        rects[i].x + rects[i].w, rects[i].y + rects[i].h);
+-            MacUnionRgn (dirty, temp, dirty);
+-        }
+-
+-        QZ_DrawResizeIcon (this, dirty);
+-        
+-        /* Flush the dirty region */
+-        QDFlushPortBuffer ( [ window_view qdPort ], dirty );
+-        DisposeRgn (dirty);
+-        DisposeRgn (temp);
++        CGContextRef cgc = (CGContextRef)
++            [[NSGraphicsContext graphicsContextWithWindow: qz_window]
++                graphicsPort];
++        QZ_DrawResizeIcon (this);
++        CGContextFlush (cg_context);
++        CGImageRef image = CGBitmapContextCreateImage (cg_context);
++        CGRect rectangle = CGRectMake (0,0,[window_view frame].size.width,[window_view frame].size.height);
++        
++        CGContextDrawImage (cgc, rectangle, image);
++        CGImageRelease(image);
++        CGContextFlush (cgc);
++        CGContextRelease (cgc);
+     }
+ }
+ 
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/video/quartz/SDL_QuartzWindow.h /usr/src/sp/src/SDL-1.2.13/src/video/quartz/SDL_QuartzWindow.h
+--- /home/pc188/Downloads/SDL-1.2.13/src/video/quartz/SDL_QuartzWindow.h	2007-12-31 04:48:04.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/video/quartz/SDL_QuartzWindow.h	2012-09-03 13:39:20.000000000 +0100
+@@ -21,6 +21,10 @@
+ */
+ #include "SDL_config.h"
+ 
++#if __MAC_OS_X_VERSION_MIN_REQUIRED < 1050
++typedef unsigned int NSUInteger;
++#endif
++
+ /* Subclass of NSWindow to fix genie effect and support resize events  */
+ @interface SDL_QuartzWindow : NSWindow
+ - (void)miniaturize:(id)sender;
+@@ -29,7 +33,7 @@
+ - (void)appDidHide:(NSNotification*)note;
+ - (void)appWillUnhide:(NSNotification*)note;
+ - (void)appDidUnhide:(NSNotification*)note;
+-- (id)initWithContentRect:(NSRect)contentRect styleMask:(unsigned int)styleMask backing:(NSBackingStoreType)backingType defer:(BOOL)flag;
++- (id)initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)styleMask backing:(NSBackingStoreType)backingType defer:(BOOL)flag;
+ @end
+ 
+ /* Delegate for our NSWindow to send SDLQuit() on close */
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/video/quartz/SDL_QuartzWindow.m /usr/src/sp/src/SDL-1.2.13/src/video/quartz/SDL_QuartzWindow.m
+--- /home/pc188/Downloads/SDL-1.2.13/src/video/quartz/SDL_QuartzWindow.m	2007-12-31 04:48:04.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/video/quartz/SDL_QuartzWindow.m	2012-09-03 13:39:20.000000000 +0100
+@@ -125,31 +125,6 @@
+         newViewFrame = [ window_view frame ];
+         
+         SDL_PrivateResize (newViewFrame.size.width, newViewFrame.size.height);
+-
+-        /* If not OpenGL, we have to update the pixels and pitch */
+-        if ( ! ( SDL_VideoSurface->flags & SDL_OPENGL ) ) {
+-            
+-            CGrafPtr thePort = [ window_view qdPort ];
+-            LockPortBits ( thePort );
+-            
+-            SDL_VideoSurface->pixels = GetPixBaseAddr ( GetPortPixMap ( thePort ) );
+-            SDL_VideoSurface->pitch  = GetPixRowBytes ( GetPortPixMap ( thePort ) );
+-                        
+-            /* 
+-                SDL_VideoSurface->pixels now points to the window's pixels
+-                We want it to point to the *view's* pixels 
+-            */
+-            { 
+-                int vOffset = [ qz_window frame ].size.height - 
+-                    newViewFrame.size.height - newViewFrame.origin.y;
+-                
+-                int hOffset = newViewFrame.origin.x;
+-                        
+-                SDL_VideoSurface->pixels = (Uint8 *)SDL_VideoSurface->pixels + (vOffset * SDL_VideoSurface->pitch) + hOffset * (device_bpp/8);
+-            }
+-            
+-            UnlockPortBits ( thePort );
+-        }
+     }
+ }
+ 
+@@ -183,7 +158,7 @@
+     SDL_PrivateAppActive (1, SDL_APPACTIVE);
+ }
+ 
+-- (id)initWithContentRect:(NSRect)contentRect styleMask:(unsigned int)styleMask backing:(NSBackingStoreType)backingType defer:(BOOL)flag
++- (id)initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)styleMask backing:(NSBackingStoreType)backingType defer:(BOOL)flag
+ {
+     /* Make our window subclass receive these application notifications */
+     [ [ NSNotificationCenter defaultCenter ] addObserver:self
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/video/quartz/SDL_QuartzWM.m /usr/src/sp/src/SDL-1.2.13/src/video/quartz/SDL_QuartzWM.m
+--- /home/pc188/Downloads/SDL-1.2.13/src/video/quartz/SDL_QuartzWM.m	2007-12-31 04:48:04.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/video/quartz/SDL_QuartzWM.m	2012-09-03 13:39:20.000000000 +0100
+@@ -171,11 +171,7 @@
+     else {
+        
+         *p = [ window_view convertPoint:*p toView: nil ];
+-        
+-        /* We need a workaround in OpenGL mode */
+-        if ( SDL_VideoSurface->flags & SDL_OPENGL ) {
+-            p->y = [window_view frame].size.height - p->y;
+-        }
++        p->y = [window_view frame].size.height - p->y;
+     }
+ }
+ 
+@@ -189,11 +185,7 @@
+     else {
+ 
+         *p = [ window_view convertPoint:*p fromView: nil ];
+-        
+-        /* We need a workaround in OpenGL mode */
+-        if ( SDL_VideoSurface != NULL && (SDL_VideoSurface->flags & SDL_OPENGL) ) {
+-            p->y = [window_view frame].size.height - p->y;
+-        }
++        p->y = [window_view frame].size.height - p->y;
+     }
+ }
+ 
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/video/quartz/SDL_QuartzYUV.m /usr/src/sp/src/SDL-1.2.13/src/video/quartz/SDL_QuartzYUV.m
+--- /home/pc188/Downloads/SDL-1.2.13/src/video/quartz/SDL_QuartzYUV.m	2007-12-31 04:48:04.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/video/quartz/SDL_QuartzYUV.m	2012-09-03 13:39:20.000000000 +0100
+@@ -48,9 +48,14 @@
+ }
+ 
+ static int QZ_DisplayYUV (_THIS, SDL_Overlay *overlay, SDL_Rect *src, SDL_Rect *dst) {
+-
++#if SDL_LEGACY_QUICKDRAW
+     OSErr err;
+     CodecFlags flags;
++    int h;
++    char *p_dst, *p_src;
++    PixMapHandle           hPixMap;
++    long                   theRowBytes;
++
+ 
+     if (dst->x != 0 || dst->y != 0) {
+ 
+@@ -81,27 +86,40 @@
+                                          codecFlagUseImageBuffer, &flags, nil ) != noErr ) )
+     {
+         SDL_SetError ("DecompressSequenceFrameS failed");
++        return TRUE;
+     }
+ 
+-    return err != noErr;
++    /* TODO: use CGContextDrawImage here too!  Create two CGContextRefs the same way we
++       create two buffers, replace current_buffer with current_context and set it
++       appropriately in QZ_FlipDoubleBuffer.  Use CTM instead of the above
++       SetIdentityMatrix thing.  */
++    hPixMap     = GetGWorldPixMap(yuv_port);
++    p_src       = GetPixBaseAddr(hPixMap);
++    theRowBytes = QTGetPixMapHandleRowBytes(hPixMap);
++    p_dst       = SDL_VideoSurface->pixels + SDL_VideoSurface->offset;
++    for (h = dst->h; h--; ) {
++        SDL_memcpy (p_dst, p_src, dst->w * 4);
++        p_src += theRowBytes;
++        p_dst += SDL_VideoSurface->pitch;
++    }
++    SDL_Flip (SDL_VideoSurface);
++#endif
++    return FALSE;
+ }
+ 
+ static void QZ_FreeHWYUV (_THIS, SDL_Overlay *overlay) {
+-
++#if SDL_LEGACY_QUICKDRAW
+     CDSequenceEnd (yuv_seq);
+     ExitMovies();
++    DisposeGWorld(yuv_port);
+ 
+     SDL_free (overlay->hwfuncs);
+     SDL_free (overlay->pitches);
+     SDL_free (overlay->pixels);
+ 
+-    if (SDL_VideoSurface->flags & SDL_FULLSCREEN) {
+-        [ qz_window close ];
+-        qz_window = nil;
+-    }
+-
+     SDL_free (yuv_matrix);
+     DisposeHandle ((Handle)yuv_idh);
++#endif
+ }
+ 
+ /* check for 16 byte alignment, bail otherwise */
+@@ -112,11 +130,12 @@
+ 
+ SDL_Overlay* QZ_CreateYUVOverlay (_THIS, int width, int height,
+                                          Uint32 format, SDL_Surface *display) {
+-
++    SDL_Overlay *overlay = NULL;
++#if SDL_LEGACY_QUICKDRAW
+     Uint32 codec;
+     OSStatus err;
+     CGrafPtr port;
+-    SDL_Overlay *overlay;
++    Rect  theBounds = {0, 0};
+ 
+     if (format == SDL_YV12_OVERLAY ||
+         format == SDL_IYUV_OVERLAY) {
+@@ -150,50 +169,21 @@
+         SDL_SetError ("Could not find QuickTime codec for format");
+         return NULL;
+     }
+-
+-    if (SDL_VideoSurface->flags & SDL_FULLSCREEN) {
+-
+-        /*
+-          Acceleration requires a window to be present.
+-          A CGrafPtr that points to the screen isn't good enough
+-        */
+-        NSRect content = NSMakeRect (0, 0, SDL_VideoSurface->w, SDL_VideoSurface->h);
+-
+-        qz_window = [ [ SDL_QuartzWindow alloc ]
+-                            initWithContentRect:content
+-                            styleMask:NSBorderlessWindowMask
+-                            backing:NSBackingStoreBuffered defer:NO ];
+-
+-        if (qz_window == nil) {
+-            SDL_SetError ("Could not create the Cocoa window");
+-            return NULL;
+-        }
+-
+-        [ qz_window setContentView:[ [ NSQuickDrawView alloc ] init ] ];
+-        [ qz_window setReleasedWhenClosed:YES ];
+-        [ qz_window center ];
+-        [ qz_window setAcceptsMouseMovedEvents:YES ];
+-        [ qz_window setLevel:CGShieldingWindowLevel() ];
+-        [ qz_window makeKeyAndOrderFront:nil ];
+-
+-        port = [ [ qz_window contentView ] qdPort ];
+-        SetPort (port);
+-        
+-        /*
+-            BUG: would like to remove white flash when window kicks in
+-            {
+-                Rect r;
+-                SetRect (&r, 0, 0, SDL_VideoSurface->w, SDL_VideoSurface->h);
+-                PaintRect (&r);
+-                QDFlushPortBuffer (port, nil);
+-            }
+-        */
+-    }
+-    else {
+-        port = [ window_view qdPort ];
+-        SetPort (port);
++    
++    theBounds.right  = width;
++    theBounds.bottom = height;
++    yuv_port = NULL;
++    
++    err = QTNewGWorld(&yuv_port, k32ARGBPixelFormat, &theBounds,
++                      NULL, NULL, 0);
++    
++    if (err != noErr) {
++        SDL_SetError ("Could not init QuickTime world");
++        return NULL;
+     }
+     
++    LockPixels(GetGWorldPixMap(yuv_port));
++    
+     SetIdentityMatrix (yuv_matrix);
+     
+     HLock ((Handle)yuv_idh);
+@@ -219,7 +209,7 @@
+                                     yuv_idh,
+                                     NULL,
+                                     0,
+-                                    port,
++                                    yuv_port,
+                                     NULL,
+                                     NULL,
+                                     yuv_matrix,
+@@ -231,11 +221,13 @@
+     
+     if (err != noErr) {
+         SDL_SetError ("Error trying to start YUV codec.");
++        DisposeGWorld(yuv_port);
+         return NULL;
+     }
+     
+     overlay = (SDL_Overlay*) SDL_malloc (sizeof(*overlay));
+     if (overlay == NULL) {
++        DisposeGWorld(yuv_port);
+         SDL_OutOfMemory();
+         return NULL;
+     }
+@@ -263,6 +255,7 @@
+             plane3 = 1; /* V plane maps to plane 2 */
+         }
+         else {
++            DisposeGWorld(yuv_port);
+             SDL_SetError("Unsupported YUV format");
+             return NULL;
+         }
+@@ -270,6 +263,7 @@
+         pixels = (Uint8**) SDL_malloc (sizeof(*pixels) * 3);
+         pitches = (Uint16*) SDL_malloc (sizeof(*pitches) * 3);
+         if (pixels == NULL || pitches == NULL) {
++            DisposeGWorld(yuv_port);
+             SDL_OutOfMemory();
+             return NULL;
+         }
+@@ -280,6 +274,7 @@
+             SDL_malloc (sizeof(PlanarPixmapInfoYUV420) +
+                     (width * height * 2));
+         if (yuv_pixmap == NULL) {
++            DisposeGWorld(yuv_port);
+             SDL_OutOfMemory ();
+             return NULL;
+         }
+@@ -314,6 +309,7 @@
+ 
+     overlay->hwfuncs = SDL_malloc (sizeof(*overlay->hwfuncs));
+     if (overlay->hwfuncs == NULL) {
++		DisposeGWorld(yuv_port);
+         SDL_OutOfMemory();
+         return NULL;
+     }
+@@ -325,6 +321,7 @@
+ 
+     yuv_width = overlay->w;
+     yuv_height = overlay->h;
++#endif
+     
+     return overlay;
+ }
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/video/SDL_blit.c /usr/src/sp/src/SDL-1.2.13/src/video/SDL_blit.c
+--- /home/pc188/Downloads/SDL-1.2.13/src/video/SDL_blit.c	2007-12-31 04:48:14.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/video/SDL_blit.c	2012-09-03 13:39:20.000000000 +0100
+@@ -193,6 +193,9 @@
+ 	}
+ 	else
+ #endif
++	if(srcskip == dstskip && srcskip == w)
++		SDL_memcpy(dst, src, w*h);
++	else
+ 	while ( h-- ) {
+ 		SDL_memcpy(dst, src, w);
+ 		src += srcskip;
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/video/SDL_video.c /usr/src/sp/src/SDL-1.2.13/src/video/SDL_video.c
+--- /home/pc188/Downloads/SDL-1.2.13/src/video/SDL_video.c	2007-12-31 04:48:14.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/video/SDL_video.c	2012-09-03 13:39:20.000000000 +0100
+@@ -268,7 +268,7 @@
+ 	video->info.vfmt = SDL_VideoSurface->format;
+ 
+ 	/* Start the event loop */
+-	if ( SDL_StartEventLoop(flags) < 0 ) {
++	if ( SDL_StartEventLoop(flags | SDL_INIT_VIDEO) < 0 ) {
+ 		SDL_VideoQuit();
+ 		return(-1);
+ 	}
+diff -ru /home/pc188/Downloads/SDL-1.2.13/src/video/x11/SDL_x11events.c /usr/src/sp/src/SDL-1.2.13/src/video/x11/SDL_x11events.c
+--- /home/pc188/Downloads/SDL-1.2.13/src/video/x11/SDL_x11events.c	2007-12-31 04:48:13.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/src/video/x11/SDL_x11events.c	2012-09-03 13:39:20.000000000 +0100
+@@ -48,6 +48,9 @@
+ #include "SDL_x11mouse_c.h"
+ #include "SDL_x11events_c.h"
+ 
++#ifdef XFREE86_KEYSYMS
++#include <X11/XF86keysym.h>
++#endif
+ 
+ /* Define this if you want to debug X11 events */
+ /*#define DEBUG_XEVENTS*/
+@@ -1092,6 +1095,90 @@
+ 	MISC_keymap[XK_Hyper_R&0xFF] = SDLK_MENU;   /* Windows "Menu" key */
+ }
+ 
++#ifdef XFREE86_KEYSYMS
++/* Macro for trivial assignment from XFree86 value to SDL value */
++#define XF86_to_SDLK(x) \
++    case XF86XK_##x:    \
++        return SDLK_##x
++
++static SDLKey
++TranslateXFree86VendorSpecificKeysyms(KeySym xsym)
++{
++    switch (xsym) {
++        /* Keys found on some "Internet" keyboards. */
++        XF86_to_SDLK(Standby);
++        XF86_to_SDLK(AudioLowerVolume);
++        XF86_to_SDLK(AudioMute);
++        XF86_to_SDLK(AudioRaiseVolume);
++        XF86_to_SDLK(AudioPlay);
++        XF86_to_SDLK(AudioStop);
++        XF86_to_SDLK(AudioPrev);
++        XF86_to_SDLK(AudioNext);
++        XF86_to_SDLK(HomePage);
++        XF86_to_SDLK(Mail);
++        XF86_to_SDLK(Start);
++        XF86_to_SDLK(Search);
++        XF86_to_SDLK(AudioRecord);
++
++        /* These are sometimes found on PDA's (e.g. Palm, PocketPC or elsewhere) */
++        XF86_to_SDLK(Calculator);
++        XF86_to_SDLK(Memo);
++        XF86_to_SDLK(ToDoList);
++        XF86_to_SDLK(Calendar);
++        XF86_to_SDLK(PowerDown);
++        XF86_to_SDLK(ContrastAdjust);
++        XF86_to_SDLK(RockerUp);
++        XF86_to_SDLK(RockerDown);
++        XF86_to_SDLK(RockerEnter);
++
++        /* Some more "Internet" keyboard symbols */
++        XF86_to_SDLK(Back);
++        XF86_to_SDLK(Forward);
++        XF86_to_SDLK(Stop);
++        XF86_to_SDLK(Refresh);
++        XF86_to_SDLK(PowerOff);
++        XF86_to_SDLK(WakeUp);
++        XF86_to_SDLK(Eject);
++        XF86_to_SDLK(ScreenSaver);
++        XF86_to_SDLK(WWW);
++        XF86_to_SDLK(Sleep);
++        XF86_to_SDLK(Favorites);
++        XF86_to_SDLK(AudioPause);
++        XF86_to_SDLK(AudioMedia);
++        XF86_to_SDLK(MyComputer);
++        XF86_to_SDLK(VendorHome);
++        XF86_to_SDLK(LightBulb);
++        XF86_to_SDLK(Shop);
++        XF86_to_SDLK(History);
++        XF86_to_SDLK(OpenURL);
++        XF86_to_SDLK(AddFavorite);
++        XF86_to_SDLK(HotLinks);
++        XF86_to_SDLK(BrightnessAdjust);
++
++        XF86_to_SDLK(Launch0);
++        XF86_to_SDLK(Launch1);
++        XF86_to_SDLK(Launch2);
++        XF86_to_SDLK(Launch3);
++        XF86_to_SDLK(Launch4);
++        XF86_to_SDLK(Launch5);
++        XF86_to_SDLK(Launch7);
++        XF86_to_SDLK(Launch8);
++        XF86_to_SDLK(Launch9);
++        XF86_to_SDLK(LaunchA);
++        XF86_to_SDLK(LaunchB);
++        XF86_to_SDLK(LaunchC);
++        XF86_to_SDLK(LaunchD);
++        XF86_to_SDLK(LaunchE);
++        XF86_to_SDLK(LaunchF);
++
++        default:
++            return SDLK_UNKNOWN;
++    }
++}
++#endif
++
++
++
+ /* Get the translated SDL virtual keysym */
+ SDLKey X11_TranslateKeycode(Display *display, KeyCode kc)
+ {
+@@ -1138,6 +1225,12 @@
+ 		    case 0xFF:
+ 			key = MISC_keymap[xsym&0xFF];
+ 			break;
++
++#ifdef XFREE86_KEYSYMS
++                    case 0x1008ff: /* XFree86 vendor specific keysyms from /usr/X11R6/include/X11/XF86keysym.h */
++                	key = TranslateXFree86VendorSpecificKeysyms(xsym);
++                	break;
++#endif
+ 		    default:
+ 			/*
+ 			fprintf(stderr, "X11: Unhandled xsym, sym = 0x%04x\n",
+diff -ru /home/pc188/Downloads/SDL-1.2.13/test/configure /usr/src/sp/src/SDL-1.2.13/test/configure
+--- /home/pc188/Downloads/SDL-1.2.13/test/configure	2007-12-31 05:09:40.000000000 +0000
++++ /usr/src/sp/src/SDL-1.2.13/test/configure	2012-09-03 13:39:20.000000000 +0100
+@@ -635,7 +635,6 @@
+ SDL_CONFIG
+ SDL_CFLAGS
+ SDL_LIBS
+-XMKMF
+ CPP
+ GLLIB
+ LIBOBJS
+@@ -649,7 +648,6 @@
+ LDFLAGS
+ LIBS
+ CPPFLAGS
+-XMKMF
+ CPP'
+ 
+ 
+@@ -1244,7 +1242,6 @@
+   LIBS        libraries to pass to the linker, e.g. -l<library>
+   CPPFLAGS    C/C++/Objective C preprocessor flags, e.g. -I<include dir> if
+               you have headers in a nonstandard directory <include dir>
+-  XMKMF       Path to xmkmf, Makefile generator for X Window System
+   CPP         C preprocessor
+ 
+ Use these variables to override the choices made by `configure' or to help
+@@ -1562,7 +1559,7 @@
+ # Let the site file select an alternate cache file if it wants to.
+ # Prefer explicitly selected file to automatically selected ones.
+ if test -n "$CONFIG_SITE"; then
+-  set x "$CONFIG_SITE"
++  set x $CONFIG_SITE
+ elif test "x$prefix" != xNONE; then
+   set x "$prefix/share/config.site" "$prefix/etc/config.site"
+ else
+@@ -3467,81 +3464,9 @@
+ else
+   # One or both of the vars are not set, and there is no cached value.
+ ac_x_includes=no ac_x_libraries=no
+-rm -f -r conftest.dir
+-if mkdir conftest.dir; then
+-  cd conftest.dir
+-  cat >Imakefile <<'_ACEOF'
+-incroot:
+-	@echo incroot='${INCROOT}'
+-usrlibdir:
+-	@echo usrlibdir='${USRLIBDIR}'
+-libdir:
+-	@echo libdir='${LIBDIR}'
+-_ACEOF
+-  if (export CC; ${XMKMF-xmkmf}) >/dev/null 2>/dev/null && test -f Makefile; then
+-    # GNU make sometimes prints "make[1]: Entering...", which would confuse us.
+-    for ac_var in incroot usrlibdir libdir; do
+-      eval "ac_im_$ac_var=\`\${MAKE-make} $ac_var 2>/dev/null | sed -n 's/^$ac_var=//p'\`"
+-    done
+-    # Open Windows xmkmf reportedly sets LIBDIR instead of USRLIBDIR.
+-    for ac_extension in a so sl; do
+-      if test ! -f "$ac_im_usrlibdir/libX11.$ac_extension" &&
+-	 test -f "$ac_im_libdir/libX11.$ac_extension"; then
+-	ac_im_usrlibdir=$ac_im_libdir; break
+-      fi
+-    done
+-    # Screen out bogus values from the imake configuration.  They are
+-    # bogus both because they are the default anyway, and because
+-    # using them would break gcc on systems where it needs fixed includes.
+-    case $ac_im_incroot in
+-	/usr/include) ac_x_includes= ;;
+-	*) test -f "$ac_im_incroot/X11/Xos.h" && ac_x_includes=$ac_im_incroot;;
+-    esac
+-    case $ac_im_usrlibdir in
+-	/usr/lib | /lib) ;;
+-	*) test -d "$ac_im_usrlibdir" && ac_x_libraries=$ac_im_usrlibdir ;;
+-    esac
+-  fi
+-  cd ..
+-  rm -f -r conftest.dir
+-fi
+-
+ # Standard set of common directories for X headers.
+ # Check X11 before X11Rn because it is often a symlink to the current release.
+-ac_x_header_dirs='
+-/usr/X11/include
+-/usr/X11R6/include
+-/usr/X11R5/include
+-/usr/X11R4/include
+-
+-/usr/include/X11
+-/usr/include/X11R6
+-/usr/include/X11R5
+-/usr/include/X11R4
+-
+-/usr/local/X11/include
+-/usr/local/X11R6/include
+-/usr/local/X11R5/include
+-/usr/local/X11R4/include
+-
+-/usr/local/include/X11
+-/usr/local/include/X11R6
+-/usr/local/include/X11R5
+-/usr/local/include/X11R4
+-
+-/usr/X386/include
+-/usr/x386/include
+-/usr/XFree86/include/X11
+-
+-/usr/include
+-/usr/local/include
+-/usr/unsupported/include
+-/usr/athena/include
+-/usr/local/x11r5/include
+-/usr/lpp/Xamples/include
+-
+-/usr/openwin/include
+-/usr/openwin/share/include'
++ac_x_header_dirs=''
+ 
+ if test "$ac_x_includes" = no; then
+   # Guess where to find include files, by looking for Xlib.h.
+@@ -4443,14 +4368,13 @@
+ SDL_CONFIG!$SDL_CONFIG$ac_delim
+ SDL_CFLAGS!$SDL_CFLAGS$ac_delim
+ SDL_LIBS!$SDL_LIBS$ac_delim
+-XMKMF!$XMKMF$ac_delim
+ CPP!$CPP$ac_delim
+ GLLIB!$GLLIB$ac_delim
+ LIBOBJS!$LIBOBJS$ac_delim
+ LTLIBOBJS!$LTLIBOBJS$ac_delim
+ _ACEOF
+ 
+-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 63; then
++  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 62; then
+     break
+   elif $ac_last_try; then
+     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
+Only in /usr/src/sp/src/SDL-1.2.13: VisualC
