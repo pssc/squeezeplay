@@ -1,0 +1,395 @@
+#
+# The two letter codes are defined by ISO 639-1
+# http://en.wikipedia.org/wiki/List_of_ISO_639_codes
+#
+
+INVALID_MAC_TITLE
+	CS	Chyba
+	DA	Fejl
+	DE	Fehler
+	EN	Error
+	ES	Error
+	FI	Virhe
+	FR	Erreur
+	IT	Errore
+	NL	Fout
+	NO	Feil
+	PL	Błąd
+	RU	Ошибка
+	SV	Fel
+
+INVALID_MAC_TEXT
+	CS	Neplatná adresa mac nebo uuid. Kontaktujte zákaznickou podporu.
+	DA	Ugyldig MAC-adresse eller UUID. Kontakt supportafdelingen.
+	DE	Ungültige MAC-Adresse oder UUID. Wenden Sie sich an den Kundendienst.
+	EN	Invalid mac address or uuid. Please contact support.
+	ES	Dirección MAC o UUID no válidos. Contacte con asistencia técnica.
+	FI	Virheellinen MAC-osoite tai UUID. Ota yhteyttä tekniseen tukeen.
+	FR	Adresse MAC ou uuid non valide. Veuillez contacter le service de support.
+	IT	Indirizzo MAC o UUID non valido. Contattare il servizio di assistenza.
+	NL	Ongeldig mac-adres of uuid. Neem contact op met ondersteuning.
+	NO	Ugyldig mac-adresse eller uuid. Ta kontakt med kundestøtte.
+	PL	Nieprawidłowy adres MAC lub identyfikator UUID. Skontaktuj się z działem wsparcia.
+	RU	Недопустимый mac-адрес или uuid. Обратитесь в службу поддержки.
+	SV	Ogiltig MAC-adress eller ogiltigt UUID. Kontakta supportavdelningen.
+
+INVALID_MAC_CONTINUE
+	CS	Pokračovat
+	DA	Fortsæt
+	DE	Weiter
+	EN	Continue
+	ES	Continuar
+	FI	Jatka
+	FR	Continuer
+	IT	Continua
+	NL	Verdergaan
+	NO	Fortsett
+	PL	Kontynuuj
+	RU	Продолжить
+	SV	Fortsätt
+
+BSP_BRIGHTNESS
+	CS	Jas
+	DA	Lysstyrke
+	DE	Helligkeit
+	EN	Brightness
+	ES	Brillo
+	FI	Kirkkaus
+	FR	Luminosité
+	IT	Luminosità
+	NL	Helderheid
+	NO	Lysstyrke
+	PL	Jasność
+	RU	Яркость
+	SV	Ljusstyrka
+
+BSP_BRIGHTNESS_ADJUST_HELP
+	CS	K nastavení jasu použijte kolečko.
+	DA	Brug drejeknappen til at justere lysstyrken.
+	DE	Sie können die Helligkeit mit dem Rad anpassen.
+	EN	Use the wheel to adjust the brightness.
+	ES	Use la rueda para ajustar el brillo.
+	FI	Voit säätää kirkkautta kiekolla.
+	FR	Utilisez la molette pour régler la luminosité.
+	IT	Usare la rotellina per regolare la luminosità.
+	NL	Gebruik het wiel om de helderheid aan te passen.
+	NO	Bruk hjulet til å justere lysstyrken.
+	PL	Użyj pokrętła, aby ustawić jasność.
+	RU	Используйте колесико для регулировки яркости.
+	SV	Justera ljusstyrkan med rullningshjulet.
+
+BSP_BRIGHTNESS_CTRL
+	CS	Ovládání jasu
+	DA	Lysstyrkeregulering
+	DE	Helligkeitsregelung
+	EN	Brightness Control
+	ES	Control de brillo
+	FI	Kirkkauden säätö
+	FR	Contrôle de luminosité
+	IT	Controllo della luminosità
+	NL	Helderheidscontrole
+	NO	Lysstyrke
+	PL	Regulacja jasności
+	RU	Управление яркостью
+	SV	Ljusstyrka
+
+BSP_BRIGHTNESS_AUTOMATIC
+	CS	Automatický jas
+	DA	Automatisk lysstyrke
+	DE	Automatische Helligkeit
+	EN	Automatic Brightness
+	ES	Brillo automático
+	FI	Automaattinen kirkkaus
+	FR	Luminosité automatique
+	IT	Luminosità automatica
+	NL	Automatische helderheid
+	NO	Automatisk lysstyrke
+	PL	Automatyczna regulacja jasności
+	RU	Автонастройка яркости
+	SV	Automatisk ljusstyrka
+
+BSP_BRIGHTNESS_MANUAL
+	CS	Manuální jas
+	DA	Manuel lysstyrke
+	DE	Manuelle Helligkeit
+	EN	Manual Brightness
+	ES	Brillo manual
+	FI	Manuaalinen kirkkaus
+	FR	Luminosité manuelle
+	IT	Luminosità manuale
+	NL	Handmatige helderheid
+	NO	Manuell lysstyrke
+	PL	Ręczna regulacja jasności
+	RU	Ручная настройка яркости
+	SV	Manuell ljusstyrka
+
+BSP_BRIGHTNESS_MIN
+	CS	Minimální jas
+	DA	Mindste lysstyrke
+	DE	Minimale Helligkeit
+	EN	Minimal Brightness
+	ES	Brillo mínimo
+	FI	Vähimmäiskirkkaus
+	FR	Luminosité minimale
+	IT	Luminosità minima
+	NL	Minimale helderheid
+	NO	Minimal lysstyrke
+	PL	Minimalna jasność
+	RU	Минимальная яркость
+	SV	Minsta ljusstyrka
+
+BSP_BRIGHTNESS_MIN_ADJUST_HELP
+	CS	K nastavení minimálního jasu použijte kolečko.
+	DA	Brug hjulet til at justere lysstyrken.
+	DE	Sie können die minimale Helligkeit mit dem Rad anpassen.
+	EN	Use the wheel to adjust the minimal brightness.
+	ES	Use la rueda para ajustar el brillo al mínimo.
+	FI	Voit säätää kirkkautta kiekolla.
+	FR	Utilisez la molette pour régler la luminosité minimale.
+	IT	Usare la rotellina per regolare la luminosità minima.
+	NL	Gebruik het wiel om de minimale helderheid aan te passen.
+	NO	Bruk hjulet til å justere minimal lysstyrke.
+	PL	Użyj pokrętła, aby ustawić minimalną jasność.
+	RU	Используйте колесико для регулировки яркости.
+	SV	Justera ljusstyrkan med rullningshjulet.
+
+GOODBYE
+	CS	Nashledanou
+	DA	Farvel
+	DE	Auf Wiedersehen
+	EN	Goodbye
+	ES	Adiós
+	FI	Näkemiin
+	FR	Au revoir
+	IT	Arrivederci
+	NL	Tot ziens
+	NO	Farvel
+	PL	Do widzenia
+	RU	До свидания
+	SV	Hej då!
+
+BATTERY_LOW
+	CS	Nízký stav baterie
+	DA	Lavt batteriniveau
+	DE	Batterie schwach
+	EN	Battery Low
+	ES	Carga de pila baja
+	FI	Heikko paristojännite
+	FR	Niveau faible des piles
+	IT	Batteria quasi scarica
+	NL	Laag batterijvermogen
+	NO	Dårlig batteri
+	PL	Niski poziom naładowania baterii
+	RU	Аккумулятор разряжен
+	SV	Låg batterinivå
+
+BATTERY_LOW_2
+	CS	Prosím o dobití
+	DA	Vær sød at skifte batterier
+	DE	Bitte aufladen
+	EN	Please Charge Me
+	ES	Necesita carga
+	FI	Lataa minut
+	FR	Veuillez la recharger
+	IT	Ricaricare la batteria
+	NL	Laad mij op
+	NO	Lad meg opp
+	PL	Naładuj baterię
+	RU	Зарядите батарею
+	SV	Ladda mig
+
+BETA_HARDWARE_TITLE
+	CS	Beta Hardware
+	DA	Beta-hardware
+	DE	Beta-Hardware
+	EN	Beta Hardware
+	ES	Hardware beta
+	FI	Beeta-laitteisto
+	FR	Matériel Beta
+	IT	Hardware in versione beta
+	NL	Bèta-hardware
+	NO	Testmaskinvare
+	PL	Sprzęt w wersji beta
+	RU	Бета-версия оборудования
+	SV	Betamaskinvara
+
+BETA_HARDWARE_TEXT
+	CS	Toto je předprodukční jednotka, revize hardwaru %s.\n\nNěkteré vlastnosti nemusí být funkční.
+	DA	Denne enhed er en prototype, hardwareversion %s.\n\nNogle funktioner virker muligvis ikke.
+	DE	Dieses Gerät gehört einer veralteten Produktionsreihe an, Hardware-Version %s.\n\nEinige Funktionen funktionieren möglicherweise nicht.
+	EN	This is a pre-production unit, hardware revision %s.\n\nSome features may not work.
+	ES	Esta es una unidad de pre-producción, revisión de hardware %s.\n\nPuede que algunas características no funcionen.
+	FI	Tämä on testiyksikkö, laitteistoversio %s.\n\nKaikki ominaisuudet eivät välttämättä toimi.
+	FR	Cette unité est une unité de pré-production, révision matérielle %s.\n\nCertaines fonctionnalités risquent de ne pas fonctionner.
+	IT	Questa è un'unità non ancora rilasciata. Revisione hardware %s.\n\nAlcune funzioni potrebbero non funzionare.
+	NL	Dit is een preproductie-eenheid, hardwarerevisie %s.\n\nSommige functies werken mogelijk niet.
+	NO	Dette er en forproduksjonsenhet, maskinvarerevisjon %s.\n\nIkke alle funksjoner fungerer nødvendigvis.
+	PL	To jest urządzenie przedprodukcyjne, wersja sprzętowa %s.\n\nNiektóre funkcje mogą nie działać.
+	RU	Это предварительная версия устройства, выпуск оборудования %s.\n\nНекоторые функции могут не работать.
+	SV	Det här är en prototyp av maskinvaran med versionsbeteckning %s.\n\nDet kan hända att vissa funktioner inte fungerar.
+
+BETA_HARDWARE_EUTHANIZE
+	CS	Toto je předprodukční jednotka, revize hardwaru %s.\n\nTato jednotka již není podporována, vraťte laskavě Logitech.
+	DA	Denne enhed er en prototype, hardwareversion %s.\n\nEnheden understøttes ikke længere. Send den tilbage til Logitech.
+	DE	Dieses Gerät gehört einer veralteten Produktionsreihe an, Hardware-Version %s.\n\nDieses Gerät wird nicht mehr unterstützt. Bitte geben Sie es an Logitech zurück.
+	EN	This is a pre-production unit, hardware revision %s.\n\nThis unit is no longer supported, please return to Logitech.
+	ES	Ésta es una unidad de pre-producción, revisión de hardware %s.\n\nEsta unidad ya no es compatible, devuélvala a Logitech.
+	FI	Tämä on testiyksikkö, laitteistoversio %s.\n\nYksikköä ei enää tueta, palauta yksikkö Logitechille.
+	FR	Cette unité est une unité de pré-production, révision matérielle %s.\n\nCette unité n'est plus prise en charge. Veuillez la renvoyer à Logitech.
+	IT	Questa è un'unità non ancora rilasciata. Revisione hardware %s.\n\nQuesta unità non è più supportata. Restituirla a Logitech.
+	NL	Dit is een preproductie-eenheid, hardwarerevisie %s.\n\nDeze eenheid wordt niet langer ondersteund. Gelieve deze aan Logitech te retourneren.
+	NO	Dette er en forproduksjonsenhet, maskinvarerevisjon %s.\n\nDenne enheten støttes ikke lenger, returner den til Logitech.
+	PL	To jest urządzenie przedprodukcyjne, wersja sprzętowa %s.\n\nTo urządzenie nie jest już obsługiwane, prosimy zwrócić je do firmy Logitech.
+	RU	Это предварительная версия устройства, выпуск оборудования %s.\n\nЭто устройство больше не поддерживается, верните его в Logitech.
+	SV	Det här är en prototyp av maskinvaran med versionsbeteckning %s.\n\nEnheten stöds inte längre och ska återlämnas till Logitech.
+
+BSP_BRIGHTNESS_SCREENSAVER
+	CS	Reduce on screen saver
+	DA	Reduce on screen saver
+	DE	Reduce on screen saver
+	EN	Reduce on screen saver
+	ES	Reduce on screen saver
+	FI	Reduce on screen saver
+	FR	Reduce on screen saver
+	IT	Reduce on screen saver
+	NL	Verminder bij schermbeveiliging
+	NO	Reduce on screen saver
+	PL	Reduce on screen saver
+	RU	Reduce on screen saver
+	SV	Reduce on screen saver
+
+BSP_BRIGHTNESS_DIMWHENPLAYING
+	CS	Při přehrávání
+	DA	Under afspilning
+	DE	Bei Wiedergabe
+	EN	When playing
+	ES	Al reproducir
+	FI	Toistettaessa
+	FR	Pendant la lecture
+	IT	Durante la riproduzione
+	NL	Tijdens afspelen
+	NO	Under avspilling
+	PL	Podczas odtwarzania
+	RU	При воспроизведении
+	SV	Vid uppspelning
+
+BSP_BRIGHTNESS_DIMWHENSTOPPED
+	CS	Při zastavení
+	DA	Når den er stoppet
+	DE	Wenn angehalten
+	EN	When stopped
+	ES	Al detener
+	FI	Keskeytettynä
+	FR	A l'arrêt
+	IT	Quando la riproduzione è interrotta
+	NL	Wanneer gestopt
+	NO	Ved stopp
+	PL	Po zatrzymaniu
+	RU	При остановке
+	SV	I stoppat läge
+
+BSP_BRIGHTNESS_DIMWHENOFF
+	CS	Při vypnutí
+	DA	Når den er slukket
+	DE	Wenn aus
+	EN	When off
+	ES	Al apagar
+	FI	Laitteen ollessa pois päältä
+	FR	En état éteint
+	IT	Se disattivato
+	NL	Wanneer uit
+	NO	Av
+	PL	Po wyłączeniu
+	RU	При выкл.
+	SV	I avstängt läge
+
+BSP_BRIGHTNESS_ACTIVE_MAXIMUM
+	CS	Maximum brightness (active)
+	DA	Maximum brightness (active)
+	DE	Maximum brightness (active)
+	EN	Maximum brightness (active)
+	ES	Maximum brightness (active)
+	FI	Maximum brightness (active)
+	FR	Maximum brightness (active)
+	IT	Maximum brightness (active)
+	NL	Maximale helderheid (actief)
+	NO	Maximum brightness (active)
+	PL	Maximum brightness (active)
+	RU	Maximum brightness (active)
+	SV	Maximum brightness (active)
+	
+BSP_BRIGHTNESS_ACTIVE_MINIMUM
+	CS	Minimum brightness (active)
+	DA	Minimum brightness (active)
+	DE	Minimum brightness (active)
+	EN	Minimum brightness (active)
+	ES	Minimum brightness (active)
+	FI	Minimum brightness (active)
+	FR	Minimum brightness (active)
+	IT	Minimum brightness (active)
+	NL	Minimale helderheid (actief)
+	NO	Minimum brightness (active)
+	PL	Minimum brightness (active)
+	RU	Minimum brightness (active)
+	SV	Minimum brightness (active)
+	
+BSP_BRIGHTNESS_SCREENSAVER_MAXIMUM
+	CS	Maximum brightness (screen saver)
+	DA	Maximum brightness (screen saver)
+	DE	Maximum brightness (screen saver)
+	EN	Maximum brightness (screen saver)
+	ES	Maximum brightness (screen saver)
+	FI	Maximum brightness (screen saver)
+	FR	Maximum brightness (screen saver)
+	IT	Maximum brightness (screen saver)
+	NL	Maximale helderheid (schermbeveiliging)
+	NO	Maximum brightness (screen saver)
+	PL	Maximum brightness (screen saver)
+	RU	Maximum brightness (screen saver)
+	SV	Maximum brightness (screen saver)
+	
+BSP_BRIGHTNESS_SCREENSAVER_MINIMUM
+	CS	Minimum brightness (screen saver)
+	DA	Minimum brightness (screen saver)
+	DE	Minimum brightness (screen saver)
+	EN	Minimum brightness (screen saver)
+	ES	Minimum brightness (screen saver)
+	FI	Minimum brightness (screen saver)
+	FR	Minimum brightness (screen saver)
+	IT	Minimum brightness (screen saver)
+	NL	Minimale helderheid (schermbeveiliging)
+	NO	Minimum brightness (screen saver)
+	PL	Minimum brightness (screen saver)
+	RU	Minimum brightness (screen saver)
+	SV	Minimum brightness (screen saver)
+	
+BSP_BRIGHTNESS_ACTIVE_WHEN_PLAYING
+	CS	Use active brightness when playing
+	DA	Use active brightness when playing
+	DE	Use active brightness when playing
+	EN	Use active brightness when playing
+	ES	Use active brightness when playing
+	FI	Use active brightness when playing
+	FR	Use active brightness when playing
+	IT	Use active brightness when playing
+	NL	Gebruik actieve helderheid bij afspelen
+	NO	Use active brightness when playing
+	PL	Use active brightness when playing
+	RU	Use active brightness when playing
+	SV	Use active brightness when playing
+
+BSP_BRIGHTNESS_DISABLE_SCREEN_SAFE
+	CS	Disable gradual dim when idle (not recommended!)
+	DA	Disable gradual dim when idle (not recommended!)
+	DE	Disable gradual dim when idle (not recommended!) 
+	EN	Disable gradual dim when idle (not recommended!) 
+	ES	Disable gradual dim when idle (not recommended!) 
+	FI	Disable gradual dim when idle (not recommended!) 
+	FR	Disable gradual dim when idle (not recommended!) 
+	IT	Disable gradual dim when idle (not recommended!) 
+	NL	Helderheid voor scherm niet aanpassen (niet aanbevolen!)
+	NO	Disable gradual dim when idle (not recommended!) 
+	PL	Disable gradual dim when idle (not recommended!) 
+	RU	Disable gradual dim when idle (not recommended!) 
+	SV	Disable gradual dim when idle (not recommended!) 
+
