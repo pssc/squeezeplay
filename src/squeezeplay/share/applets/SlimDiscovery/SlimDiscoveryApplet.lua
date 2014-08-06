@@ -38,6 +38,7 @@ local Framework     = require("jive.ui.Framework")
 local Timer         = require("jive.ui.Timer")
 
 local SocketUdp     = require("jive.net.SocketUdp")
+local SocketTcp     = require("jive.net.SocketTcp")
 local Udap          = require("jive.net.Udap")
 
 local hasNetworking, Networking  = pcall(require, "jive.net.Networking")
@@ -280,8 +281,18 @@ end
 function _discover(self)
 	-- Broadcast SqueezeCenter discovery
 	for i, address in pairs(self.poll) do
-		log:debug("sending slim discovery to ", address)
+            -- Special case proxied servers as udp boarcast will not work.
+            tsocket = SocketTcp(self.jnt, address, 9000, "ServerIsProxed")
+            if  tsocket.t_tcp.proxy:isProxied() and address != "255.255.255.255" then
+                -- jive.slim.SlimServer(jnt, ip, name, version)
+                -- FIXME resolve address of proxy? or proxied name from config or query name?
+		pss = SlimServer(jnt, address, "Proxied("..address..")")
+                -- _serverUpdateAddress(self, server, ip, port, name)
+		self:_serverUpdateAddress(pss, address, 9000, "Proxied("..address..")")
+            else 
+		log:debug("sending slim discovery to ", address,"/",i)
 		self.socket:send(_slimDiscoverySource, address, PORT)
+            end
 	end
 
 	-- Discover players via udap or wireless scanning
@@ -301,9 +312,11 @@ function _discover(self)
 
 	-- Special case Squeezenetwork
 	if System:getUUID() then
+                -- comment here to disable inital sn connect
 		squeezenetwork = SlimServer(jnt, "mysqueezebox.com", "mysqueezebox.com")
 		self:_serverUpdateAddress(squeezenetwork, jnt:getSNHostname(), 9000, "mysqueezebox.com")
 	end
+
 
 	-- Remove SqueezeCenters that have not been seen for a while
 	_squeezeCenterCleanup(self)
