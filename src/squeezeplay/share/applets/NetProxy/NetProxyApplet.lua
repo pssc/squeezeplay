@@ -40,11 +40,12 @@ local Textinput       = require("jive.ui.Textinput")
 local Keyboard        = require("jive.ui.Keyboard")
 local Button          = require("jive.ui.Button")
 local Popup           = require("jive.ui.Popup")
+local System          = require("jive.System")
 
-local jnt           = jnt
-local appletManager = appletManager
+local jnt             = jnt
+local appletManager   = appletManager
 
-local Proxy      = require("jive.net.Proxy")
+local Proxy           = require("jive.net.Proxy")
 
 local CONNECT_TIMEOUT = 20
 
@@ -69,6 +70,11 @@ function menu(self, menuItem)
         -- Menu for Settings...
         local menu = SimpleMenu("menu", { 
 		-- Globals
+                {
+			id='help',
+			text= self:string('HELP'),
+			style = 'item_text',
+                },
 		{
 			id = 'BigSwitch',
 			text = self:string('PROXY'),
@@ -203,8 +209,14 @@ function menuProxy(self,menuItem,i,refresh)
                                                         	tostring(obj:getSelected())
                                                			)	
 								Proxy:setMethod(selectedIndex,i)
+                                                                fresh()
                          				end
 							, select(2,Proxy:getMethod(i))) -- Index into choice... also
+						},
+						{
+							id = 'method_help',
+							style = 'item_text',
+							text = self:string(Proxy:getMethod(i).."_HELP"),
 						},
 	})
 	-- no delete idx 1 defaults
