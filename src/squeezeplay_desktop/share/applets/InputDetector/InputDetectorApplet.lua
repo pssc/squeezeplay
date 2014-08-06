@@ -51,7 +51,7 @@ local appletManager = appletManager
 
 -- contants
 local mappings = { "UNMAPPED","LOCAL","REMOTE","IGNORE" }
-local readsize = 48 -- FIXME for unkown machine/kernel types we should be 1 otherwise reads could block...
+local readsize = 1 -- FIXME for unkown machine/kernel types we should be 1 otherwise reads could block...
 
 -- runtime
 local mapping = nil
@@ -137,6 +137,7 @@ function menu(self, menuItem)
         return window
 end
 
+--task dsiabled 
 --service method
 function getInputDetectorMapping(self)
 	if task then
@@ -145,7 +146,7 @@ function getInputDetectorMapping(self)
 			log:warn(self,":getInputDetectorMapping task resumed")
 		end	
 	else
-		log:warn(self,":getInputDetectorMapping task nil")
+		--log:warn(self,":getInputDetectorMapping task nil")
 		self:monitordevices()
 	end
 	
