@@ -210,7 +210,7 @@ end
 function t_addRead(self, pump, timeout)
 	local newpump = function(...)
 		local ps = self.t_tcp.proxy:getState()
-		if ps then
+		if ps > 0 then
 		  local source = function()
                                 local line, err, partial = self.t_sock:receive('*l', partial)
                                 while partial do
@@ -244,6 +244,7 @@ function t_addRead(self, pump, timeout)
 			end
 			ps, data = self.t_tcp.proxy:step(line)
 	  	  end
+                  if ps == 0 then
 		  -- Yeild to write real request
                                     _, networkErr = Task:yield(false)
 
@@ -252,6 +253,7 @@ function t_addRead(self, pump, timeout)
                                         	self:close(networkErr)
 						return line,  networkErr
                                     end
+                  end
 		end
 
 		if not self.t_tcp.connected then self:t_setConnected(true) end
@@ -263,7 +265,7 @@ end
 function t_addWrite(self, pump, timeout)
 	local newpump = function(...)
 		local ps = self.t_tcp.proxy:getState()
-		if ps then 
+		if ps > 0 then 
 		   local sink = function(data)
 			       local err = socket.skip(1, self.t_sock:send(data))
 
@@ -285,10 +287,10 @@ function t_addWrite(self, pump, timeout)
 					return
 				end
 				
-			else
+			elseif ps > 0 then -- >=? fix for tunnel atm
 			  _, networkErr = Task:yield(false)
                           if networkErr then
-                                      log:warn(self, ":_addWead: yeild on write error: ", networkErr)
+                                      log:warn(self, ":_addWite: yeild on write error: ", networkErr)
                                       self:close()
                           end
 			end
