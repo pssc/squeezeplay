@@ -6,6 +6,9 @@
 APPLET_NAME
 	EN	Network Proxy
 
+HELP
+	EN	Proxies used in order, first match
+
 # Applet
 TIMEOUT
 	EN	Timeout
@@ -37,8 +40,14 @@ METHOD
 HTTP_CONNECT
 	EN	HTTP Connect
 
-LMS_SERVER
-	EN	LMS Proxy
+HTTP_CONNECT_HELP
+	EN	HTTP Proxy supporting Connect, typically on ports 80 and 9000
+
+PF_SERVER
+	EN	Port Forward
+
+PF_SERVER_HELP
+	EN	Use IP addresses only, Match is on noproxy address and port is the port shifted offset on any requests
 
 REMOVE
 	EN	Remove
