@@ -54,7 +54,7 @@ function registerApplet(meta)
 		Proxy.setProxyState(settings['proxy'])
 	end
 
-	jiveMain:addItem(meta:menuItem('appletNetProxySettings', 'advancedSettings', meta:string("APPLET_NAME"), function(applet, ...) local w = applet:menu(...) w:show() end))
+	jiveMain:addItem(meta:menuItem('appletNetProxySettings', 'networkSettings', meta:string("APPLET_NAME"), function(applet, ...) local w = applet:menu(...) w:show() end))
 end
 
 --[[
