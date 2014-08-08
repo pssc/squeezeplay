@@ -41,6 +41,7 @@ local Keyboard        = require("jive.ui.Keyboard")
 local Button          = require("jive.ui.Button")
 local Popup           = require("jive.ui.Popup")
 local System          = require("jive.System")
+local debug           = require("jive.utils.debug")
 
 local jnt             = jnt
 local appletManager   = appletManager
@@ -241,7 +242,7 @@ end
 function menuAddProxy(self,menuItem, refresh)
 	i = Proxy:addProxy("new")
 	log:debug(self,":menuAddProxy = ",i)
-	return self:menuProxy(menuItem,i, refresh)
+	return self:menuProxy(menuItem, i, refresh)
 end
 
 function menuNoProxy(self,menuItem,i,refresh)
@@ -373,6 +374,9 @@ function free(self)
 	local set = self:getSettings()
 	set['proxies'] = Proxy.getSettings()
 	set['proxy'] = Proxy.getProxyState()
+        if log:isDebug() then
+            debug.dump(set,4)
+        end
 	self:storeSettings() -- Applet Mananger should do this...
 	log:debug(self,":free() end")
 	return true
