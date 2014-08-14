@@ -28,6 +28,8 @@
 #define FLAG_STREAM_PLAYBACK 0x01
 #define FLAG_STREAM_EFFECTS  0x02
 #define FLAG_STREAM_NOISE    0x04
+#define FLAG_STREAM_LOOPBACK 0x08
+#define FLAG_NOMMAP          0x16
 
 
 pid_t effect_pid = -1;
@@ -166,7 +168,6 @@ static pid_t decode_alsa_fork(const char *device, const char *capture, unsigned 
 
 	/* wait for backend process to start */
 	while (1) {
-		// pssc
 		fifo_wait_timeout(&decode_audio->fifo, 1500);
 
 		if (decode_audio->running) {
@@ -234,7 +235,7 @@ static int decode_alsa_init(lua_State *L) {
 	effects_device = luaL_optstring(L, -1, NULL);
 
 	lua_getfield(L, 2, "alsaSampleSize");
-	sample_size = luaL_optinteger(L, -1, 16);
+	sample_size = luaL_optinteger(L, -1, 0);
 
 	lua_getfield(L, 2, "alsaFlags");
 	flags = luaL_optinteger(L, -1, 16);
