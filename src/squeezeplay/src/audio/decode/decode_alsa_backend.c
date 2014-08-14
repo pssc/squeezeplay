@@ -107,8 +107,7 @@ struct decode_audio *decode_audio;
 #define PCM_WAIT_TIMEOUT     500
 
 /* format list to try in order when opening device - each requires explicit support in playback callback */
-static snd_pcm_format_t fmts[] = { SND_PCM_FORMAT_S32_LE, SND_PCM_FORMAT_S24_LE, SND_PCM_FORMAT_S24_3LE, SND_PCM_FORMAT_S16_LE,
-								   SND_PCM_FORMAT_UNKNOWN };
+static snd_pcm_format_t fmts[] = { SND_PCM_FORMAT_S32_LE, SND_PCM_FORMAT_S24_LE, SND_PCM_FORMAT_S24_3LE, SND_PCM_FORMAT_S16_LE, SND_PCM_FORMAT_UNKNOWN };
 
 struct decode_alsa {
 	/* device configuration */
@@ -714,7 +713,7 @@ static int _pcm_open(struct decode_alsa *state,
 		}
 	}
 
-	/* set mmap interleaved access format */
+	/* set access format */
 	if ((err = snd_pcm_hw_params_set_access(*pcmp, hw_params, access)) < 0) {
 		LOG_ERROR("Access type not available: %s", snd_strerror(err));
 		return err;
@@ -1265,9 +1264,12 @@ static int decode_lock_memory()
 
 	/* Turn off malloc trimming.*/
    	mallopt(M_TRIM_THRESHOLD, -1);
+	LOG_DEBUG("malloc trim");
    
    	/* Turn off mmap usage. */
    	mallopt(M_MMAP_MAX, 0);
+	LOG_DEBUG("mmap max");
+
 
 	page_size = sysconf(_SC_PAGESIZE);
 
@@ -1308,6 +1310,10 @@ int main(int argv, char **argc)
 	struct utsname utsname;
 	int err, i;
 
+#ifdef HAVE_SYSLOG
+	openlog("squeezeplay_alsa", LOG_ODELAY | LOG_CONS | LOG_PID, LOG_USER);
+#endif
+        LOG_DEBUG("Parse Args")
 	/* parse args */
 	for (i=1; i<argv; i++) {
 		if (strcmp(argc[i], "-v") == 0) {
@@ -1333,24 +1339,40 @@ int main(int argv, char **argc)
 		else if (strcmp(argc[i], "-f") == 0) {
 			state.flags = strtoul(argc[++i], NULL, 0);
 		}
+		else if (strcmp(argc[i], "-t") == 0) {
+			state.pcm_wait_timeout = strtoul(argc[++i], NULL, 0);
+                }
+                else if (strcmp(argc[i], "-s") == 0) {
+                        if (strcmp(argc[++i], "0") == 0) {
+				// NoOp... Auto
+                        }
+                        else if (strcmp(argc[i], "32") == 0) {
+                                fmts[0] = SND_PCM_FORMAT_S32_LE;
+                                fmts[1] = SND_PCM_FORMAT_UNKNOWN;
+                        }
+                        else if (strcmp(argc[i], "24") == 0) {
+                                fmts[0] = SND_PCM_FORMAT_S24_LE;
+                                fmts[1] = SND_PCM_FORMAT_UNKNOWN;
+                        }
+                        else if (strcmp(argc[i], "24_3") == 0) {
+                                fmts[0] = SND_PCM_FORMAT_S24_3LE;
+                                fmts[1] = SND_PCM_FORMAT_UNKNOWN;
+                        }
+                        else if (strcmp(argc[i], "16") == 0) {
+                                fmts[0] = SND_PCM_FORMAT_S16_LE;
+                                fmts[1] = SND_PCM_FORMAT_UNKNOWN;
+                        }
+                }
 	}
 
 	if (!state.playback_device || !state.buffer_time || !state.period_count || !state.flags) {
-		printf("Usage: %s [-v] -d <playback_device> [-c <capture_device>] -b <buffer_time> -p <period_count> -f <flags>\n", argc[0]);
+		printf("Usage: %s [-v] -d <playback_device> [-c <capture_device>] [ -t <pcm_timeout>] [ -s <sample_size>] -b <buffer_time> -p <period_count> -f <flags>\n", argc[0]);
 		exit(-1);
-	}
-
-	if (!state.format) {
-		state.format = SND_PCM_FORMAT_S16_LE;
 	}
 
 	if(!state.pcm_wait_timeout) {
 		state.pcm_wait_timeout = PCM_WAIT_TIMEOUT;
 	}
-
-#ifdef HAVE_SYSLOG
-	openlog("squeezeplay", LOG_ODELAY | LOG_CONS | LOG_PID, LOG_USER);
-#endif
 
 	/* attach to shared memory buffer */
 	if (decode_alsa_shared_mem_attach() != 0) {
