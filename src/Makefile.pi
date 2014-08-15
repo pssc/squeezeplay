@@ -46,8 +46,8 @@ all: sdl-all lua-all app
 # SDL
 #####
 
-.PHONY: sdl-all freetype sdl sdl-image sdl-tff sdl-gfx c-ares
-sdl-all: freetype sdl sdl-ttf sdl-image sdl-gfx
+.PHONY: sdl-all freetype tslib sdl sdl-image sdl-tff sdl-gfx c-ares
+sdl-all: freetype tslib sdl sdl-ttf sdl-image sdl-gfx
 
 generated:
 	mkdir -p generated
@@ -60,9 +60,20 @@ freetype-2.1.10/config.mk:
 freetype: freetype-2.1.10/config.mk
 	cd freetype-2.1.10; make; make install
 
+
+tslib/configure:
+	git clone https://github.com/kergoth/tslib/tree/release/1.1
+	cd tslib/ ; ./autogen.sh
+
+tslib/Makefile: tslib/configure 
+	cd tslib/ ;  ./configure --host=${HOST} --target=${TARGET} --prefix=${PREFIX} 
+
+tslib: tslib/Makefile 
+	cd tslib/ ; make  && make install
+
 # sdl --disable-video-directfb --enable-alsa --enable-audio --disable-assembly --disable-video-x11 
 SDL-1.2.15/Makefile:
-	cd SDL-1.2.15; ./configure --enable-video --enable-events --disable-joystick --disable-cdrom --enable-threads --enable-timers --enable-file --enable-loadso --disable-oss --disable-esd --disable-arts --enable-clock_gettime --host=${HOST} --target=${TARGET} --prefix=${PREFIX} --disable-shared --enable-screensaver
+	cd SDL-1.2.15; ./configure --enable-video --enable-events --disable-joystick --disable-cdrom --enable-threads --enable-timers --enable-file --enable-loadso --disable-oss --disable-esd --disable-arts --enable-clock_gettime --host=${HOST} --target=${TARGET} --prefix=${PREFIX} --disable-shared --enable-screensaver --disable-video-directfb --disable-video-opengl --disable-pulseaudio --disable-alsa --disable-audio
 
 sdl: SDL-1.2.15/Makefile
 	cd SDL-1.2.15; make && make install
@@ -163,8 +174,8 @@ tolua++: lua
 #
 # squeezeplay
 #
-.PHONY: app portaudio flac libmad tremor squeezeplay squeezeplay_desktop squeezeplay_contrib squeezeplay_private freefont freefont-debian axtls rtmp
-app: portaudio flac libmad tremor ${SPPRIVATE_TARGETS} squeezeplay squeezeplay_desktop squeezeplay_contrib freefont rtmp squeezeplay-tgz 
+.PHONY: app flac libmad tremor squeezeplay squeezeplay_desktop squeezeplay_contrib squeezeplay_private freefont freefont-debian axtls rtmp
+app: flac libmad tremor ${SPPRIVATE_TARGETS} squeezeplay squeezeplay_desktop squeezeplay_contrib freefont rtmp squeezeplay-tgz 
 
 
 # portaudio
