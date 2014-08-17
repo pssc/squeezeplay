@@ -102,7 +102,7 @@ struct decode_audio *decode_audio;
 #define FLAG_STREAM_EFFECTS  0x02
 #define FLAG_STREAM_NOISE    0x04
 #define FLAG_STREAM_LOOPBACK 0x08
-#define FLAG_NOMMAP          0x16
+#define FLAG_NOMMAP          0x10
 
 #define PCM_WAIT_TIMEOUT     500
 
@@ -804,7 +804,7 @@ static int _pcm_open(struct decode_alsa *state,
 
 static int pcm_open(struct decode_alsa *state, bool_t loopback, int mode)
 {
-	int err;
+	int err = 0;
 
 	if (mode == SND_PCM_STREAM_PLAYBACK) {
 		u32_t sample_rate;
@@ -820,6 +820,7 @@ static int pcm_open(struct decode_alsa *state, bool_t loopback, int mode)
 		}
 
 		if ( !(state->flags & FLAG_NOMMAP) ) {
+			LOG_DEBUG("PCM Open %X %s",state->flags,state->playback_device);
 			err = _pcm_open(state,
 				&state->pcm,
 				mode,
@@ -830,7 +831,10 @@ static int pcm_open(struct decode_alsa *state, bool_t loopback, int mode)
 		}
 
 		if (err < 0 || (state->flags & FLAG_NOMMAP) ) {
-			LOG_WARN("PCM Open without mem map\n");
+                        if (err < 0) {
+			   LOG_WARN("PCM Open with mmap failed trying to continue,%s\n",snd_strerror(err));
+                        }
+			LOG_DEBUG("PCM Open NOMMAP %X %s",state,state->playback_device);
 			/* Retry without MMAP */
 			err = _pcm_open(state,
 					&state->pcm,
