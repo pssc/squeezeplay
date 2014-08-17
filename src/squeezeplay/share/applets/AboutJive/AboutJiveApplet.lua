@@ -95,6 +95,7 @@ function settingsShow(self)
 		"     Matt Weldon",
 		"     Matt Wise",
 		"     Osama Zaidan",
+                "     Phillip Camp",
 		"",
 		"",
 		tostring(self:string("ABOUT_COPYRIGHT")),
