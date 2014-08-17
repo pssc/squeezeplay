@@ -29,7 +29,7 @@
 #define FLAG_STREAM_EFFECTS  0x02
 #define FLAG_STREAM_NOISE    0x04
 #define FLAG_STREAM_LOOPBACK 0x08
-#define FLAG_NOMMAP          0x16
+#define FLAG_NOMMAP          0x10
 
 
 pid_t effect_pid = -1;
@@ -238,7 +238,7 @@ static int decode_alsa_init(lua_State *L) {
 	sample_size = luaL_optinteger(L, -1, 0);
 
 	lua_getfield(L, 2, "alsaFlags");
-	flags = luaL_optinteger(L, -1, 16);
+	flags = luaL_optinteger(L, -1, 0);
 #if 0
 	/* test if device is available */
 	if (pcm_test(playback_device, &playback_max_rate) < 0) {
