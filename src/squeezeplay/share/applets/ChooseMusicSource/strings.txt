@@ -368,7 +368,7 @@ SQUEEZECENTER_VERSION_HELP
 	CS	%s vyžaduje aktualizaci na novější verzi Logitech Media Server.\n\nPro stažení nejnovější verze navštivte laskavě mysqueezebox.com/downloads.
 	DA	%s skal opdateres til en nyere version af Logitech Media Server.\n\nGå til mysqueezebox.com/downloads, og hent den nyeste version.
 	DE	%s muss auf eine neue Version von Logitech Media Server aktualisiert werden.\n\nLaden Sie unter mysqueezebox.com/downloads die neueste Version herunter.
-	EN	%s needs to be updated to a newer version of the Logitech Media Server.\n\nPlease visit mysqueezebox.com/downloads to download the latest version.
+	EN	%s version %s needs to be updated to a newer version of the Logitech Media Server.\n\nPlease visit mysqueezebox.com/downloads to download the latest version.
 	ES	%s debe actualizarse a una versión nueva de Logitech Media Server.\n\nVisite mysqueezebox.com/downloads para descargar la versión más reciente.
 	FI	%s täytyy päivittää Logitech Media Serverin uudempaan versioon.\n\nLataa uusin versio osoitteesta mysqueezebox.com/downloads.
 	FR	Vous devez mettre %s à jour à la dernière version du Logitech Media Server.\n\nVisitez mysqueezebox.com/downloads pour télécharger la dernière version.
