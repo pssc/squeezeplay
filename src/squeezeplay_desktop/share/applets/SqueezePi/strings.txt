@@ -1,0 +1,14 @@
+AUDIO_SELECT
+	EN	Pi Audio Out
+
+AUTO
+	EN	Auto
+
+SOCKET
+	EN	Socket
+
+HDMI
+	EN	HDMI
+
+AUDIO_SELECTOR
+	EN	Selected Output
