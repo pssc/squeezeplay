@@ -346,10 +346,10 @@ function keyboardWindow(self, menuItem, style, val, setfn)
 
         local textinput = Textinput("textinput", v,
                 function(_, value)
-                        log:info("Input ", value)
+                        log:debug("Input ", value,":",value:getValue())
                         window:playSound("WINDOWSHOW")
                         window:hide(Window.transitionPushLeft)
-                        return setfn and setfn(value) or false
+                        return setfn and setfn(value:getValue()) or false
                 end, vaidinput)
         local backspace = Keyboard.backspace()
         local group = Group('keyboard_textinput', { textinput = textinput, backspace = backspace } )
