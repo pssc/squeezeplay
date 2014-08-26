@@ -1249,6 +1249,7 @@ function isCompatible(self)
 		return nil
 	end
 	
+        log:debug("Server version",self.state.version,">", minimumVersion)
 	return self:isMoreRecent(self.state.version, minimumVersion)
 end
 
