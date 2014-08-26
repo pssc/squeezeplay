@@ -1,0 +1,153 @@
+
+
+# Meta
+APPLET_NAME
+	EN	Digital Output
+
+DAC_NOT_CONNECTED
+	EN	Dac not connected
+
+# Applet
+DIGITAL_ONLY
+	EN	Digital Only
+
+DIRECT_HW
+	EN	Direct Hardware
+
+SELECT_OUTPUT
+	EN	Select Audio Output
+
+CURRENT
+	EN	 [Current]
+
+INFO
+	EN	 [Info]
+
+DEFAULT
+	EN	Default
+
+ANALOG_DIGITAL
+	EN	Analog + Digital
+
+USB1_DAC_NO_HUB
+	EN	Use with 44/48kHz no-hub workaround
+
+USB1_DAC_HUB
+	EN	Use without workaround - I will add a hub	
+
+HELP_USB1_DAC
+	EN	Asynchronous USB 1 dacs may not work correctly without an external USB 2 High Speed hub between Squeezebox and the dac. Some dacs support a workaround for 44/48kHz playback without a hub.\nChange@ Settings > Advanced > Digital Output
+
+HELP_FIRST_USE
+	EN	Connect DAC and select output.  Supports external USB and SPDIF dacs up to 192k sampling rates.\nChange@ Settings > Audio Settings > Digital Output
+
+KERNEL_UPDATE
+	EN	Digital Output Kernel Update
+
+KERNEL_UPDATE_AUTO
+	EN	Auto Update on Install
+
+KERNEL_UPDATE_NOW
+	EN	Update Now
+
+HELP_KERNEL_UPDATE
+	EN	Enhanced Digital Output requires a custom linux kernel which must be reinstalled each time the app is installed or a firmware upgrade performed
+
+NO_HUB_OPTION
+	EN	USB 1 No-Hub Workaround
+
+NO_HUB_SETTING
+	EN	USB 1 No-Hub Workaround
+
+HELP_NO_HUB_OPTION
+	EN	Asynchronous USB 1 dacs should either be used with an external USB 2 High Speed hub or this workaround.  The workaround will restrict playback to 44/48kHz sampling rates and will not work with all dacs.  (Reboots after changing)
+
+KERNEL_IDLE_OPTION
+	EN	Kernel Idle Option (Experimental)
+
+KERNEL_IDLE_SETTING
+	EN	Avoid low power during playback
+
+HELP_KERNEL_IDLE_OPTION
+	EN	This option avoids the cpu entering low power mode during playback
+
+BUFFER_TUNING
+	EN	Buffer Tuning (Experimental)
+
+HELP_BUFFER_TUNING
+	EN	Tuning buffer size may impact sound quality
+
+BUFFER_DEFAULT
+	EN	Default HW Player settings
+
+BUFFER_LARGE
+	EN	Large (avoid if synchronized)
+
+BUFFER_SMALL
+	EN	Small (may cause dropouts)
+
+BUFFER_RAND
+	EN	Large + Randomise CPU
+
+BUFFER_VLARGE
+	EN	Very Large (USB Only)
+
+BUFFER_VLRAND
+	EN	Very Large + Randomise CPU (USB Only)
+
+BUFFER_SPDF
+	EN	SqueezePlay Default
+
+BUFFER_SLDF
+	EN	SqueezeLite Default
+
+BUFFER_SPPI
+	EN	SqueezePlay Pi
+
+REBOOTING
+	EN	Rebooting
+
+DOWNLOADING
+	EN	Downloading
+
+KERNEL_DOWNLOAD
+	EN	Kernel Download
+
+KERNEL_VERIFY
+	EN	Kernel Verify
+
+KERNEL_UPDATE_FAILED
+	EN	Kernel Update Failed
+
+CANCEL
+	EN	Cancel
+
+SAMPLE_TUNING
+	EN	Sample Tuning (Experimental)
+
+HELP_SAMPLE_TUNING
+	EN	Tuning sample size may impact sound quality
+
+SAMPLE_A
+	EN	Automatic Mode, High rates first.
+
+SAMPLE_32
+	EN	32LE PCM
+
+SAMPLE_24
+	EN	24LE PCM
+
+SAMPLE_24_3
+	EN	24_3LE PCM
+
+SAMPLE_16
+	EN	16LE PCM
+
+NO_MMAP_OPTION
+	EN	Disable MMAP
+
+HELP_NO_MMAP_OPTION
+	EN	Some Drivers don't implment MMAP access correctly
+
+NO_MMAP_SETTING
+	EN	MMAP Disabled
