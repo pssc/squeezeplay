@@ -107,7 +107,7 @@ end
 function removeProxy(self,i)
 	if i != 1 then
 		table.remove(proxies,i)
-		self:setProxyState(proxy)
+		setProxyState(proxy)
 	end
 end
 
@@ -218,7 +218,6 @@ end
 
 function removeNoProxy(self,idx, j)
          table.remove(proxies[idx].no_proxy,j)
-         self:setProxyState(proxy)
 end
 
 function getActive(self, idx)
