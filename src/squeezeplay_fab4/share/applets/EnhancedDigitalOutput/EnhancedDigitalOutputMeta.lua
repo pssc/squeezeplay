@@ -16,6 +16,11 @@ local Timer         = require("jive.ui.Timer")
 local Popup         = require("jive.ui.Popup")
 local Label         = require("jive.ui.Label")
 local Icon          = require("jive.ui.Icon")
+local Window           = require("jive.ui.Window")
+local SimpleMenu       = require("jive.ui.SimpleMenu")
+local Checkbox         = require("jive.ui.Checkbox")
+
+
 local appletManager = appletManager
 
 local jiveMain, jnt, string, tonumber, tostring = jiveMain, jnt, string, tonumber, tostring
@@ -42,14 +47,15 @@ end
 function defaultSettings(self)
 	return {
 		playbackDevice = "default",
-		bufferTime = 50,
-		periodCount = 16,
+		bufferTime = 20000,
+		periodCount = 2,
                 sampleSize = 0,
 		autoKernelUpdate = true,
 		embeddedTTHack = false,
 		cpuIdleFullspeed = false,
 		firstUse = true,
                 nommap = false,
+                active = false,
 	}
 end
 
@@ -59,6 +65,42 @@ function registerApplet(meta)
 	local system = System:getMachine()
 	local updating
 	
+        local ja = io.open("jive_alsa","r") -- cwd should be bin dir for jive alsa to exec anyway... using as test for alsa support... --FIXME OS linux check..
+        if not ja or system == 'baby' or system == 'jive'  then
+           return
+        else
+           ja:close()
+        end
+
+
+        if not settings.active then
+            jiveMain:addItem(
+               meta:menuItem('appletEnhancedDigitalOutputOptions', 'advancedSettings', meta:string("APPLET_NAME"), 
+                  function(self, menuItem)
+                     local window = Window("text_list", menuItem.text)
+                     local menu = SimpleMenu("menu")
+                     window:addWidget(menu)
+
+                     menu:addItem({
+                        text = self:string("ACTIVE"),
+                        style = 'item_choice',
+                        check = Checkbox("checkbox",
+                           function(object, isSelected)
+                                  self:getSettings()["active"] = isSelected
+                                  self:storeSettings()
+                                  self:_restart()
+                           end,
+                           self:getSettings()["active"]
+                        ),
+                     })
+
+                     self:tieAndShowWindow(window)
+                  end
+               )
+            )
+            return
+        end
+
 	-- check kernel version and install if required, with safety checks...
 	local fh1 = io.open("/proc/version")
 	if fh1 and (system == "fab4") then
@@ -106,12 +148,6 @@ function registerApplet(meta)
 		os.execute("chmod 755 /usr/bin/jive_alsa")
 	end
 
-        ja = io.open("jive_alsa","r") -- cwd should be bin dir for jive alsa to exec anyway... using as test for alsa support...
-        if not ja then
-           return
-        else
-           ja:close()
-        end
 
 	-- if usb hack then set kernel option FIXME open end check?
 	if settings.embeddedTTHack then
