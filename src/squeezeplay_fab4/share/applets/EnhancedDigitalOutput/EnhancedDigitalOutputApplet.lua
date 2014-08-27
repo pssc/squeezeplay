@@ -344,6 +344,19 @@ function optionsMenu(self, menuItem)
 				   end,
 	})
 
+        menu:addItem({
+                 text = self:string("ACTIVE"),
+		 style = 'item_choice',
+                 check = Checkbox("checkbox",
+                         function(object, isSelected)
+                                  self:getSettings()["active"] = isSelected
+                                  self:storeSettings()
+                                  self:_restart()
+                                  end,
+                                  self:getSettings()["active"]
+                         ),
+        })
+
 	self:tieAndShowWindow(window)
 	return window
 end
