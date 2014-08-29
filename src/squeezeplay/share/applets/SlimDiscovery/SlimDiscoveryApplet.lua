@@ -282,7 +282,7 @@ function _discover(self)
 	-- Broadcast SqueezeCenter discovery
 	for i, address in pairs(self.poll) do
             -- Special case proxied servers as udp boarcast will not work and proxying the broadcast address will not work.
-            tsocket = address != "255.255.255.255" and SocketTcp(self.jnt, address, 9000, "ServerIsProxed") or nil
+            tsocket = address != "255.255.255.255" and SocketTcp(self.jnt, address, 9000, "ServerDiscoveryIsProxied") or nil
             if  tsocket and tsocket.t_tcp.proxy:isProxied() then
                 -- jive.slim.SlimServer(jnt, ip, name, version)
                 -- FIXME resolve address of proxy? or proxied name from config or query name?
