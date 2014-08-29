@@ -13,11 +13,13 @@ local Framework     = require("jive.ui.Framework")
 local System        = require("jive.System")
 local Player        = require("jive.slim.Player")
 local SlimServer        = require("jive.slim.SlimServer")
+local Decode        = require("squeezeplay.decode")
 
 local appletManager = appletManager
 local jiveMain      = jiveMain
 local jive          = jive
 local jnt           = jnt
+
 
 
 module(...)
@@ -34,11 +36,17 @@ end
 function defaultSettings(meta)
 	return { 
 --		audio_select = "AUTO" we dont hold the state alsa does...
+		alsaSampleSize = 16,
+                alsaPlaybackDevice = "default",
+                alsaPlaybackBufferTime = 50,
+                alsaPlaybackPeriodCount = 5,
+
 	}
 end
 
 
 function registerApplet(meta)
+	local settings = meta:getSettings()
         -- Check pi...
 	local f = io.open(CPU_INFO)
         local pi = false
@@ -63,6 +71,13 @@ function registerApplet(meta)
         SlimServer:setMinimumVersion("7.6")
 
         jiveMain:addItem(meta:menuItem('piaudio_selector', 'settingsAudio', "AUDIO_SELECT", function(applet, ...) applet:settingsAudioSelect(...) end))
+
+        if jiveMain:getDefaultSkin() == 'QVGAportraitSkin' then
+           jiveMain:setDefaultSkin("800x600Skin") -- FIXME 640x480... LCD
+        end
+
+         -- open audio device
+        Decode:open(settings)
 
 end
 
