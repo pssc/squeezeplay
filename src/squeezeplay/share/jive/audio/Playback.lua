@@ -527,20 +527,20 @@ function _streamConnect(self, serverIp, serverPort, reader, writer, slaves)
 	end
 
 	if reader and writer then
-		-- use given stream methods
+		log:debug(self,"use given stream methods")
 		m.read  = reader
 		m.write = writer
 	elseif self.flags & 0x20 == 0x20 then
-		-- use Rtmp methods, load Rtmp module on demand
+		log:debug(self,"use Rtmp methods, load Rtmp module on demand")
 		Rtmp = require("jive.audio.Rtmp")
 		m.read  = Rtmp.read
 		m.write = Rtmp.write
 	elseif self.mode == 'n' then
-		-- network test, use specific read method
+		log:debug(self,"network test, use specific read method")
 		m.read = m.readToNull
 		m.write = m._streamWrite
 	else
-		-- use standard stream methods
+		log:debug(self,"use standard stream methods")
 		m.read  = m._streamRead
 		m.write = m._streamWrite
 	end 
@@ -563,7 +563,7 @@ function _proxyQueueSegment(self, chunk)
 end
 
 function _proxyConnClose(self, conn, err, leaveConnectionTable)
-	log:info("Proxy connection closed: from ", conn.ip, ':', conn.port, '; ', err or '')
+	log:info(self,"Playback Stream Proxy connection closed: from ", conn.ip, ':', conn.port, '; ', err or '')
 	self.jnt:t_removeWrite(conn.stream)
 	self.jnt:t_removeRead(conn.stream)
 	conn.stream:close()
@@ -707,7 +707,7 @@ function _proxyInit(self, expected, stream)
 	end
 
 	if expected and expected > 0 then
-		log:info("Proxy: connections expected = ", expected)
+		log:info("Stream Proxy: connections expected = ", expected)
 		local proxy = {}
 		proxy.expected = expected
 		proxy.stream = stream
