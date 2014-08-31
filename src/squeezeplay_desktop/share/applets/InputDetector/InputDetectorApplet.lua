@@ -150,7 +150,7 @@ function getInputDetectorMapping(self)
 		self:monitordevices()
 	end
 	
-	log:info(self,":getInputDetectorMapping ",mappings[mapping])
+	log:debug(self,":getInputDetectorMapping ",mappings[mapping])
         return mappings[mapping] 
 end
 
