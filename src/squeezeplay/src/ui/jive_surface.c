@@ -859,7 +859,7 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 	LOG_INFO(log_ui_draw, "Window Manager %s available", video_info->wm_available?"is":"is not");
 	LOG_INFO(log_ui_draw, "Video Setup for %sfullscreen", fullscreen?"":"non-");
 
-	if (fullscreen ) {
+	if (fullscreen) {
 	    flags = SDL_FULLSCREEN;
 	}
 	else {
@@ -872,6 +872,7 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 	    }
 	}
 
+	LOG_INFO(log_ui_draw, "SDL Get Video surface");
 	sdl = SDL_GetVideoSurface();
 
 	if (sdl) {
@@ -894,8 +895,9 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 	}
 
 	if (!sdl) {
-		/* create new surface */
+                LOG_INFO(log_ui_draw, "Creating new surface %dx%d %dbpp (flags %x): %s",w, h, bpp,flags, SDL_GetError());
 		sdl = SDL_SetVideoMode(w, h, bpp, flags);
+                LOG_INFO(log_ui_draw, "Created new surface");
 		if (!sdl) {
 			LOG_ERROR(log_ui_draw, "SDL_SetVideoMode(%d,%d,%d): %s",
 				  w, h, bpp, SDL_GetError());
@@ -906,7 +908,7 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 			LOG_INFO(log_ui_draw, "Using a hardware double buffer");
 		}
 
-		LOG_DEBUG(log_ui_draw, "Video mode: %d bits/pixel %d bytes/pixel [R<<%d G<<%d B<<%d]", sdl->format->BitsPerPixel, sdl->format->BytesPerPixel, sdl->format->Rshift, sdl->format->Gshift, sdl->format->Bshift);
+		LOG_INFO(log_ui_draw, "Video mode: %d bits/pixel %d bytes/pixel [R<<%d G<<%d B<<%d]", sdl->format->BitsPerPixel, sdl->format->BytesPerPixel, sdl->format->Rshift, sdl->format->Gshift, sdl->format->Bshift);
 
 #ifdef SCREEN_ROTATION_ENABLED
 		/* orientaion hack */
