@@ -21,7 +21,6 @@ local ipairs, pairs, tostring ,select, tonumber, type = ipairs, pairs, tostring,
 
 local table           = require("table")
 local string          = require("string")
-local debug           = require("debug")
 
 
 local oo              = require("loop.simple")
