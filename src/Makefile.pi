@@ -61,15 +61,15 @@ freetype: freetype-2.1.10/config.mk
 	cd freetype-2.1.10; make; make install
 
 
-tslib/configure:
-	cd genterated/ && git clone https://github.com/kergoth/tslib/tree/release/1.1
-	cd genterated/tslib/ && ./autogen.sh
+generated/tslib/configure: generated
+	cd generated/ && git clone https://github.com/kergoth/tslib.git -b release/1.1 tslib
+	cd generated/tslib/ && ./autogen.sh
 
-tslib/Makefile: tslib/configure 
-	cd genterated/tslib/ && ./configure --host=${HOST} --target=${TARGET} --prefix=${PREFIX} 
+generated/tslib/Makefile: generated/tslib/configure 
+	cd generated/tslib/ && ./configure --host=${HOST} --target=${TARGET} --prefix=${PREFIX} 
 
-tslib: tslib/Makefile 
-	cd genterated/tslib/ && make && make install
+tslib: generated/tslib/Makefile
+	cd generated/tslib/ && make && make install
 
 # sdl --disable-video-directfb --enable-alsa --enable-audio --disable-assembly --disable-video-x11 
 SDL-1.2.15/Makefile:
