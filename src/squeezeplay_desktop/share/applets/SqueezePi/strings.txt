@@ -12,3 +12,21 @@ HDMI
 
 AUDIO_SELECTOR
 	EN	Selected Output
+
+OV
+	EN	Overclocked
+
+MEMORY
+	EN	Memory
+
+VERSION
+	EN	Board Version
+
+MODEL
+	EN	Model
+
+REVISION
+	EN	Revision
+
+MAKER
+	EN	Maker
