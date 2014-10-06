@@ -45,10 +45,9 @@ function settingsAudioSelect(self)
 -- numid=3,iface=MIXER,name='PCM Playback Route'
 --  ; type=INTEGER,access=rw------,values=1,min=0,max=2,step=0
 --  : values=2
-        local f,err = io.popen("amixer -c ALSA cget numid=3", "r")
+        local f,err = io.popen("amixer -c ALSA cget numid=3 2>&1", "r")
         if not f then
                 log:error("amixer could not be run ",err,".")
-                -- add error to widow fixme
             	window:addWidget(Textarea("text", "amixer could not be run "..err..".")) --FIXME string err
 	        self:tieAndShowWindow(window)
                 return window
@@ -94,11 +93,10 @@ function settingsAudioSelect(self)
                 },
 	})
 
-        f,err = io.popen("tvservice -a", "r")
+        f,err = io.popen("tvservice -a 2>&1", "r")
         if not f then
                 log:warn("tvservice -a could not be run ",err,".")
-                -- add error to widow fixme
-                window:addWidget(Textarea("text", "tvservice -a"..err..".")) --FIXME string err
+                window:addWidget(Textarea("text", "tvservice -a"..err.."."))
         end
         -- "    PCM supported: Max channels: 2, Max samplerate:  32kHz, Max samplesize 16 bits."
         local i = 0
@@ -109,6 +107,15 @@ function settingsAudioSelect(self)
         end
         f:close()
 
+	local pi = self:getSettings()['pi']
+        local i = 0
+        if pi then
+            for k,v in pairs(pi) do
+		v = k == "revision" and string.format("%04x",v) or v
+		menu:addItem({id='pi'..i,text=tostring(self:string(string.upper(k)))..": "..tostring(v),style = 'item_text'})
+                i = i + 1
+            end
+        end
         window:addWidget(menu)
 	self:tieAndShowWindow(window)
 	return window
