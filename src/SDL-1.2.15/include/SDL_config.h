@@ -146,7 +146,7 @@
 #endif /* HAVE_LIBC */
 
 /* Allow disabling of core subsystems */
-/* #undef SDL_AUDIO_DISABLED */
+#define SDL_AUDIO_DISABLED 1
 #define SDL_CDROM_DISABLED 1
 /* #undef SDL_CPUINFO_DISABLED */
 /* #undef SDL_EVENTS_DISABLED */
@@ -158,8 +158,8 @@
 /* #undef SDL_VIDEO_DISABLED */
 
 /* Enable various audio drivers */
-#define SDL_AUDIO_DRIVER_ALSA 1
-#define SDL_AUDIO_DRIVER_ALSA_DYNAMIC "libasound.so.2"
+/* #undef SDL_AUDIO_DRIVER_ALSA */
+/* #undef SDL_AUDIO_DRIVER_ALSA_DYNAMIC */
 /* #undef SDL_AUDIO_DRIVER_ARTS */
 /* #undef SDL_AUDIO_DRIVER_ARTS_DYNAMIC */
 /* #undef SDL_AUDIO_DRIVER_BAUDIO */
@@ -167,8 +167,8 @@
 /* #undef SDL_AUDIO_DRIVER_COREAUDIO */
 /* #undef SDL_AUDIO_DRIVER_DART */
 /* #undef SDL_AUDIO_DRIVER_DC */
-#define SDL_AUDIO_DRIVER_DISK 1
-#define SDL_AUDIO_DRIVER_DUMMY 1
+/* #undef SDL_AUDIO_DRIVER_DISK */
+/* #undef SDL_AUDIO_DRIVER_DUMMY */
 /* #undef SDL_AUDIO_DRIVER_DMEDIA */
 /* #undef SDL_AUDIO_DRIVER_DSOUND */
 /* #undef SDL_AUDIO_DRIVER_PULSE */
@@ -206,7 +206,7 @@
 
 /* Enable various input drivers */
 #define SDL_INPUT_LINUXEV 1
-/* #undef SDL_INPUT_TSLIB */
+#define SDL_INPUT_TSLIB 1
 /* #undef SDL_JOYSTICK_BEOS */
 /* #undef SDL_JOYSTICK_DC */
 /* #undef SDL_JOYSTICK_DUMMY */
