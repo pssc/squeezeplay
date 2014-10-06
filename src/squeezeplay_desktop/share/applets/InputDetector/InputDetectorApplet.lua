@@ -316,7 +316,7 @@ function monitordevices(self)
 				mapping = fd.detail.mapping and fd.detail.mapping or settings.default_mapping
 				device = fd.detail
 
-				log:info(self,":monitordevices ",fd.file,"=",mapping)
+				log:debug(self,":monitordevices ",fd.file,"=",mapping)
 			end
 		end
 end
