@@ -159,7 +159,13 @@ typedef enum {
 	JIVE_KEY_ALARM			= 0x800000,
 	JIVE_KEY_MUTE			= 0x1000000,
 	JIVE_KEY_POWER			= 0x2000000,
-} JiveKey;
+	//JIVE_KEY_FREE1			= 0x4000000,
+	//JIVE_KEY_FREE2			= 0x8000000,
+	//JIVE_KEY_FREE3			= 0x10000000,
+	//JIVE_KEY_FREE4			= 0x20000000,
+	//JIVE_KEY_FREE5			= 0x40000000,
+	//JIVE_KEY_FREE6			= 0x80000000,
+} JiveKey; // key updowns is bit mask atm.
 
 typedef enum {
 	JIVE_GESTURE_L_R                = 0x0001,
