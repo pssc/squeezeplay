@@ -1169,6 +1169,18 @@ function _installListeners(self, window)
 	
 	end
 
+	-- Deal with removing directional keys up down simulating scrolling , left right in action map...
+	window:addListener(EVENT_KEY_PRESS,
+		function(event)
+			local keycode = event:getKeycode()
+			if keycode == KEY_UP or keycode == KEY_DOWN then
+				Framework:pushAction("go_now_playing")
+				return EVENT_CONSUME
+			end
+			return EVENT_UNUSED
+		end
+	)
+
 	window:addActionListener("go", self, showPlaylistAction)
 	window:addActionListener("go_home", self, _goHomeAction)
 	window:addActionListener("go_now_playing", self, toggleNPScreenStyle)
