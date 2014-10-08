@@ -865,6 +865,7 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 	else {
 	    if (video_info->wm_available) {
 	        // Note these options will break some HW! raspberry pi in full screen...
+		LOG_INFO(log_ui_draw, "Flags for windowed enviroment");
 	    	flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE;
 	    } else {
 		LOG_INFO(log_ui_draw, "SDL Flags forced as windowing not available");
@@ -886,10 +887,15 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 			mask = (SDL_HWSURFACE | SDL_DOUBLEBUF);
 		}
 
-		if ((sdl->w != w) || (sdl->h != h)
-		    || (bpp && sdl->format->BitsPerPixel != bpp)
-		    || ((sdl->flags & mask) != (flags & mask))) {
-			LOG_INFO(log_ui_draw, "SDL Video surface Cannot be reused");
+		if ((sdl->w != w) || (sdl->h != h)) {
+			LOG_INFO(log_ui_draw, "SDL Video surface Cannot be reused Resultion %dx%d/%dx%d",sdl->w,sdl->h,w,h);
+			sdl = NULL;
+                } else if ((bpp > 0 ) && (sdl->format->BitsPerPixel != bpp)) {
+			LOG_INFO(log_ui_draw, "SDL Video surface Cannot be reused depth %d/%d",(sdl->format->BitsPerPixel),bpp);
+			sdl = NULL;
+
+		} else if ((sdl->flags & mask) != (flags & mask)) {
+			LOG_INFO(log_ui_draw, "SDL Video surface Cannot be reused flags %x,%x",(sdl->flags & mask),(flags & mask));
 			sdl = NULL;
 		}
 	}
