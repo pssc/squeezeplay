@@ -169,7 +169,25 @@ function _selectAndHighlightItemUnderPointer(self, event)
 	local i = (y - self.pixelOffsetY) / self.itemHeight --(h / self.numWidgets)
 
 	local itemShift = math.floor(i)
-	if itemShift >= 0 and itemShift <= self.numWidgets then
+
+	-- Smooth scrolling standard menu list (1 item per line) -> +1
+	local tempVisibleWidgets = self.numWidgets + 1
+	if self.itemsPerLine and self.itemsPerLine > 1 then
+		-- Smooth scrolling grid view (4 items per line) -> +4
+		tempVisibleWidgets = self.numWidgets + self.itemsPerLine
+
+		itemShift = itemShift * self.itemsPerLine
+
+		local sw, sh = Framework:getScreenSize()
+
+		-- FIXME ********** - is this right?
+		itemShift = itemShift + math.floor(x / (sw/self.itemsPerLine))
+		--if x > (sw / 4 * 1) then itemShift = itemShift + 1 end
+		--if x > (sw / 4 * 2) then itemShift = itemShift + 1 end
+		--if x > (sw / 4 * 3) then itemShift = itemShift + 1 end
+	end
+
+	if itemShift >= 0 and itemShift < tempVisibleWidgets then
 		--select item under cursor
 		local selectedIndex = self.topItem + itemShift
 		if selectedIndex <= self.listSize then
@@ -195,8 +213,19 @@ end
 
 
 function _updateScrollbar(self)
-	local max = self.listSize * self.itemHeight
-	local pos = (self.topItem - 1) * self.itemHeight - self.pixelOffsetY
+	local tempPixelOffsetY = self.pixelOffsetY
+	local tempListSize = self.listSize
+
+	if self.itemsPerLine and self.itemsPerLine > 1 then
+		tempPixelOffsetY = tempPixelOffsetY * self.itemsPerLine
+		-- Fix listSize in case the last line contains less than itemsPerLine items.
+		if tempListSize % self.itemsPerLine ~= 0 then
+			tempListSize = tempListSize - (tempListSize % self.itemsPerLine) + self.itemsPerLine
+		end
+	end
+
+	local max = tempListSize * self.itemHeight
+	local pos = (self.topItem - 1) * self.itemHeight - tempPixelOffsetY
 	local size = self.numWidgets * self.itemHeight
 
 	if size + pos > max then
@@ -223,6 +252,11 @@ function handleDrag(self, dragAmountY, byItemOnly, forceAccel)
 		if (self.dragYSinceShift > 0 and math.floor(self.dragYSinceShift / self.itemHeight) > 0) or
 				(self.dragYSinceShift < 0 and math.floor(self.dragYSinceShift / self.itemHeight) < 0) then
 			local itemShift = math.floor(self.dragYSinceShift / self.itemHeight)
+
+			if self.itemsPerLine and self.itemsPerLine > 1 then
+				itemShift = itemShift * self.itemsPerLine
+			end
+
 			self.dragYSinceShift = self.dragYSinceShift % self.itemHeight
 			if itemShift > 0 and self.currentShiftDirection <= 0 then
 				--changing shift direction, move cursor so scroll wil occur
@@ -539,6 +573,35 @@ local function _eventHandler(self, event)
 
 	elseif evtype == EVENT_KEY_PRESS then
 		local keycode = event:getKeycode()
+		local scroll
+
+		if (keycode == KEY_LEFT or keycode == KEY_RIGHT) and self.itemsPerLine and 
+			(self.itemsPerLine == 1 or (keycode == KEY_LEFT and (self.selected == nil or self.selected == 1))) then
+			if keycode == KEY_LEFT then
+				Framework:pushAction("back")
+			end
+			if keycode == KEY_RIGHT then
+				Framework:pushAction("go")
+			end
+			return EVENT_CONSUME
+		elseif keycode == KEY_UP then
+			scroll = -1 * (self.itemsPerLine or 1)
+		elseif keycode == KEY_DOWN then
+			scroll = 1 * (self.itemsPerLine or 1)
+		elseif keycode == KEY_LEFT then
+			scroll = -1
+		elseif keycode == KEY_RIGHT then
+			scroll = 1
+		end
+
+		if scroll and self.locked == nil then
+			if self.textMode then
+				self:dispatchNewEvent(EVENT_SCROLL, scroll)
+			else
+				self:scrollBy(scroll, true, false, false)
+			end
+			return EVENT_CONSUME
+		end
 
 		if self.locked == nil then
 			self:resetDragData()
@@ -1532,38 +1595,83 @@ function _scrollList(self)
 	local selected = _coerce(self.selected or 1, self.listSize)
 	local topItem = self.topItem
 
-	-- show the first item if the first item is selected
-	if selected == 1 then
-		topItem = 1
-		
-	-- otherwise, try to leave one item above the selected one (we've scrolled out of the view)
-	elseif selected <= topItem  + ( self.itemsBeforeScroll - 1 ) then
-		-- if we land here, selected > 1 so topItem cannot become < 1
-		topItem = selected - self:getEffectiveItemsBeforeScroll() 
-
-	-- show the last item if it is selected
-	elseif selected == self.listSize then
-		if self.listSize < self.numWidgets or self.numWidgets == 0 then
-			topItem = 1
-		else
-			topItem = self.listSize - self.numWidgets + 1
-		end
-	
-	-- otherwise, try to leave one item below the selected one (we've scrolled out of the view)
-	elseif selected >= topItem + self.numWidgets - self.itemsBeforeScroll then
-		topItem = selected - self.numWidgets + self:getEffectiveItemsBeforeScroll() + 1
+	if self.numWidgets == 1 then
+		self.topItem = selected
+		return
 	end
 
+--	log:info("*********")
+--	log:info("*** listSize: ", self.listSize, " numWid: ", self.numWidgets)
+--	log:info("*** topItem ", topItem, " selected: ", selected)
+
+	if self.itemsPerLine and self.itemsPerLine > 1 then
+
+		--  show the first item if the first item is selected
+		if selected == 1 then
+			topItem = 1
+			--		log:info("*** c1 ", topItem)
+			--  otherwise, we've scrolled out of the view (up)
+		elseif selected <= topItem - 1 then
+			topItem = selected - ((selected - 1) % self.itemsPerLine)
+			--		log:info("*** c2 ", topItem)
+			-- show the last item if it is selected
+		elseif selected == self.listSize then
+			if self.listSize < self.numWidgets or self.numWidgets == 0 then
+				topItem = 1
+				--			log:info("*** c3a ", topItem)
+			else
+				topItem = selected - ((selected - 1) % self.itemsPerLine) - self.itemsPerLine
+				if self.pixelOffsetY < -10 then
+					topItem = topItem - self.itemsPerLine
+				end
+				--			log:info("*** c3b ", topItem)
+			end
+			-- otherwise, we've scrolled out of the view (down)
+		elseif selected >= topItem + self.numWidgets then
+			topItem = selected - ((selected - 1) % self.itemsPerLine) - self.itemsPerLine
+			--		log:info("*** c4 ", topItem)
+			--		log:info("*** poy ", self.pixelOffsetY)
+			-- Smooth scrolling - up to three lines visible (12 widgets)
+			if self.pixelOffsetY < -10 then
+				topItem = topItem - self.itemsPerLine
+			end
+			--		log:info("*** c4 ", topItem)
+		end
+	else
+		-- show the first item if the first item is selected
+		if selected == 1 then
+			topItem = 1
+			-- otherwise, try to leave one item above the selected one (we've scrolled out of the view)
+		elseif selected <= topItem  + ( self.itemsBeforeScroll - 1 ) then
+			-- if we land here, selected > 1 so topItem cannot become < 1
+			topItem = selected - self:getEffectiveItemsBeforeScroll()
+			-- show the last item if it is selected
+		elseif selected == self.listSize then
+			if self.listSize < self.numWidgets or self.numWidgets == 0 then
+				topItem = 1
+			else
+				topItem = self.listSize - self.numWidgets + 1
+			end
+			-- otherwise, try to leave one item below the selected one (we've scrolled out of the view)
+		elseif selected >= topItem + self.numWidgets - self.itemsBeforeScroll then
+			topItem = selected - self.numWidgets + self:getEffectiveItemsBeforeScroll() + 1
+		end
+	end
 	self.topItem = topItem
 end
 
 
 function _updateWidgets(self)
 
-	local jumpScrollBottom = self.topItem + self.numWidgets
+	local iPL = 1
+	if self.itemsPerLine and self.itemsPerLine > 1 then
+		iPL = self.itemsPerLine
+	end
+
+	local jumpScrollBottom = self.topItem + (self.numWidgets / iPL)
 	if self.mouseState ~= MOUSE_COMPLETE then
 		--when touch activity in progress, allow one more bottom item to be selected without jump, for half onscreen items
-		jumpScrollBottom = jumpScrollBottom + 1
+		jumpScrollBottom = jumpScrollBottom + iPL
 	end
 	local selected = _coerce(self.selected or 1, self.listSize)
 	if #self.widgets > 0 and (selected < self.topItem
@@ -1572,7 +1680,7 @@ function _updateWidgets(self)
 		_scrollList(self)
 	end
 
-	local indexSize = self.numWidgets + 1 -- one extra for smooth scrolling
+	local indexSize = self.numWidgets + iPL -- one extra for smooth scrolling
 	local min = self.topItem
 	local max = self.topItem + indexSize - 1
 	if max > self.listSize then
