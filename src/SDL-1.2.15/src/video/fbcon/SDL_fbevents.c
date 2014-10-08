@@ -39,6 +39,7 @@
 #include <linux/vt.h>
 #include <linux/kd.h>
 #include <linux/keyboard.h>
+#include <linux/input.h>
 
 #include "SDL_timer.h"
 #include "SDL_mutex.h"
@@ -55,14 +56,26 @@
 #define GPM_NODE_FIFO	"/dev/gpmdata"
 #endif
 
+/* Macro for trivial assignment from input value to SDL value */
+#define KEY_to_SDLK(x) \
+    case KEY_##x:    \
+         keymap[i] = SDLK_##x; \
+    break
+
+/* Macro for trivial assignment from input value to a mapped SDL key value */
+#define KEY_to_MapSDLK(x,y) \
+    case KEY_##x:    \
+         keymap[i] = SDLK_##y; \
+    break
+
 /*#define DEBUG_KEYBOARD*/
 /*#define DEBUG_MOUSE*/
 
 /* The translation tables from a console scancode to a SDL keysym */
 #define NUM_VGAKEYMAPS	(1<<KG_CAPSSHIFT)
 static Uint16 vga_keymap[NUM_VGAKEYMAPS][NR_KEYS];
-static SDLKey keymap[210];
-static Uint16 keymap_temp[210]; /* only used at startup */
+static SDLKey keymap[KEY_MAX];
+static Uint16 keymap_temp[128]; /* only used at startup */
 static SDL_keysym *TranslateKey(int scancode, SDL_keysym *keysym);
 
 /* Ugh, we have to duplicate the kernel's keysym mapping code...
@@ -1000,11 +1013,17 @@ static void handle_keyboard(_THIS)
 	SDL_keysym keysym;
 	nread = read(keyboard_fd, keybuf, BUFSIZ);
 	for ( i = 0; i<nread; ++i ) {
-		if ( ((keybuf[i] == 0) || keybuf[i] == 128) && (nread-i >= 2) && keybuf[i + 1] == 129) {
-			/* is extended character (scancode>128), comes in as three codes,
-			first code: 0(pressed) or 128(released), second code:129
-			third code: actual extended scancode value */
-			scancode = keybuf[i + 2];
+		if ( ((keybuf[i] == 0) || keybuf[i] == 0x80) && (nread-i >= 2) && keybuf[i + 1] & 0x80) {
+			/* is extended character (scancode>128),
+                        comes in as three codes,
+			first code: 0(pressed) or 0x80(released),
+			second code: high 7 bits
+			third code: low 7 bits
+                        The two bytes after 0 will always have the up flag set
+			not to interfere with older applications
+			This allows for 16384 different keycodes
+                        */
+			scancode = ((keybuf[i + 1] ^ 0x80)<<7) + (keybuf[i + 2] ^0x80);
 			if (keybuf[i] == 0) {
 				pressed = SDL_PRESSED;
 			} else {
@@ -1012,6 +1031,9 @@ static void handle_keyboard(_THIS)
 			}
 			//push past next 2 since the set of 3 are the extended character representation
 			i += 2;
+#ifdef DEBUG_KEYBOARD
+			fprintf(stderr, "Ext key scancode %x %x\n", scancode, pressed);
+#endif
 		} else {
 			scancode = keybuf[i] & 0x7F;
 			if ( keybuf[i] & 0x80 ) {
@@ -1019,6 +1041,9 @@ static void handle_keyboard(_THIS)
 			} else {
 				pressed = SDL_PRESSED;
 			}
+#ifdef DEBUG_KEYBOARD
+			fprintf(stderr, "Std key scancode %x %x\n", scancode, pressed);
+#endif
 		}
 		TranslateKey(scancode, &keysym);
 		/* Handle Ctrl-Alt-FN for vt switch */
@@ -1109,84 +1134,70 @@ void FB_InitOSKeymap(_THIS)
 	/* First get the ascii keys and others not well handled */
 	for (i=0; i<SDL_arraysize(keymap); ++i) {
 	  switch(i) {
-	  /* These aren't handled by the x86 kernel keymapping (?) */
-	  case SCANCODE_PRINTSCREEN:
-	    keymap[i] = SDLK_PRINT;
-	    break;
-	  case SCANCODE_BREAK:
-	    keymap[i] = SDLK_BREAK;
-	    break;
-	  case SCANCODE_BREAK_ALTERNATIVE:
-	    keymap[i] = SDLK_PAUSE;
-	    break;
-	  case SCANCODE_LEFTSHIFT:
-	    keymap[i] = SDLK_LSHIFT;
-	    break;
-	  case SCANCODE_RIGHTSHIFT:
-	    keymap[i] = SDLK_RSHIFT;
-	    break;
-	  case SCANCODE_LEFTCONTROL:
-	    keymap[i] = SDLK_LCTRL;
-	    break;
-	  case SCANCODE_RIGHTCONTROL:
-	    keymap[i] = SDLK_RCTRL;
-	    break;
-	  case SCANCODE_RIGHTWIN:
-	    keymap[i] = SDLK_RSUPER;
-	    break;
-	  case SCANCODE_LEFTWIN:
-	    keymap[i] = SDLK_LSUPER;
-	    break;
-	  case SCANCODE_LEFTALT:
-	    keymap[i] = SDLK_LALT;
-	    break;
-	  case SCANCODE_RIGHTALT:
-	    keymap[i] = SDLK_RALT;
-	    break;
-	  case 127:
-	    keymap[i] = SDLK_MENU;
-	    break;
-	  case 113:
-	    keymap[i] = SDLK_AudioMute;
-	    break;
-	  case 114:
-	    keymap[i] = SDLK_AudioLowerVolume;
-	    break;
-	  case 115:
-	    keymap[i] = SDLK_AudioRaiseVolume;
-	    break;
-	  case 116:
-	    keymap[i] = SDLK_POWER;
-	    break;
-	  case 142:
-	    keymap[i] = SDLK_Sleep;
-	    break;
-	  case 163:
-	    keymap[i] = SDLK_AudioNext;
-	    break;
-	  case 164: // playpause should this be play
-	    keymap[i] = SDLK_AudioPause;
-	    break;
-	  case 165:
-	    keymap[i] = SDLK_AudioPrev;
-	    break;
-	  case 166:
-	    keymap[i] = SDLK_AudioStop;
-	    break;
-	  case 172: 
-	    keymap[i] = SDLK_HomePage;
-	    break;
-	  case 207:
-	    keymap[i] = SDLK_AudioPlay;
-	    break;
+		/* These aren't handled by the x86 kernel keymapping (?) */
+		case SCANCODE_PRINTSCREEN:       keymap[i] = SDLK_PRINT; break;
+		case SCANCODE_BREAK:             keymap[i] = SDLK_BREAK; break;
+		case SCANCODE_BREAK_ALTERNATIVE: keymap[i] = SDLK_PAUSE; break;
+		case SCANCODE_LEFTSHIFT:         keymap[i] = SDLK_LSHIFT; break;
+		case SCANCODE_RIGHTSHIFT:        keymap[i] = SDLK_RSHIFT; break;
+		case SCANCODE_LEFTCONTROL:       keymap[i] = SDLK_LCTRL; break;
+		case SCANCODE_RIGHTCONTROL:      keymap[i] = SDLK_RCTRL; break;
+		case SCANCODE_RIGHTWIN:          keymap[i] = SDLK_RSUPER; break;
+		case SCANCODE_LEFTWIN:           keymap[i] = SDLK_LSUPER; break;
+		case SCANCODE_LEFTALT:           keymap[i] = SDLK_LALT; break;
+		case SCANCODE_RIGHTALT:          keymap[i] = SDLK_RALT; break;
+		// KEY_MIN_INTERESTING... 113
+		case KEY_MUTE:                   keymap[i] = SDLK_AudioMute; break;
+		case KEY_VOLUMEDOWN:             keymap[i] = SDLK_AudioLowerVolume; break;
+		case KEY_VOLUMEUP:               keymap[i] = SDLK_AudioRaiseVolume; break;
+		KEY_to_SDLK(POWER);
+		KEY_to_SDLK(COMPOSE);
+		// >=128
+		case KEY_STOP:                   keymap[i] = SDLK_Stop; break;
+		KEY_to_SDLK(BOOKMARKS);
+		KEY_to_SDLK(HELP);
+		KEY_to_SDLK(MENU);
+		case KEY_SLEEP:                 keymap[i] = SDLK_Sleep; break;
+		case KEY_BACK:                   keymap[i] = SDLK_Back; break;
+		case KEY_FORWARD:                keymap[i] = SDLK_Forward; break;
+		case KEY_NEXTSONG:               keymap[i] = SDLK_AudioNext; break;
+		case KEY_PLAYPAUSE:              keymap[i] = SDLK_AudioPause; break;
+		case KEY_PREVIOUSSONG:           keymap[i] = SDLK_AudioPrev; break;
+		case KEY_STOPCD:                 keymap[i] = SDLK_AudioStop; break;
+		KEY_to_MapSDLK(RECORD,AudioRecord);
+		KEY_to_SDLK(REWIND);
+		case KEY_HOMEPAGE:               keymap[i] = SDLK_HomePage; break;
+		KEY_to_SDLK(EXIT);
+		KEY_to_MapSDLK(PLAY,AudioPlay);
+		KEY_to_SDLK(FASTFORWARD);
+		KEY_to_MapSDLK(SEARCH,Search);
+		KEY_to_SDLK(UNKNOWN);
+		//>= 255
+		//CEC >= 0x160
+		KEY_to_SDLK(OK);
+		KEY_to_SDLK(FAVORITES);
+		KEY_to_SDLK(EPG);
+		KEY_to_SDLK(LIST);
+		KEY_to_SDLK(RED);
+		KEY_to_SDLK(GREEN);
+		KEY_to_SDLK(YELLOW);
+		KEY_to_SDLK(BLUE);
+		KEY_to_SDLK(PREVIOUS);
+		KEY_to_SDLK(CONTEXT_MENU);
 
-	  /* this should take care of all standard ascii keys */
-	  default:
-	    keymap[i] = KVAL(vga_keymap[0][i]);
-	    break;
-          }
+		/* this should take care of all standard ascii keys */
+		default:
+			if (  i < NR_KEYS ) {
+				keymap[i] = KVAL(vga_keymap[0][i]);
+			} else {
+				keymap[i] = SDLK_UNKNOWN;
+			}
+		break;
+	  }
 	}
-	for (i=0; i<SDL_arraysize(keymap); ++i) {
+
+        // Map to SDLK from keymap_temp for scancode < 128 see FB_vgainitkeymaps
+	for (i=0; i<SDL_arraysize(keymap_temp); ++i) {
 	  switch(keymap_temp[i]) {
 	    case K_F1:  keymap[i] = SDLK_F1;  break;
 	    case K_F2:  keymap[i] = SDLK_F2;  break;
@@ -1250,8 +1261,6 @@ void FB_InitOSKeymap(_THIS)
 	    case K_HOLD:  keymap[i] = SDLK_SCROLLOCK; break;
 	    case K_PAUSE: keymap[i] = SDLK_PAUSE;     break;
 
-	    case 127: keymap[i] = SDLK_BACKSPACE; break;
-	     
 	    default: break;
 	  }
 	}
@@ -1261,9 +1270,16 @@ static SDL_keysym *TranslateKey(int scancode, SDL_keysym *keysym)
 {
 	/* Set the keysym information */
 	keysym->scancode = scancode;
-	keysym->sym = keymap[scancode];
+        if (scancode < SDL_arraysize(keymap)) {
+		keysym->sym = keymap[scancode];
+	} else {
+		keysym->sym = 0;
+	}
 	keysym->mod = KMOD_NONE;
 
+#ifdef DEBUG_KEYBOARD
+	fprintf(stderr, "TranslateKey sc/sym %x/%x map size %x\n", scancode, keysym->sym, SDL_arraysize(keymap));
+#endif
 	/* If UNICODE is on, get the UNICODE value for the key */
 	keysym->unicode = 0;
 	if ( SDL_TranslateUNICODE ) {
