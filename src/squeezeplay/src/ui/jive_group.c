@@ -94,158 +94,320 @@ int jiveL_group_skin(lua_State *L) {
 	lua_call(L, 3, 1);
 	lua_setfield(L, 1, "_order");
 
+
+	/* group orientation */
+	lua_pushcfunction(L, jiveL_style_value);
+	lua_pushvalue(L, 1);
+	lua_pushstring(L, "orientation");
+	lua_pushnil(L);
+	lua_call(L, 3, 1);
+	lua_setfield(L, 1, "_orientation");
+
 	return 0;
 }
 
 
 int jiveL_group_layout(lua_State *L) {
-	GroupWidget *peer;
-	JiveInset *border;
-	int *w;
-	int fc = 0, fw = 0, num = 0;
-	int max_w, sum_w;
-	int i, x, y, h;
+	int orientation = 0;
 
-	peer = jive_getpeer(L, 1, &groupPeerMeta);
-
-	lua_getfield(L, 1, "widgets");
-
-	lua_getfield(L, 1, "_order");
-	if (lua_isnil(L, 3)) {
-		lua_pushnil(L);
-		while (lua_next(L, 2) != 0) {
-			num++;
-			lua_pop(L, 1);
-		}
+	lua_getfield(L, 1, "_orientation");	// false, nil = horizontal
+	if (lua_isnil(L, -1)) {
+		orientation = 0;
+	} else {
+		orientation = lua_tointeger(L, -1);
 	}
-	else {
-		/* create table with ordered widgets */
-		lua_newtable(L);
+	lua_pop(L, 1);
 
-		lua_pushnil(L);
-		while (lua_next(L, 3) != 0) {
-			lua_gettable(L, 2);
-			lua_rawseti(L, -3, ++num);
-		}
+	// horizontal layout
+	if (orientation == 0) {
+		GroupWidget *peer;
+		JiveInset *border;
+		int *w;
+		int fc = 0, fw = 0, num = 0;
+		int max_w, sum_w;
+		int i, x, y, h;
 
-		lua_replace(L, 2); /* replace widgets */
-	}
-	lua_pop(L, 1); /* pop _order */
+		peer = jive_getpeer(L, 1, &groupPeerMeta);
 
-	/* stack is:
-	 * 1: widget
-	 * 2: widget.widgets (or ordered widgets)
-	 */
+		lua_getfield(L, 1, "widgets");
 
-	lua_pushvalue(L, -1);
-	lua_setfield(L, 1, "_widgets");
-
-	w = calloc(num, sizeof(int));
-	h = 0;
-	border = calloc(num, sizeof(JiveInset));
-
-	/* first pass, find widget preferred bounds */
-	i = 0;
-	lua_pushnil(L);
-	while (lua_next(L, 2) != 0) {
-		if (jive_getmethod(L, -1, "isHidden")) {
-			lua_pushvalue(L, -2);
-			lua_call(L, 1, 1);
-
-			if (lua_toboolean(L, -1)) {
-				i++;
-				lua_pop(L, 2);
-				continue;
+		lua_getfield(L, 1, "_order");
+		if (lua_isnil(L, 3)) {
+			lua_pushnil(L);
+			while (lua_next(L, 2) != 0) {
+				num++;
+				lua_pop(L, 1);
 			}
-
-			lua_pop(L, 1);
-		}
-
-		if (jive_getmethod(L, -1, "getBorder")) {
-			lua_pushvalue(L, -2);
-			lua_call(L, 1, 4);
-				
-			border[i].left = lua_tointeger(L, -4);
-			border[i].top = lua_tointeger(L, -3);
-			border[i].right = lua_tointeger(L, -2);
-			border[i].bottom = lua_tointeger(L, -1);
-			lua_pop(L, 4);
 		}
 		else {
-			border[i].left = 0;
-			border[i].top = 0;
-			border[i].right = 0;
-			border[i].bottom = 0;
+			/* create table with ordered widgets */
+			lua_newtable(L);
+			lua_pushnil(L);
+			while (lua_next(L, 3) != 0) {
+				lua_gettable(L, 2);
+				lua_rawseti(L, -3, ++num);
+			}
+			lua_replace(L, 2); /* replace widgets */
 		}
+		lua_pop(L, 1); /* pop _order */
+		/* stack is:
+		 * 1: widget
+		 * 2: widget.widgets (or ordered widgets)
+		 */
+		lua_pushvalue(L, -1);
+		lua_setfield(L, 1, "_widgets");
 
-		if (jive_getmethod(L, -1, "getPreferredBounds")) {
-			lua_pushvalue(L, -2);
-			lua_call(L, 1, 4);
+		w = calloc(num, sizeof(int));
+		h = 0;
+		border = calloc(num, sizeof(JiveInset));
 
-			w[i] = lua_tointeger(L, -2);
-			h = MAX(h + border[i].top + border[i].bottom, lua_tointeger(L, -1) + border[i].top + border[i].bottom);
+		/* first pass, find widget preferred bounds */
+		i = 0;
+		lua_pushnil(L);
+		while (lua_next(L, 2) != 0) {
+			if (jive_getmethod(L, -1, "isHidden")) {
+				lua_pushvalue(L, -2);
+				lua_call(L, 1, 1);
 
-			if (w[i] == JIVE_WH_FILL) {
-				fc++;
+				if (lua_toboolean(L, -1)) {
+					i++;
+					lua_pop(L, 2);
+					continue;
+				}
+				lua_pop(L, 1);
+			}
+
+			if (jive_getmethod(L, -1, "getBorder")) {
+				lua_pushvalue(L, -2);
+				lua_call(L, 1, 4);
+
+				border[i].left = lua_tointeger(L, -4);
+				border[i].top = lua_tointeger(L, -3);
+				border[i].right = lua_tointeger(L, -2);
+				border[i].bottom = lua_tointeger(L, -1);
+				lua_pop(L, 4);
 			}
 			else {
-				w[i] += border[i].left + border[i].right;
-				fw += w[i];
+				border[i].left = 0;
+				border[i].top = 0;
+				border[i].right = 0;
+				border[i].bottom = 0;
 			}
-			lua_pop(L, 4);
+
+			if (jive_getmethod(L, -1, "getPreferredBounds")) {
+				lua_pushvalue(L, -2);
+				lua_call(L, 1, 4);
+
+				w[i] = lua_tointeger(L, -2);
+				h = MAX(h + border[i].top + border[i].bottom, lua_tointeger(L, -1) + border[i].top + border[i].bottom);
+				if (w[i] == JIVE_WH_FILL) {
+					fc++;
+				}
+				else {
+					w[i] += border[i].left + border[i].right;
+					fw += w[i];
+				}
+				lua_pop(L, 4);
+			}
+			i++;
+			lua_pop(L, 1);
 		}
 
-		i++;
-		lua_pop(L, 1);
-	}
-		
-	max_w = peer->w.bounds.w - peer->w.padding.left - peer->w.padding.right;
-	sum_w = 0;
-	for (i=0; i<num; i++) {
-		/* set width for widgets to fill space */
-		if (w[i] == JIVE_WH_FILL) {
-			w[i] = (max_w - fw) / fc;
+		max_w = peer->w.bounds.w - peer->w.padding.left - peer->w.padding.right;
+		sum_w = 0;
+		for (i=0; i<num; i++) {
+			/* set width for widgets to fill space */
+			if (w[i] == JIVE_WH_FILL) {
+				w[i] = (max_w - fw) / fc;
+			}
+
+			/* don't exceed widget width */
+			if (sum_w + w[i] > max_w) {
+				w[i] = MAX(0, max_w - sum_w);
+			}
+			sum_w += w[i];
 		}
 
-		/* don't exceed widget width */
-		if (sum_w + w[i] > max_w) {
-			w[i] = MAX(0, max_w - sum_w);
+		if (h == JIVE_WH_FILL) {
+			h = peer->w.bounds.h - peer->w.padding.top - peer->w.padding.bottom;
 		}
-		sum_w += w[i];
-	}
+		else if (h != JIVE_WH_NIL && h != JIVE_WH_FILL) {
+			h = MIN(h, peer->w.bounds.h - peer->w.padding.top - peer->w.padding.bottom);
+		}
 
-	if (h == JIVE_WH_FILL) {
-		h = peer->w.bounds.h - peer->w.padding.top - peer->w.padding.bottom;
-	}
-	else if (h != JIVE_WH_NIL && h != JIVE_WH_FILL) {
-		h = MIN(h, peer->w.bounds.h - peer->w.padding.top - peer->w.padding.bottom);
-	}
+		x = peer->w.bounds.x + peer->w.padding.left;
+		y = peer->w.bounds.y + peer->w.padding.top;
 
-	x = peer->w.bounds.x + peer->w.padding.left;
-	y = peer->w.bounds.y + peer->w.padding.top;
-
-	/* second pass, set widget bounds */
-	i = 0;
-	lua_pushnil(L);
-	while (lua_next(L, 2) != 0) {
-		if (jive_getmethod(L, -1, "setBounds")) {
-			lua_pushvalue(L, -2);
-			lua_pushinteger(L, x + border[i].left);
-			lua_pushinteger(L, y + border[i].top);
-			lua_pushinteger(L, w[i] - border[i].left - border[i].right);
-			lua_pushinteger(L, h - border[i].top - border[i].bottom);
+		/* second pass, set widget bounds */
+		i = 0;
+		lua_pushnil(L);
+		while (lua_next(L, 2) != 0) {
+			if (jive_getmethod(L, -1, "setBounds")) {
+				lua_pushvalue(L, -2);
+				lua_pushinteger(L, x + border[i].left);
+				lua_pushinteger(L, y + border[i].top);
+				lua_pushinteger(L, w[i] - border[i].left - border[i].right);
+				lua_pushinteger(L, h - border[i].top - border[i].bottom);
+				
+				lua_call(L, 5, 0);
+			}
 			
-			lua_call(L, 5, 0);
+			x += w[i++];
+			
+			lua_pop(L, 1);
 		}
-
-		x += w[i++];
-
-		lua_pop(L, 1);
+		free(w);
+		free(border);
 	}
 
-	free(w);
-	free(border);
+	// vertical layout
+	if (orientation == 1) {
+		GroupWidget *peer;
+		JiveInset *border;
+		int *h;
+		int fc = 0, fh = 0, num = 0;
+		int max_h, sum_h;
+		int i, x, y, w;
 
+		peer = jive_getpeer(L, 1, &groupPeerMeta);
+
+		lua_getfield(L, 1, "widgets");
+
+		lua_getfield(L, 1, "_order");
+		if (lua_isnil(L, 3)) {
+			lua_pushnil(L);
+			while (lua_next(L, 2) != 0) {
+				num++;
+				lua_pop(L, 1);
+			}
+		}
+		else {
+			/* create table with ordered widgets */
+			lua_newtable(L);
+			lua_pushnil(L);
+			while (lua_next(L, 3) != 0) {
+				lua_gettable(L, 2);
+				lua_rawseti(L, -3, ++num);
+			}
+
+			lua_replace(L, 2); /* replace widgets */
+		}
+		lua_pop(L, 1); /* pop _order */
+
+		/* stack is:
+		 * 1: widget
+		 * 2: widget.widgets (or ordered widgets)
+		 */
+
+		lua_pushvalue(L, -1);
+		lua_setfield(L, 1, "_widgets");
+
+		h = calloc(num, sizeof(int));
+		w = 0;
+		border = calloc(num, sizeof(JiveInset));
+
+		/* first pass, find widget preferred bounds */
+		i = 0;
+		lua_pushnil(L);
+		while (lua_next(L, 2) != 0) {
+			if (jive_getmethod(L, -1, "isHidden")) {
+				lua_pushvalue(L, -2);
+				lua_call(L, 1, 1);
+				
+				if (lua_toboolean(L, -1)) {
+					i++;
+					lua_pop(L, 2);
+					continue;
+				}
+				lua_pop(L, 1);
+			}
+
+			if (jive_getmethod(L, -1, "getBorder")) {
+				lua_pushvalue(L, -2);
+				lua_call(L, 1, 4);
+
+				border[i].left = lua_tointeger(L, -4);
+				border[i].top = lua_tointeger(L, -3);
+				border[i].right = lua_tointeger(L, -2);
+				border[i].bottom = lua_tointeger(L, -1);
+				lua_pop(L, 4);
+			}
+			else {
+				border[i].left = 0;
+				border[i].top = 0;
+				border[i].right = 0;
+				border[i].bottom = 0;
+			}
+
+			if (jive_getmethod(L, -1, "getPreferredBounds")) {
+				lua_pushvalue(L, -2);
+				lua_call(L, 1, 4);
+
+				// Save height of i widget
+				h[i] = lua_tointeger(L, -1);
+				// Update w with biggest width I think that should be MAX( w, ...)
+				w = MAX(w + border[i].left + border[i].right, lua_tointeger(L, -2) + border[i].left + border[i].right);
+				if (h[i] == JIVE_WH_FILL) {
+					// Update fill count = num of withget with WH_FILL
+					fc++;
+				}
+				else {
+					// Real widget height
+					h[i] += border[i].top + border[i].bottom;
+					// Update height of non fill widgets
+					fh += h[i];
+				}
+				lua_pop(L, 4);
+			}
+
+			i++;
+			lua_pop(L, 1);	// Pop current widget
+		}
+
+		max_h = peer->w.bounds.h - peer->w.padding.top - peer->w.padding.bottom;
+		sum_h = 0;
+		for (i=0; i<num; i++) {
+			/* set height for widgets to fill space */
+			if (h[i] == JIVE_WH_FILL) {
+				h[i] = (max_h - fh) / fc;
+			}
+
+			/* don't exceed widget height */
+			if (sum_h + h[i] > max_h) {
+				h[i] = MAX(0, max_h - sum_h);
+			}
+			sum_h += h[i];
+		}
+
+		if (w == JIVE_WH_FILL) {
+			w = peer->w.bounds.w - peer->w.padding.left - peer->w.padding.right;
+		}
+		else if (w != JIVE_WH_NIL && w != JIVE_WH_FILL) {
+			w = MIN(w, peer->w.bounds.w - peer->w.padding.left - peer->w.padding.right);
+		}
+
+		x = peer->w.bounds.x + peer->w.padding.left;
+		y = peer->w.bounds.y + peer->w.padding.top;
+
+		/* second pass, set widget bounds */
+		i = 0;
+		lua_pushnil(L);
+		while (lua_next(L, 2) != 0) {
+			if (jive_getmethod(L, -1, "setBounds")) {
+				lua_pushvalue(L, -2);
+				lua_pushinteger(L, x + border[i].left);
+				lua_pushinteger(L, y + border[i].top);
+				lua_pushinteger(L, w - border[i].left - border[i].right);
+				lua_pushinteger(L, h[i] - border[i].top - border[i].bottom);
+				lua_call(L, 5, 0);
+			}
+			y += h[i++];
+			lua_pop(L, 1);
+		}
+
+		free(h);
+		free(border);
+	}
 	return 0;
 }
 
@@ -282,7 +444,7 @@ int jiveL_group_draw(lua_State *L) {
 	 */
 
 	GroupWidget *peer = jive_getpeer(L, 1, &groupPeerMeta);
-	JiveSurface *srf = tolua_tousertype(L, 2, 0);
+	JiveSurface *srf = *(JiveSurface **)lua_touserdata(L, 2);
 	bool drawLayer = luaL_optinteger(L, 3, JIVE_LAYER_ALL) & peer->w.layer;
 
 	if (drawLayer && peer->bg_tile) {
