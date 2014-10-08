@@ -294,8 +294,9 @@ typedef enum {
     SDLK_Mail               = 332,
     SDLK_Start              = 333,
     SDLK_Search             = 334,
-    SDLK_AudioRecord        = 325,
+    //SDLK_AudioRecord        = 325,
 
+    //Overlap
     SDLK_Calculator         = 326,
     SDLK_Memo               = 327,
     SDLK_ToDoList           = 328,
@@ -346,6 +347,22 @@ typedef enum {
     SDLK_LaunchE            = 371,
     SDLK_LaunchF            = 372,
 
+    // HDMI CEC
+    SDLK_EXIT               = 375,
+    SDLK_FASTFORWARD        = 376,
+    SDLK_REWIND             = 377,
+    SDLK_OK		    = 378,
+    SDLK_FAVORITES          = 379,
+    SDLK_EPG		    = 380,
+    SDLK_BOOKMARKS	    = 381,
+
+    SDLK_LIST		    = 395,
+    SDLK_RED                = 398,
+    SDLK_GREEN              = 399,
+    SDLK_YELLOW             = 400,
+    SDLK_BLUE               = 401,
+    SDLK_PREVIOUS	    = 412,
+    SDLK_CONTEXT_MENU       = 438,
 	/* Add any other keys here */
 
 	SDLK_LAST
