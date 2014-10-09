@@ -20,6 +20,10 @@ charActionMappings.press = {
 	["Q"]  = "power",
 
 --END temp shortcuts to test action framework
+--alternatives for common control buttons avoiding keyboard modifiers
+	["f"]  = "go_favorites",
+	["s"]  = "sleep",
+	["q"]  = "power",
 
 	["/"]   = "go_search",
 	["h"]   = "go_home",
@@ -114,6 +118,7 @@ keyActionMappings.hold = {
 	[KEY_HOME] = "go_home",
 	[KEY_PLAY] = "create_mix",
 	[KEY_ADD]  = "add_end",
+	[KEY_UP]  = "power",
 	[KEY_BACK] = "go_home",
 	[KEY_LEFT] = "go_home",
 	[KEY_GO] = "add", --has no default assignment yet
