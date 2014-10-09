@@ -53,6 +53,11 @@ struct jive_keyir {
 	Uint32 code;
 };
 
+struct jive_keyuni {
+	SDLKey keysym;
+	Uint16 unicode;
+};
+
 static enum jive_key_state {
 	KEY_STATE_NONE,
 	KEY_STATE_DOWN,
@@ -81,16 +86,24 @@ static Uint16 mouse_origin_x, mouse_origin_y;
 static int ui_watchdog;
 
 static struct jive_keymap keymap[] = {
-	{ SDLK_RIGHT,		JIVE_KEY_GO },
+	//{ SDLK_RIGHT,           JIVE_KEY_GO },
+	{ SDLK_UP,           JIVE_KEY_UP },
+	{ SDLK_DOWN,           JIVE_KEY_DOWN },
+	{ SDLK_RIGHT,           JIVE_KEY_RIGHT },
 	{ SDLK_RETURN,		JIVE_KEY_GO },
-	{ SDLK_LEFT,		JIVE_KEY_BACK },
+	{ SDLK_OK,		JIVE_KEY_GO },
+	//{ SDLK_LEFT,            JIVE_KEY_BACK },
+	{ SDLK_LEFT,            JIVE_KEY_LEFT },
 	{ SDLK_HOME,		JIVE_KEY_HOME },
 	{ SDLK_AudioPlay,	JIVE_KEY_PLAY },
 	{ SDLK_AudioPause,	JIVE_KEY_PAUSE },
 	{ SDLK_AudioStop,	JIVE_KEY_PAUSE },
+	{ SDLK_PAUSE,		JIVE_KEY_PAUSE },
 	{ SDLK_KP_PLUS,		JIVE_KEY_ADD },
 	{ SDLK_AudioPrev,	JIVE_KEY_REW },
+	{ SDLK_Back,		JIVE_KEY_REW },
 	{ SDLK_AudioNext,	JIVE_KEY_FWD },
+	{ SDLK_Forward,		JIVE_KEY_FWD },
 	{ SDLK_AudioRaiseVolume,JIVE_KEY_VOLUME_UP },
 	{ SDLK_AudioLowerVolume,JIVE_KEY_VOLUME_DOWN },
 	{ SDLK_PAGEUP,		JIVE_KEY_PAGE_UP },
@@ -109,6 +122,20 @@ static struct jive_keymap keymap[] = {
 	{ SDLK_HomePage,	JIVE_KEY_HOME },
 	{ SDLK_UNKNOWN,		JIVE_KEY_NONE },
 };
+
+static struct jive_keyuni unimap[] = {
+	{ SDLK_LIST,	  ']'        },
+	{ SDLK_EPG,	  ';'        },
+	{ SDLK_FAVORITES, ':'        },
+	{ SDLK_BOOKMARKS, ':'        },
+        { SDLK_PREVIOUS,  'J'        },
+        { SDLK_RED,       ','        },
+        { SDLK_GREEN,     ':'        },
+        { SDLK_YELLOW,     '/'        },
+        { SDLK_BLUE,      '.'        },
+        { SDLK_HELP,      '?'        },
+	{ SDLK_UNKNOWN,	  0x0        },
+        };
 
 static struct jive_keyir irmap[] = {
 	{ SDLK_UP,       0x7689e01f }, /* arrow_up */
@@ -184,7 +211,7 @@ static int jiveL_initSDL(lua_State *L) {
 		SDL_Quit();
 		exit(-1);
 	} else {
-	  atexit(SDL_Quit);
+		atexit(SDL_Quit);
 	}
 
 	/* report video info */
@@ -199,6 +226,7 @@ static int jiveL_initSDL(lua_State *L) {
 	SDL_SetEventFilter(filter_events);
 
 	// Secific magic for windows|linux|macos
+	LOG_INFO(log_ui_draw, "platform_init");
 	platform_init(L);
 
 #ifndef JIVE_NO_DISPLAY
@@ -247,6 +275,7 @@ static int jiveL_initSDL(lua_State *L) {
 		// Get largest?
 		splash = jive_surface_load_image(splashfile);
 		if(!splash) {
+			LOG_INFO(log_ui_draw, "Splash Fail Defaulting");
 			sprintf(splashfile,"jive/splash.png");
 			splash = jive_surface_load_image(splashfile);
 		}
@@ -258,7 +287,7 @@ static int jiveL_initSDL(lua_State *L) {
 		fullscreen = true;
 	}
 
-        // Set video mode to splash...
+	LOG_INFO(log_ui_draw, "Set video mode to splash...");
 	srf = jive_surface_set_video_mode(screen_w, screen_h, screen_bpp, fullscreen);
 	if (!srf) {
 		LOG_ERROR(log_ui_draw, "Splash Video Mode Fail.");
@@ -275,7 +304,7 @@ static int jiveL_initSDL(lua_State *L) {
         			screen_h = video_info->current_h;
 				srf = jive_surface_set_video_mode(screen_w, screen_h, screen_bpp, fullscreen);
 				if(!srf) {
-					LOG_ERROR(log_ui_draw, "Splash Video Mode Fail.");
+					LOG_ERROR(log_ui_draw, "Splash Video Mode Fail (screen size).");
 				}
 		
 			}
@@ -284,8 +313,8 @@ static int jiveL_initSDL(lua_State *L) {
 	}
 
 	if (splash) {
-                // Position Splash Image on screen
-		jive_surface_blit(splash, srf, (screen_w - splash_w) > 0 ?((screen_w - splash_w) / 2):0, (screen_w - splash_w) > 0 ?((screen_w - splash_w) / 2):0);
+		LOG_INFO(log_ui_draw, "Position Splash Image on screen");
+		jive_surface_blit(splash, srf, (screen_w - splash_w) > 0 ?((screen_w - splash_w) / 2):0, (screen_h - splash_h) > 0 ?((screen_h - splash_h) / 2):0);
 		jive_surface_flip(srf);
 		LOG_INFO(log_ui_draw, "Splash %s %dx%d Screen %dx%d", splashfile,splash_w,splash_h,screen_w,screen_h);
 	}
@@ -323,6 +352,7 @@ static int jiveL_initSDL(lua_State *L) {
 	watchdog_keepalive(ui_watchdog, 6); /* 60 seconds to start */
 
 #endif /* JIVE_NO_DISPLAY */
+	LOG_INFO(log_ui_draw, "initSDL End");
 
 	return 0;
 }
@@ -1135,6 +1165,9 @@ static int process_event(lua_State *L, SDL_Event *event) {
 		break;
 
 	case SDL_KEYDOWN:
+		/*
+		  this emulates the scrollwheel using keypresses - remove for them moment as we want 4 way navigation
+
 		if (event->key.keysym.mod == KMOD_NONE || event->key.keysym.mod == KMOD_NUM) {
 			if (event->key.keysym.sym == SDLK_UP) {
 				jevent.type = JIVE_EVENT_SCROLL;
@@ -1147,14 +1180,16 @@ static int process_event(lua_State *L, SDL_Event *event) {
 				break;
 			}
 		}
+                */
 		// Fall through
 
 	case SDL_KEYUP: {
 		struct jive_keymap *entry = keymap;
+		struct jive_keyuni *unicode = unimap;
 		
 		if (event->key.keysym.mod & (KMOD_ALT|KMOD_MODE)) {
-			/* simulate IR input, using alt key */
 			struct jive_keyir *ir = irmap;
+			LOG_INFO(log_ui, "IR Emulation with Alt or Mode");
 
 			while (ir->keysym != SDLK_UNKNOWN) {
 				if (ir->keysym == event->key.keysym.sym) {
@@ -1193,29 +1228,40 @@ static int process_event(lua_State *L, SDL_Event *event) {
 			entry++;
 		}
 
+
 		if (entry->keysym == SDLK_UNKNOWN) {
+			while (unicode->keysym != SDLK_UNKNOWN) {
+				if (unicode->keysym == event->key.keysym.sym) {
+					break;
+				}
+				unicode++;
+			}
 			// handle regular character keys ('a', 't', etc..)
-			if (event->type == SDL_KEYDOWN && event->key.keysym.unicode != 0) {
+			if (event->type == SDL_KEYDOWN && (event->key.keysym.unicode != 0 || ( unicode->keysym != SDLK_UNKNOWN && unicode->unicode != 0 ))) {
 				jevent.type = JIVE_EVENT_CHAR_PRESS;
 				if (event->key.keysym.sym == SDLK_BACKSPACE) {
 					//special case for Backspace, where value set is not ascii value, instead pass backspace ascii value
 					jevent.u.text.unicode = 8;
+				} else if (unicode->keysym != SDLK_UNKNOWN && unicode->unicode != 0 ) {
+				         LOG_DEBUG(log_ui, "Unicode mapped SDLK(%x(%c))",event->key.keysym.sym, unicode->unicode);
+					jevent.u.text.unicode = unicode->unicode;
 				} else {
+				         LOG_DEBUG(log_ui, "Unicode Char (%c))",event->key.keysym.unicode);
 					jevent.u.text.unicode = event->key.keysym.unicode;
 				}
-			}
+			} else if (event->type == SDL_KEYDOWN) {
+				LOG_DEBUG(log_ui, "Unknown SDLK(%x/%x)",event->key.keysym.sym,event->key.keysym.scancode);
+		        }
 		}
-
-		/* handle pgup/upgn as repeatable keys */
-		else if (entry->keysym == SDLK_PAGEUP || entry->keysym == SDLK_PAGEDOWN) {
+		/* handle pgup/upgn and cursors as repeatable keys */
+		else if (entry->keysym == SDLK_PAGEUP || entry->keysym == SDLK_PAGEDOWN ||
+				 entry->keysym == SDLK_UP || entry->keysym == SDLK_DOWN || entry->keysym == SDLK_LEFT || entry->keysym == SDLK_RIGHT) {
 			if (event->type == SDL_KEYDOWN) {
 				jevent.type = JIVE_EVENT_KEY_PRESS;
 				jevent.ticks = jive_jiffies();
 				jevent.u.key.code = entry->keycode;
 			}
-		}
-		
-		else if (event->type == SDL_KEYDOWN) {
+		} else if (event->type == SDL_KEYDOWN) {
 			if (key_mask & entry->keycode) {
 				// ignore key repeats
 				return 0;
@@ -1300,13 +1346,17 @@ static int process_event(lua_State *L, SDL_Event *event) {
 
 	case SDL_VIDEORESIZE: {
 		JiveSurface *srf;
-		int bpp = 16;
+		LOG_INFO(log_ui_draw, "SDL_VIDEORESIZE");
 
 		screen_w = event->resize.w;
 		screen_h = event->resize.h;
+                screen_isfull = jive_surface_isSDLFullScreen(NULL);
+                //bpp?
 
-		srf = jive_surface_set_video_mode(screen_w, screen_h, bpp, jive_surface_isSDLFullScreen(NULL));
+		/* update video surface */
+		srf = jive_surface_set_video_mode(screen_w, screen_h, 0, screen_isfull);
 
+		/* store new screen surface */
 		lua_getfield(L, 1, "screen");
 
 		lua_getfield(L, -1, "bounds");
@@ -1314,12 +1364,13 @@ static int process_event(lua_State *L, SDL_Event *event) {
 		lua_rawseti(L, -2, 3);
 		lua_pushinteger(L, screen_h);
 		lua_rawseti(L, -2, 4);
-		lua_pop(L, 1);
+                lua_pop(L, 1);
 
-		tolua_pushusertype(L, srf, "Surface");
-		lua_setfield(L, -2, "surface");
+		/* store new screen surface */
+                tolua_pushusertype(L, srf, "Surface");
+                lua_setfield(L, -2, "surface");
 
-		lua_pop(L, 1);
+                lua_pop(L, 1);
 
 		next_jive_origin++;
 
@@ -1604,7 +1655,7 @@ static int jiveL_core_init(lua_State *L) {
 	lua_getfield(L, 2, "Framework");
 	luaL_register(L, NULL, core_methods);
 	lua_pop(L, 1);
-	
+
 	return 0;
 }
 
