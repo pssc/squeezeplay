@@ -176,22 +176,52 @@ function registerApplet(meta)
 	-- Set the minimum support server version the version has to be greater than this ie 7.7+
 	SlimServer:setMinimumVersion("7.6")
 
-	jiveMain:addItem(meta:menuItem('piaudio_selector', 'settingsAudio', "AUDIO_SELECT", function(applet, ...) applet:settingsAudioSelect(...) end))
+        -- is a resident Applet
+        --appletManager:loadApplet("SqeezePi")
+
+	-- audio playback defaults
+	appletManager:addDefaultSetting("Playback", "enableAudio", 1)
+	appletManager:addDefaultSetting("ScreenSavers", "whenStopped", "false:false")
+	--appletManager:addDefaultSetting("ScreenSavers", "whenOff", "Clock:openDetailedClockBlack")
 
 	if jiveMain:getDefaultSkin() == 'QVGAportraitSkin' then -- Lowest common denominator
-		jiveMain:setDefaultSkin("800x600Skin") -- FIXME Resolution Detection....
+		jiveMain:setDefaultSkin("800x600Skin") -- FIXME Resolution Detection Applet....
 	end
 
-	appletManager:addDefaultSetting("Playback", "enableAudio", 1)
+	-- settings
+	jiveMain:addItem(meta:menuItem('piaudio_selector', 'settingsAudio', "AUDIO_SELECT", function(applet, ...) applet:settingsAudioSelect(...) end))
+
 
         -- sp default 8MB -- FIXME make tunebale this is per slimserver... FIXME...
 	if (settings['pi']['memory'] > 256) then
                 -- FIXME alter default setting needs applet 
 		ArtworkCache.setDefaultLimit(32*1024*1024)
+		--appletManager:addDefaultSetting("ArtworkCache", "enableSetting", 1)
+		--appletManager:addDefaultSetting("ArtworkCache", "defaultSize", 32*1024*1024)
 	else
 		ArtworkCache.setDefaultLimit(12*1024*1024)
+		--appletManager:addDefaultSetting("ArtworkCache", "enableSetting", 1)
+		--appletManager:addDefaultSetting("ArtworkCache", "defaultSize", 12*1024*1024)
 	end
+
+	-- services
+	--meta:registerService("getBrightness")
+	meta:registerService("setBrightness")
+        --meta:registerService("getWakeupAlarm")
+        --meta:registerService("setWakeupAlarm")
+        --meta:registerService("getDefaultWallpaper")
+        --meta:registerService("poweroff")
+        --meta:registerService("reboot")
 
 	-- open audio device
 	Decode:open(settings)
 end
+
+--[[
+function configureApplet(meta)
+        local applet = appletManager:getAppletInstance("SqueezePI")
+
+        applet:_configureInit()
+end
+--]]
+
