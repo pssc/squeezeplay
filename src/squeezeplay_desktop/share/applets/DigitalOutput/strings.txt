@@ -1,0 +1,103 @@
+# Meta
+APPLET_NAME
+	EN	Digital Output
+
+DAC_NOT_CONNECTED
+	EN	Dac not connected
+
+# Applet
+DIGITAL_ONLY
+	EN	Digital Only
+
+DIRECT_HW
+	EN	Direct Hardware
+
+SELECT_OUTPUT
+	EN	Select Audio Output
+
+EFFECTS
+	EN	(Effects)
+
+CURRENT
+	EN	 [Current]
+
+INFO
+	EN	 [Info]
+
+DEFAULT
+	EN	Default
+
+HELP_FIRST_USE
+	EN	Connect DAC and select output.  Supports external USB and SPDIF dacs up to 192k sampling rates.\nChange@ Settings > Audio Settings > Digital Output
+
+BUFFER_TUNING
+	EN      Buffer Tuning
+
+HELP_BUFFER_TUNING
+	EN	Tuning buffer size may impact sound quality
+
+BUFFER_DEFAULT
+	EN	Default HW Player settings
+
+BUFFER_LARGE
+	EN	Large (avoid if synchronized)
+
+BUFFER_SMALL
+	EN	Small (may cause dropouts)
+
+BUFFER_RAND
+	EN	Large + Randomise CPU
+
+BUFFER_VLARGE
+	EN	Very Large (USB Only)
+
+BUFFER_VLRAND
+	EN	Very Large + Randomise CPU (USB Only)
+
+BUFFER_SPDF
+	EN	SqueezePlay Default
+
+BUFFER_SLDF
+	EN	SqueezeLite Default
+
+BUFFER_SPPI
+	EN	SqueezePlay Pi
+
+REBOOTING
+	EN	Rebooting
+
+CANCEL
+	EN	Cancel
+
+SAMPLE_TUNING
+	EN	Sample Tuning (Experimental)
+
+HELP_SAMPLE_TUNING
+	EN	Tuning sample size may impact sound quality
+
+SAMPLE_A
+	EN	Automatic Mode, High rates first.
+
+SAMPLE_32
+	EN	32LE PCM
+
+SAMPLE_24
+	EN	24LE PCM
+
+SAMPLE_24_3
+	EN	24_3LE PCM
+
+SAMPLE_16
+	EN	16LE PCM
+
+NO_MMAP_OPTION
+	EN	Disable MMAP
+
+HELP_NO_MMAP_OPTION
+	EN	Some Drivers don't implment MMAP access correctly
+
+NO_MMAP_SETTING
+	EN	MMAP Disabled
+
+ACTIVE
+	EN	Active
