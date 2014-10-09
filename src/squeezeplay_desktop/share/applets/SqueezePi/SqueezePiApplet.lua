@@ -29,6 +29,59 @@ oo.class(_M, Applet)
 
 local AUDIO_SELECT = { "AUTO", "SOCKET", "HDMI" }
 
+function sysOpen(self, path, attr, mode)
+        if not mode or string.match(mode, "r") then
+                local fh = io.open(path .. attr, "r")
+                if not fh then
+                        log:warn("Can't open (read) ", path, attr)
+                        return
+                end
+
+                self["sysr_" .. attr] = fh
+        end
+
+        if mode and string.match(mode, "w") then
+                local fh = io.open(path .. attr, "w")
+                if not fh then
+                        log:warn("Can't open (write) ", path, attr)
+                        return
+                end
+
+                self["sysw_" .. attr] = fh
+        end
+end
+
+function sysReadNumber(self, attr)
+        local fh = self["sysr_" .. attr]
+        if not fh then
+                return -1
+        end
+
+        fh:seek("set")
+
+        local line, err = fh:read("*a")
+        if err then
+                return nil
+        else
+                return tonumber(line)
+        end
+end
+
+
+function sysWrite(self, attr, val)
+        local fh = self["sysw_" .. attr]
+        if not fh then
+                return -1
+        end
+
+        fh:write(val)
+        fh:flush(val)
+end
+
+function init(self)
+	sysOpen(self, "/sys/class/graphics/fb0/", "blank", "rw")
+end
+
 function settingsAudioSelect(self)
 	local window = Window("information", self:string("AUDIO_SELECT"), 'settingstitle')
 
@@ -125,5 +178,25 @@ function map(f, t)
   local t2 = {}
   for k,v in pairs(t) do t2[k] = f(v) end
   return t2
+end
+
+function getBrightness(self)
+        return sysReadNumber(self, "blank")
+end
+
+
+function setBrightness(self, level)
+        -- FIXME a quick hack to prevent the display from dimming
+        if level == "off" then
+                level = 0
+        elseif level == "on" then
+                level = 1
+        elseif level == nil then
+                return
+        else
+                level = 1
+        end
+        log:info("setBrightness: ", level)
+	sysWrite(self, "blank", level)
 end
 
