@@ -19,6 +19,8 @@ local Choice 		     = require("jive.ui.Choice")
 local Popup                  = require("jive.ui.Popup")
 local SimpleMenu	     = require("jive.ui.SimpleMenu")
 
+local os              = require("os")
+
 
 local jnt                    = jnt
 
@@ -79,7 +81,9 @@ function sysWrite(self, attr, val)
 end
 
 function init(self)
-	sysOpen(self, "/sys/class/graphics/fb0/", "blank", "rw")
+	local fbdev = string.match(os.getenv("SDL_FBDEV") or "", "/dev/fb([0-9]+)")
+
+	sysOpen(self, "/sys/class/graphics/fb"..(fbdev and fbdev or "0").."/", "blank", "rw")
 end
 
 function settingsAudioSelect(self)
