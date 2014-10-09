@@ -180,9 +180,11 @@ function map(f, t)
   return t2
 end
 
+--[[
 function getBrightness(self)
         return sysReadNumber(self, "blank")
 end
+]]--
 
 
 function setBrightness(self, level)
@@ -197,6 +199,6 @@ function setBrightness(self, level)
                 level = 1
         end
         log:info("setBrightness: ", level)
-	sysWrite(self, "blank", level)
+	sysWrite(self, "blank", level == 0 and 1 or 0) -- Blanking is the inverse
 end
 
