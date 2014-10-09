@@ -43,7 +43,6 @@ function defaultSettings(meta)
                 alsaPlaybackDevice = "default",
                 alsaPlaybackBufferTime = 50,
                 alsaPlaybackPeriodCount = 5,
-
 	}
 end
 
@@ -54,102 +53,101 @@ function registerApplet(meta)
 	local f = io.open(CPU_INFO)
         local pi = false
         if not f then
-           -- Warn
-           return
+        	-- warn
+        	return
         end
         for line in f:lines() do
-            if string.match(line, "Hardware%s+: BCM2708") then
-               pi = true
-           elseif string.match(line, "Revision%s+: %x+") then
-		local pi = { model="error", version=0, memory=0, revision=0, maker="", ov=false }
-               local nrev = string.match(line, "Revision%s+: (%x+)")
-		log:debug("Raw Revision: ", nrev)
-                nrev = tonumber(nrev,16)
-               if (not settings['Revision'] and nrev ) or (nrev and settings['Revision'] and settings['Revision'] != nrev) then
-                  settings['Revision']=nrev
-	          -- olde style overvolting - that will add in  1000000
-                  if ( nrev > 1000000 ) then
-			pi.ov = true
-			nrev = nrev - 1000000
-                  end
-                  pi.revision=nrev
+        	if string.match(line, "Hardware%s+: BCM2708") then
+        		pi = true
+        	elseif string.match(line, "Revision%s+: %x+") then
+			local pi = { model="error", version=0, memory=0, revision=0, maker="", ov=false }
+			local nrev = string.match(line, "Revision%s+: (%x+)")
+			log:debug("Raw Revision: ", nrev)
+			nrev = tonumber(nrev,16)
+			if (not settings['Revision'] and nrev ) or (nrev and settings['Revision'] and settings['Revision'] != nrev) then
+				settings['Revision']=nrev
+				-- olde style overvolting - that will add in  1000000
+				if ( nrev > 1000000 ) then
+					pi.ov = true
+					nrev = nrev - 1000000
+                  		end
+                  		pi.revision=nrev
 
-               if rev == 0 or nrev == 1 or nrev > 0x11 then
-		   log:error("Error Determining model of Pi")
-		   pi.model="error"
-		   pi = false
-               elseif nrev == 0x02 then
-                   pi.model = "B"
-                   pi.version = 1
-                   pi.memory = 256
-                   pi.maker = "Egoman"
-               elseif nrev == 0x03 then
-                   pi.model = "B"
-                   pi.version = 1.1
-                   pi.memory = 256
-                   pi.maker = "Egomanx"
-               elseif nrev == 0x04 then
-                   pi.model = "B"
-                   pi.version = 2
-                   pi.memory = 256
-                   pi.maker = "Sony"
-               elseif nrev == 0x05 then
-                   pi.model = "B"
-                   pi.version = 1.1
-                   pi.memory = 256
-                   pi.maker = "Qisda"
-               elseif nrev == 0x06 then
-                   pi.model = "B"
-                   pi.version = 2
-                   pi.memory = 256
-                   pi.maker = "Egoman"
-               elseif nrev == 0x07 then
-                   pi.model = "A"
-                   pi.version = 2
-                   pi.memory = 256
-                   pi.maker = "Egoman"
-               elseif nrev == 0x08 then
-                   pi.model = "A"
-                   pi.version = 2
-                   pi.memory = 256
-                   pi.maker = "Sony"
-               elseif nrev == 0x09 then
-                   pi.model = "A"
-                   pi.version = 2
-                   pi.memory = 256
-                   pi.maker = "Qisda"
-               elseif nrev == 0x0d then
-                   pi.model = "B"
-                   pi.version = 2
-                   pi.memory = 512
-                   pi.maker = "Egoman"
-               elseif nrev == 0x0e then
-                   pi.model = "B"
-                   pi.version = 2
-                   pi.memory = 512
-                   pi.maker = "Sony"
-               elseif nrev == 0x0f then
-                   pi.model = "B"
-                   pi.version = 2
-                   pi.memory = 256
-                   pi.maker = "Qisda"
-               elseif nrev == 0x10 then
-                   pi.model = "C"
-                   pi.version = 1.2
-                   pi.memory = 512
-                   pi.maker = "Sony"
-               elseif nrev == 0x11 then
-                   pi.model = "B+"
-                   pi.version = 1.2
-                   pi.memory = 512
-                   pi.maker = "Sony"
+				if rev == 0 or nrev == 1 or nrev > 0x11 then
+					log:error("Error Determining model of Pi")
+					pi.model="error"
+					pi = false
+				elseif nrev == 0x02 then
+					pi.model = "B"
+					pi.version = 1
+					pi.memory = 256
+					pi.maker = "Egoman"
+				elseif nrev == 0x03 then
+					pi.model = "B"
+					pi.version = 1.1
+					pi.memory = 256
+					pi.maker = "Egomanx"
+				elseif nrev == 0x04 then
+					pi.model = "B"
+					pi.version = 2
+					pi.memory = 256
+					pi.maker = "Sony"
+				elseif nrev == 0x05 then
+					pi.model = "B"
+					pi.version = 1.1
+					pi.memory = 256
+					pi.maker = "Qisda"
+				elseif nrev == 0x06 then
+					pi.model = "B"
+					pi.version = 2
+					pi.memory = 256
+					pi.maker = "Egoman"
+				elseif nrev == 0x07 then
+					pi.model = "A"
+					pi.version = 2
+					pi.memory = 256
+					pi.maker = "Egoman"
+				elseif nrev == 0x08 then
+					pi.model = "A"
+					pi.version = 2
+					pi.memory = 256
+					pi.maker = "Sony"
+				elseif nrev == 0x09 then
+					pi.model = "A"
+					pi.version = 2
+					pi.memory = 256
+					pi.maker = "Qisda"
+				elseif nrev == 0x0d then
+					pi.model = "B"
+					pi.version = 2
+					pi.memory = 512
+					pi.maker = "Egoman"
+				elseif nrev == 0x0e then
+					pi.model = "B"
+					pi.version = 2
+					pi.memory = 512
+					pi.maker = "Sony"
+				elseif nrev == 0x0f then
+					pi.model = "B"
+					pi.version = 2
+					pi.memory = 512
+					pi.maker = "Qisda"
+				elseif nrev == 0x10 then
+					pi.model = "C"
+					pi.version = 1.2
+					pi.memory = 512
+					pi.maker = "Sony"
+				elseif nrev == 0x11 then
+					pi.model = "B+"
+					pi.version = 1.2
+					pi.memory = 512
+					pi.maker = "Sony"
+				end
+				settings['pi'] = pi
+				-- save...
+				-- reset? settings.
+			end
 		end
-
-               settings['pi'] = pi
-               -- save...
-               -- reset? settings.
-               end
-           end
         end
         f:close()
 
@@ -187,14 +185,13 @@ function registerApplet(meta)
 	appletManager:addDefaultSetting("Playback", "enableAudio", 1)
 
         -- sp default 8MB -- FIXME make tunebale this is per slimserver... FIXME...
-	if (settings['pi']['memory'] <= 256) then
-		ArtworkCache.setDefaultLimit(12*1024*1024) -- 12MB
+	if (settings['pi']['memory'] > 256) then
+                -- FIXME alter default setting needs applet 
+		ArtworkCache.setDefaultLimit(32*1024*1024)
 	else
-		ArtworkCache.setDefaultLimit(32*1024*1024) -- 32MB
+		ArtworkCache.setDefaultLimit(12*1024*1024)
 	end
 
 	-- open audio device
 	Decode:open(settings)
 end
-
-
