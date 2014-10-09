@@ -54,15 +54,14 @@ function deviceMenu(self, menuItem, firstUse)
 		local items = {}
 
 		if curr == "default" then
-			if not firstUse then
+			--if not firstUse then
 				items[#items+1] = {
-					text = tostring(system == "fab4" and self:string("ANALOG_DIGITAL") or self:string("DEFAULT")) .. tostring(self:string("CURRENT")) ,
+					text = tostring(self:string("DEFAULT")) .. tostring(self:string("CURRENT")) ,
 				}
-			end
+			--end
 		else
-	items[#items+1] = {
-				-- FIXME pssc right for non fab4?
-				text = system == "fab4" and self:string("ANALOG_DIGITAL") or self:string("DEFAULT"),
+				items[#items+1] = {
+				text = self:string("DEFAULT"),
 				sound = "WINDOWSHOW",
 				callback = function(event, menuItem)
 							   timer:stop()
@@ -79,33 +78,10 @@ function deviceMenu(self, menuItem, firstUse)
 					callback = function(event, menuItem)
 								   timer:stop()
 								   -- FIXME plughw support...
-								   if card.needshub then
-									   -- this is a usb1 async dac without a hub - ask whether to use embeddedTTHack
-									   local window = Window("text_list", menuItem.text)
-									   local menu = SimpleMenu("menu")
-									   menu:setHeaderWidget(Textarea("help_text", self:string("HELP_USB1_DAC")))
-									   menu:addItem({
-											text = self:string("USB1_DAC_NO_HUB"),
-											style = 'item_choice',
-											callback = function(event, menuItem)
-														   self:_setCardAndReboot(card, true)
-													   end,
-									   })
-									   menu:addItem({
-											text = self:string("USB1_DAC_HUB"),
-											style = 'item_choice',
-											callback = function(event, menuItem)
-														   self:_setCardAndReboot(card, false)
-													   end,
-									   })
-									   window:addWidget(menu)
-									   window:show()
-								   else
 									   self:_setCardAndReboot(card, false)
-								   end
 							   end,
 				}
-			elseif (card.id == "TXRX") or (card.type == "asound-virtual") then
+			elseif (card.type == "asound-virtual") then
 				items[#items+1] = {
 					text = card.desc .. tostring(self:string("CURRENT")),
 				}
@@ -150,7 +126,6 @@ function deviceMenu(self, menuItem, firstUse)
 	)
 
 	self:tieAndShowWindow(window)
-	return window
 end
 
 
@@ -163,89 +138,9 @@ function optionsMenu(self, menuItem)
 		text = self:string("SELECT_OUTPUT"),
 		sound = "WINDOWSHOW",
 		callback = function(event, menuItem)
-					   self:deviceMenu(menuItem, false)
+					   self:deviceMenu(menuItem, false, "playback")
 				   end
 	})
-
-	if (System:getMachine() == "fab4") then
-		menu:addItem({
-			text = self:string("KERNEL_UPDATE"),
-			sound = "WINDOWSHOW",
-			callback = function(event, menuItem)
-					   local window = Window("text_list", menuItem.text)
-					   local menu = SimpleMenu("menu")
-					   menu:setHeaderWidget(Textarea("help_text", self:string("HELP_KERNEL_UPDATE")))
-					   menu:addItem({
-							text = self:string("KERNEL_UPDATE_AUTO"),
-							style = 'item_choice',
-							check = Checkbox("checkbox",
-								  function(object, isSelected)
-									  self:getSettings()["autoKernelUpdate"] = isSelected
-									  self:storeSettings()
-								  end,
-								  self:getSettings()["autoKernelUpdate"]
-							),
-					   })
-					   menu:addItem({
-							text = self:string("KERNEL_UPDATE_NOW"),
-							style = 'item_choice',
-							callback = function(event, menuItem)
-										   self:_kernelUpdate()
-									   end,
-					   })
-					   window:addWidget(menu)
-					   window:show()
-				   end,
-		})
-
-		menu:addItem({
-			text = self:string("NO_HUB_OPTION"),
-			sound = "WINDOWSHOW",
-			callback = function(event, menuItem)
-					   local window = Window("text_list", menuItem.text)
-					   local menu = SimpleMenu("menu")
-					   menu:setHeaderWidget(Textarea("help_text", self:string("HELP_NO_HUB_OPTION"))) 
-					   menu:addItem({
-							text = self:string("NO_HUB_SETTING"),
-							style = 'item_choice',
-							check = Checkbox("checkbox",
-								  function(object, isSelected)
-									  self:getSettings()["embeddedTTHack"] = isSelected
-									  self:storeSettings()
-									  self:_restart()
-								  end,
-								  self:getSettings()["embeddedTTHack"]
-							),
-					   })
-					   window:addWidget(menu)
-					   window:show()
-				   end,
-		})
-
-		menu:addItem({
-			text = self:string("KERNEL_IDLE_OPTION"),
-			sound = "WINDOWSHOW",
-			callback = function(event, menuItem)
-					   local window = Window("text_list", menuItem.text)
-					   local menu = SimpleMenu("menu")
-					   menu:setHeaderWidget(Textarea("help_text", self:string("HELP_KERNEL_IDLE_OPTION")))
-					   menu:addItem({
-							text = self:string("KERNEL_IDLE_SETTING"),
-							style = 'item_choice',
-							check = Checkbox("checkbox",
-								  function(object, isSelected)
-									  self:getSettings()["cpuIdleFullspeed"] = isSelected
-									  self:storeSettings()
-									  self.cpuIdle() -- cb in meta to potentially update state
-								  end,
-								  self:getSettings()["cpuIdleFullspeed"]
-							),
-					   })
-					   window:addWidget(menu)
-					   window:show()
-				   end,
-		})
-	end
 
 	menu:addItem({
 		text = self:string("BUFFER_TUNING"),
@@ -344,6 +239,14 @@ function optionsMenu(self, menuItem)
 				   end,
 	})
 
+	menu:addItem({
+		text = self:string("SELECT_OUTPUT")..self:string("EFFECTS"),
+		sound = "WINDOWSHOW",
+		callback = function(event, menuItem)
+					   self:deviceMenu(menuItem, false, "effects")
+				   end
+	})
+
         menu:addItem({
                  text = self:string("ACTIVE"),
 		 style = 'item_choice',
@@ -373,25 +276,16 @@ function _parseCards(self)
 		return
 	end
 
-	-- internal cards, put first in list
-	if (system == "fab4") then
-		t[1] = { id = "TXRX", desc = tostring(self:string("DIGITAL_ONLY")) }
-	end
-
 	-- read and parse entries
 	for line in cards:lines() do
 		local num, id, desc = string.match(line, "(%d+)%s+%[(.-)%s*%]:%s+(.*)")
 		if id and id != "TXRX" and id != "fab4" and id != "fab4_1" then
 			-- usb card - get bitdepth info
 			local info = self:_parseStreamInfo(id)
-			t[#t+1] = { id = id, desc = (system != "fab4" and desc) and tostring(self:string("DIRECT_HW")).." "..desc or desc , needshub = info.needshub , type="asound-card",  }
+			t[#t+1] = { id = id, desc = tostring(self:string("DIRECT_HW")).." "..desc }
 		end
 	end
 	cards:close()
-
-	if (system == "fab4") then
-		return t
-	end
 
 	local pcms,err = io.popen("aplay -L", "r")
 
@@ -516,11 +410,6 @@ function _parseStreamInfo(self, card)
 			t.fmt = fmts[#fmts]
 		end
 
-		-- touch needs a hub in this case only due to imx35 embedded TT limitations
-		-- FIXME pssc hub touch only or other platforms? 
-		if type == "ASYNC" and t.speed == "full" and not t.hub then
-			t.needshub = true
-		end
 
 	end
 	
@@ -532,13 +421,13 @@ function _parseStreamInfo(self, card)
 end
 
 
-function _setCardAndReboot(self, card, embeddedTTHack)
+function _setCardAndReboot(self, card ,device)
 	local s = self:getSettings()
 
-	s.playbackDevice = card.id
-	s.playbackType = card.type
-	s.playbackHW = card.hw
-	s.embeddedTTHack = embeddedTTHack
+	device = device and device or "playback"
+	s[device.."Device"] = card.id
+	s[device.."Type"] = card.type
+	s[device.."HW" ] = card.hw
 
 	self:storeSettings()
 
@@ -640,139 +529,3 @@ function _restart(self)
 	self.timer:start()
 end
 
-
---------------------------------------------------------------------------------------------------------------------------------
--- following is a modified form of SetupFirmwareUpgrade
-
-function _kernelUpdate(self, kernel)
-	if kernel then
-		self.kernel = kernel
-	end
-
-	self.popup = Popup("update_popup")
-	self.icon = Icon("icon_software_update")
-	self.popup:addWidget(self.icon)
-
-	self.text = Label("text", self:string("DOWNLOADING"), "")
-	self.counter = Label("subtext", "")
-	self.progress = Slider("progress", 1, 100, 1)
-
-	self.popup:addWidget(self.text)
-	self.popup:addWidget(self.counter)
-	self.popup:addWidget(self.progress)
-	self.popup:focusWidget(self.text)
-
-	-- make sure this popup remains on screen
-	self.popup:setAllowScreensaver(false)
-	self.popup:setAlwaysOnTop(true)
-	self.popup:setAutoHide(false)
-	self.popup:setTransparent(false)
-
-	-- no way to exit this popup
-	self.upgradeListener =
-		Framework:addListener(EVENT_ALL_INPUT,
-				      function()
-					      Framework.wakeup()
-					      return EVENT_CONSUME
-				      end,
-				      true)
-
-	-- disconnect from SqueezeCenter, we don't want to up
-	-- interrupted during the firmware upgrade.
-	appletManager:callService("disconnectPlayer")
-
-	-- stop memory hungry services before upgrading
-	if (System:getMachine() == "fab4") then
-
-		appletManager:callService("stopSqueezeCenter")
-		appletManager:callService("stopFileSharing")
-
-		-- start the upgrade once SBS is shut down or timed out
-		local timeout = 0
-		self.serverStopTimer = self.popup:addTimer(1000, function()
-
-			timeout = timeout + 1
-			
-			if timeout <= STOP_SERVER_TIMEOUT and appletManager:callService("isBuiltInSCRunning") then
-				return
-			end
-
-			Task("upgrade", self, _doUpgrade, _upgradeFailed):addTask()
-			
-			self.popup:removeTimer(self.serverStopTimer)
-		end)
-	else
-		Task("upgrade", self, _doUpgrade, _upgradeFailed):addTask()
-	end
-
-	self:tieAndShowWindow(self.popup)
-	return window
-end
-
-
-function _doUpgrade(self)
-	Task:yield(true)
-
-	-- EN only messages
-	local str = { UPDATE_DOWNLOAD = self:string("KERNEL_DOWNLOAD"), UPDATE_VERIFY = self:string("KERNEL_VERIFY"), 
-				  UPDATE_REBOOT = self:string("REBOOTING") }
-
-	local KernelUpgrade = require("applets.EnhancedDigitalOutput.KernelUpgrade")
-
-	local t, err = KernelUpgrade():start(self.kernel.url, self.kernel.md5, 
-		function (done, msg, count)
-			if type(count) == "number" then
-				if count >= 100 then
-					count = 100
-				end
-				self.counter:setValue(count .. "%")
-				self.progress:setRange(1, 100, count)
-			else
-				self.counter:setValue("")
-			end
-			
-			self.text:setValue(str[msg] or msg)
-			
-			if done then
-				self.icon:setStyle("icon_restart")
-			end
-		end
-	)
-	if not t then
-		log:error("Upgrade failed: ", err)
-		self:_upgradeFailed()
-
-		if self.popup then
-			self.popup:hide()
-			self.popup = nil
-		end
-	end
-end
-
-
-function _upgradeFailed(self)
-	-- unblock keys
-	Framework:removeListener(self.upgradeListener)
-	self.upgradeListener = nil
-
-	-- reconnect to server
-	appletManager:callService("connectPlayer")
-
-	local window = Window("help_list", self:string("KERNEL_UPDATE_FAILED"))
-	local menu = SimpleMenu("menu")
-	window:addWidget(menu)
-
-	menu:addItem({
-		text = self:string("CANCEL"),
-		sound = "WINDOWHIDE",
-		callback = function()
-					   window:hide()
-				   end,
-	})
-
-	-- turn off auto update
-	self:getSettings()["autoKernelUpdate"] = false
-	self:storeSettings()
-
-	self:tieAndShowWindow(window)
-end
