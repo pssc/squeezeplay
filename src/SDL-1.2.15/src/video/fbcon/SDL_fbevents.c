@@ -1184,6 +1184,8 @@ void FB_InitOSKeymap(_THIS)
 		KEY_to_SDLK(BLUE);
 		KEY_to_SDLK(PREVIOUS);
 		KEY_to_SDLK(CONTEXT_MENU);
+		KEY_to_SDLK(CHANNELUP);
+		KEY_to_SDLK(CHANNELDOWN);
 
 		/* this should take care of all standard ascii keys */
 		default:
@@ -1257,7 +1259,7 @@ void FB_InitOSKeymap(_THIS)
 	    case K_NUM:  keymap[i] = SDLK_NUMLOCK;   break;
 	    case K_CAPS: keymap[i] = SDLK_CAPSLOCK;  break;
 
-	    case K_F13:   keymap[i] = SDLK_PRINT;     break;
+	    //case K_F13:   keymap[i] = SDLK_PRINT;     break;
 	    case K_HOLD:  keymap[i] = SDLK_SCROLLOCK; break;
 	    case K_PAUSE: keymap[i] = SDLK_PAUSE;     break;
 

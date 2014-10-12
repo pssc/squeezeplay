@@ -285,18 +285,18 @@ typedef enum {
     SDLK_Standby            = 323,
     SDLK_AudioLowerVolume   = 324,
     SDLK_AudioMute          = 325,
-    SDLK_AudioRaiseVolume   = 326,
+    SDLK_AudioRaiseVolume   = 326,//DUP
     SDLK_AudioPlay          = 327,
     SDLK_AudioStop          = 328,
     SDLK_AudioPrev          = 329,
     SDLK_AudioNext          = 330,
     SDLK_HomePage           = 331,
     SDLK_Mail               = 332,
-    SDLK_Start              = 333,
+    SDLK_Start              = 0,
+    SDLK_AudioRecord        = 333,
     SDLK_Search             = 334,
-    //SDLK_AudioRecord        = 325,
 
-    //Overlap
+    //Overlap not used for squeezplay
     SDLK_Calculator         = 326,
     SDLK_Memo               = 327,
     SDLK_ToDoList           = 328,
@@ -361,6 +361,8 @@ typedef enum {
     SDLK_GREEN              = 399,
     SDLK_YELLOW             = 400,
     SDLK_BLUE               = 401,
+    SDLK_CHANNELUP          = 402,
+    SDLK_CHANNELDOWN        = 403,
     SDLK_PREVIOUS	    = 412,
     SDLK_CONTEXT_MENU       = 438,
 	/* Add any other keys here */
