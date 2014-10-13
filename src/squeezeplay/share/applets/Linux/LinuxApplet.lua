@@ -24,10 +24,10 @@ local Timer                  = require("jive.ui.Timer")
 local SimpleMenu             = require("jive.ui.SimpleMenu")
 local Window                 = require("jive.ui.Window")
 
-local squeezeos              = require("squeezeos_bsp")
+local squeezeos              = nil
 
 local debug                  = require("jive.utils.debug")
-local log                    = require("jive.utils.log").logger("applet.Squeezebox")
+local log                    = require("jive.utils.log").logger("applet.Linux")
 
 local jnt                    = jnt
 local jiveMain               = jiveMain
@@ -43,7 +43,7 @@ function sysOpen(self, path, attr, mode)
 		local fh = io.open(path .. attr, "r")
 		if not fh then
 			log:warn("Can't open (read) ", path, attr)
-			return
+			return nil
 		end
 
 		self["sysr_" .. attr] = fh
@@ -52,19 +52,24 @@ function sysOpen(self, path, attr, mode)
 	if mode and string.match(mode, "w") then
 		local fh = io.open(path .. attr, "w")
 		if not fh then
-			log:warn("Can't open (wite) ", path, attr)
-			return
+			log:warn("Can't open (write) ", path, attr)
+			return nil
 		end
 
 		self["sysw_" .. attr] = fh
 	end
+	return fh
 end
 
 
 function sysReadNumber(self, attr)
+         return sysReadString(self, attr,true)
+end
+
+function sysReadString(self, attr, num)
 	local fh = self["sysr_" .. attr]
 	if not fh then
-		return -1
+		return nil
 	end
 
 	fh:seek("set")
@@ -73,10 +78,9 @@ function sysReadNumber(self, attr)
 	if err then
 		return nil
 	else
-		return tonumber(line)
+		return num and tonumber(line) or line
 	end
 end
-
 
 function sysWrite(self, attr, val)
 	local fh = self["sysw_" .. attr]
