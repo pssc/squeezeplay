@@ -12,7 +12,7 @@ local LocalPlayer   = require("jive.slim.LocalPlayer")
 local Framework     = require("jive.ui.Framework")
 local System        = require("jive.System")
 local Player        = require("jive.slim.Player")
-local SlimServer        = require("jive.slim.SlimServer")
+local SlimServer    = require("jive.slim.SlimServer")
 
 local appletManager = appletManager
 local jiveMain      = jiveMain
