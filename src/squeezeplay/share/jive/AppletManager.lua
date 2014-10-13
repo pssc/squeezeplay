@@ -807,7 +807,6 @@ function registerService(self, appletName, service)
 		log:warn('WARNING: registerService called an already existing service name: ', service)
 	end
 	_services[service] = appletName
-
 end
 
 
