@@ -6,8 +6,11 @@ local assert, getmetatable, ipairs, pcall, setmetatable, tonumber, tostring, pai
 local oo                     = require("loop.simple")
 
 local string                 = require("string")
-local table                  = require("jive.utils.table")
 local io                     = require("io")
+local os                     = require("os")
+
+local table                  = require("jive.utils.table")
+local debug                  = require("jive.utils.debug")
 
 local Applet                 = require("jive.Applet")
 local System                 = require("jive.System")
@@ -19,66 +22,18 @@ local Choice 		     = require("jive.ui.Choice")
 local Popup                  = require("jive.ui.Popup")
 local SimpleMenu	     = require("jive.ui.SimpleMenu")
 
-local os              = require("os")
+local LinuxApplet            = require("applets.Linux.LinuxApplet")
+local log                    = require("jive.utils.log").logger("applet.SqueezePi")
 
-
+local appletManager = appletManager
 local jnt                    = jnt
 
-local debug                  = require("jive.utils.debug")
 
 module(..., Framework.constants)
-oo.class(_M, Applet)
+oo.class(_M, LinuxApplet)
 
 local AUDIO_SELECT = { "AUTO", "SOCKET", "HDMI" }
 
-function sysOpen(self, path, attr, mode)
-        if not mode or string.match(mode, "r") then
-                local fh = io.open(path .. attr, "r")
-                if not fh then
-                        log:warn("Can't open (read) ", path, attr)
-                        return
-                end
-
-                self["sysr_" .. attr] = fh
-        end
-
-        if mode and string.match(mode, "w") then
-                local fh = io.open(path .. attr, "w")
-                if not fh then
-                        log:warn("Can't open (write) ", path, attr)
-                        return
-                end
-
-                self["sysw_" .. attr] = fh
-        end
-end
-
-function sysReadNumber(self, attr)
-        local fh = self["sysr_" .. attr]
-        if not fh then
-                return -1
-        end
-
-        fh:seek("set")
-
-        local line, err = fh:read("*a")
-        if err then
-                return nil
-        else
-                return tonumber(line)
-        end
-end
-
-
-function sysWrite(self, attr, val)
-        local fh = self["sysw_" .. attr]
-        if not fh then
-                return -1
-        end
-
-        fh:write(val)
-        fh:flush(val)
-end
 
 function init(self)
 	local fbdev = string.match(os.getenv("SDL_FBDEV") or "", "/dev/fb([0-9]+)")
@@ -190,8 +145,18 @@ function getBrightness(self)
 end
 ]]--
 
+function setBrightness(self, ...)
+	local i = 0
+	local name = "setBrightness"..i
+        while appletManager:hasService(name) do
+	log:info("Will call ",name,": ", ...)
+		appletManager:callService(name, ...)
+		i = i + 1
+		name = "setBrightness"..i
+	end
+end
 
-function setBrightness(self, level)
+function setBrightness0(self, level)
         -- FIXME a quick hack to prevent the display from dimming
         if level == "off" then
                 level = 0

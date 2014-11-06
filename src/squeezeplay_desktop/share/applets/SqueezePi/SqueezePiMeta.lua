@@ -48,14 +48,16 @@ end
 
 
 function registerApplet(meta)
-	local settings = meta:getSettings()
         -- Check pi...
 	local f = io.open(CPU_INFO)
         local pi = false
         if not f then
-        	-- warn
+		-- warn?
         	return
         end
+
+	local settings = meta:getSettings()
+
         for line in f:lines() do
         	if string.match(line, "Hardware%s+: BCM2708") then
         		pi = true
@@ -207,6 +209,7 @@ function registerApplet(meta)
 	-- services
 	--meta:registerService("getBrightness")
 	meta:registerService("setBrightness")
+	meta:registerService("setBrightness0")
         --meta:registerService("getWakeupAlarm")
         --meta:registerService("setWakeupAlarm")
         --meta:registerService("getDefaultWallpaper")
