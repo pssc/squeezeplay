@@ -387,6 +387,7 @@ function JiveMain:__init()
 							    function()
 							        JiveMain:performPostOnScreenInit()
 								Framework:setUpdateScreen(true)
+								log:debug("Fired")
 								return EVENT_UNUSED
 							    end)
 	local splashTimer = Timer(2000 - (os.time() - initTime),
@@ -394,6 +395,7 @@ function JiveMain:__init()
 			JiveMain:performPostOnScreenInit()
 			Framework:setUpdateScreen(true)
 			Framework:removeListener(splashHandler)
+			log:debug("Fired")
 		end,
 		true)
 	splashTimer:start()
