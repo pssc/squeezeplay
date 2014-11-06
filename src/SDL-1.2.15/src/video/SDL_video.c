@@ -734,10 +734,8 @@ SDL_Surface * SDL_SetVideoMode (int width, int height, int bpp, Uint32 flags)
 		mode->offset = video->offset_y*mode->pitch +
 				video->offset_x*mode->format->BytesPerPixel;
 #ifdef DEBUG_VIDEO
-  fprintf(stderr,
-	"Requested mode: %dx%dx%d, obtained mode %dx%dx%d (offset %d)\n",
-		width, height, bpp,
-		mode->w, mode->h, mode->format->BitsPerPixel, mode->offset);
+		fprintf(stderr, "Requested mode: %dx%dx%d, obtained mode %dx%dx%d (offset %dx%d %d)\n",
+		width, height, bpp, mode->w, mode->h, mode->format->BitsPerPixel, video->offset_x, video->offset_y,mode->offset);
 #endif
 		mode->w = width;
 		mode->h = height;
