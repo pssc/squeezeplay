@@ -1,0 +1,6 @@
+ACTIVE
+	EN	Active
+
+APPLET_NAME
+	EN	FBTFT
+
