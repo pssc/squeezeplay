@@ -78,6 +78,7 @@ local Window        = require("jive.ui.Window")
 local Sample        = require("squeezeplay.sample")
 
 local log           = require("jive.utils.log").logger("squeezeplay.ui")
+local logDraw       = require("jive.utils.log").logger("squeezeplay.ui.draw")
 local logTask       = require("jive.utils.log").logger("squeezeplay.task")
 
 local dumper        = require("jive.utils.dumper")
@@ -411,6 +412,7 @@ Returns I<w, h> the current screen size.
 --]]
 function getScreenSize(self)
 	local bounds = screen.bounds
+	logDraw:debug("getScreenSize: ",bounds[3], "x", bounds[4] ," Surface ", screen.surface)
 	return bounds[3], bounds[4]
 end
 
