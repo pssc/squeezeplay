@@ -1,9 +1,12 @@
 # Meta
 APPLET_NAME
-	EN	Digital Output
+	EN	Advanced Audio
 
 DAC_NOT_CONNECTED
 	EN	Dac not connected
+
+AUDIO_DEVICE
+	EN	Audio Device
 
 # Applet
 DIGITAL_ONLY

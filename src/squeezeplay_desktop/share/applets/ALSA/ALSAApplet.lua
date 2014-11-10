@@ -1,8 +1,9 @@
 --[[
 
-Enhanced Digital Output Applet - support of usb audio and extended digital output capabilties via addon kernel
+ALSA - Support of ALSA and extended output capabilties
 
-(c) 2012, Adrian Smith, triode1@btinternet.com
+Based on EDO by (c) 2012, Adrian Smith, triode1@btinternet.com
+(c) 2014, Phillip Camp,
 
 --]]
 
@@ -279,11 +280,9 @@ function _parseCards(self)
 	-- read and parse entries
 	for line in cards:lines() do
 		local num, id, desc = string.match(line, "(%d+)%s+%[(.-)%s*%]:%s+(.*)")
-		if id and id != "TXRX" and id != "fab4" and id != "fab4_1" then
-			-- usb card - get bitdepth info
+			-- if usb card - get bitdepth info FIXME
 			local info = self:_parseStreamInfo(id)
 			t[#t+1] = { id = id, desc = tostring(self:string("DIRECT_HW")).." "..desc }
-		end
 	end
 	cards:close()
 

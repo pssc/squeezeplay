@@ -1,8 +1,9 @@
 --[[
 
-Enhanced Digital Output Meta - support of usb audio and extended digital output capabilties via addon kernel
+ALSA - Support of ALSA and extended output capabilties
 
-(c) 2012, Adrian Smith, triode1@btinternet.com
+Based on EDO by (c) 2012, Adrian Smith, triode1@btinternet.com
+(c) 2014, Phillip Camp,
 
 --]]
 
@@ -187,12 +188,13 @@ function registerApplet(meta)
 
 	-- register menus
 	jiveMain:addItem(
-		meta:menuItem('appletDigitalOutputDevices', 'settingsAudio', meta:string("APPLET_NAME"), 
+		meta:menuItem('appletALSADevices', 'settingsAudio', meta:string("AUDIO_DEVICE"), 
 			function(applet, menuItem) applet:deviceMenu(menuItem,false,"playback" ) end
 		)
 	)
+
 	jiveMain:addItem(
-		meta:menuItem('appletDigitalOutputOptions', 'advancedSettings', meta:string("APPLET_NAME"), 
+		meta:menuItem('appletALSAOptions', 'advancedSettings', meta:string("APPLET_NAME"), 
 			function(applet, menuItem) applet:optionsMenu(menuItem) end
 		)
 	)
@@ -201,7 +203,7 @@ function registerApplet(meta)
 	if not updating and settings.firstUse then
 		settings.firstUse = false
 		meta:storeSettings()
-		local applet = appletManager:loadApplet('DigitalOutput')
+		local applet = appletManager:loadApplet('ALSA')
 		applet:deviceMenu(nil, true, "playback")
 	end
 
