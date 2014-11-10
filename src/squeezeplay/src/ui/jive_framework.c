@@ -16,6 +16,7 @@ int (*jive_sdlfilter_pump)(const SDL_Event *event);
 
 LOG_CATEGORY *log_ui_draw;
 LOG_CATEGORY *log_ui;
+LOG_CATEGORY *log_ui_input;
 
 SDL_Rect jive_dirty_region, last_dirty_region;
 
@@ -31,7 +32,7 @@ struct jive_perfwarn perfwarn = { 0, 0, 0, 0, 0, 0 };
 /* button hold threshold 1 seconds */
 #define HOLD_TIMEOUT 1000
 
-#define LONG_HOLD_TIMEOUT 3500
+#define LONG_HOLD_TIMEOUT 3750
 
 #define POINTER_TIMEOUT 20000
 
@@ -98,12 +99,15 @@ static struct jive_keymap keymap[] = {
 	{ SDLK_AudioPlay,	JIVE_KEY_PLAY },
 	{ SDLK_AudioPause,	JIVE_KEY_PAUSE },
 	{ SDLK_AudioStop,	JIVE_KEY_PAUSE },
+	{ SDLK_Stop,		JIVE_KEY_PAUSE },
 	{ SDLK_PAUSE,		JIVE_KEY_PAUSE },
 	{ SDLK_KP_PLUS,		JIVE_KEY_ADD },
 	{ SDLK_AudioPrev,	JIVE_KEY_REW },
 	{ SDLK_Back,		JIVE_KEY_REW },
+	{ SDLK_CHANNELUP,	JIVE_KEY_REW },
 	{ SDLK_AudioNext,	JIVE_KEY_FWD },
 	{ SDLK_Forward,		JIVE_KEY_FWD },
+	{ SDLK_CHANNELDOWN,	JIVE_KEY_FWD },
 	{ SDLK_AudioRaiseVolume,JIVE_KEY_VOLUME_UP },
 	{ SDLK_AudioLowerVolume,JIVE_KEY_VOLUME_DOWN },
 	{ SDLK_PAGEUP,		JIVE_KEY_PAGE_UP },
@@ -128,14 +132,14 @@ static struct jive_keyuni unimap[] = {
 	{ SDLK_EPG,	  ';'        },
 	{ SDLK_FAVORITES, ':'        },
 	{ SDLK_BOOKMARKS, ':'        },
-        { SDLK_PREVIOUS,  'J'        },
-        { SDLK_RED,       ','        },
-        { SDLK_GREEN,     ':'        },
-        { SDLK_YELLOW,     '/'        },
-        { SDLK_BLUE,      '.'        },
-        { SDLK_HELP,      '?'        },
+	{ SDLK_PREVIOUS,  'J'        },
+	{ SDLK_RED,       ','        },
+	{ SDLK_GREEN,     ':'        },
+	{ SDLK_YELLOW,    '/'        },
+	{ SDLK_BLUE,      '.'        },
+	{ SDLK_HELP,      '?'        },
 	{ SDLK_UNKNOWN,	  0x0        },
-        };
+};
 
 static struct jive_keyir irmap[] = {
 	{ SDLK_UP,       0x7689e01f }, /* arrow_up */
@@ -188,9 +192,13 @@ static int jiveL_initSDL(lua_State *L) {
 	Uint16 splash_w, splash_h;
 	bool fullscreen = false;
 	char splashfile[32] = "jive/splash.png";
+
+       SDL_Rect **modes;
+       int i;
 #endif
 	/* logging */
 	log_ui_draw = LOG_CATEGORY_GET("squeezeplay.ui.draw");
+	log_ui_input = LOG_CATEGORY_GET("squeezeplay.ui.input");
 	log_ui = LOG_CATEGORY_GET("squeezeplay.ui");
 
 	/* linux fbcon does not need a mouse so allow mouse open to fail and continue */
@@ -207,7 +215,7 @@ static int jiveL_initSDL(lua_State *L) {
 	LOG_INFO(log_ui_draw, "initSDL");
 	/* initialise SDL */
 	if (SDL_Init(JIVE_SDL_FEATURES) < 0) {
-		LOG_ERROR(log_ui_draw, "SDL_Init(V|T|A): %s\n", SDL_GetError());
+		LOG_ERROR(log_ui_draw, "SDL_Init(V|T): %s\n", SDL_GetError());
 		SDL_Quit();
 		exit(-1);
 	} else {
@@ -216,9 +224,26 @@ static int jiveL_initSDL(lua_State *L) {
 
 	/* report video info */
 	if ((video_info = SDL_GetVideoInfo())) {
-		LOG_INFO(log_ui_draw, "Current Video %d,%d %d bits/pixel %d bytes/pixel [R<<%d G<<%d B<<%d]", video_info->current_w, video_info->current_h, video_info->vfmt->BitsPerPixel, video_info->vfmt->BytesPerPixel, video_info->vfmt->Rshift, video_info->vfmt->Gshift, video_info->vfmt->Bshift);
+		LOG_INFO(log_ui_draw, "Current Video Mode %d,%d %d bits/pixel %d bytes/pixel [R<<%d G<<%d B<<%d]", video_info->current_w, video_info->current_h, video_info->vfmt->BitsPerPixel, video_info->vfmt->BytesPerPixel, video_info->vfmt->Rshift, video_info->vfmt->Gshift, video_info->vfmt->Bshift);
 		LOG_INFO(log_ui_draw, "Hardware acceleration %s available", video_info->hw_available?"is":"is not");
 		LOG_INFO(log_ui_draw, "Window Manager %s available", video_info->wm_available?"is":"is not");
+	}
+
+	/* Get available fullscreen/hardware modes this needs to be synced with jive_surface_set_video_mode */
+	modes=SDL_ListModes(NULL, SDL_FULLSCREEN|SDL_HWSURFACE|SDL_DOUBLEBUF);
+
+	/* Check is there are any modes available */
+	if(modes == (SDL_Rect **)0) {
+		LOG_INFO(log_ui_draw,"No modes available!");
+	}
+
+	/* Check if our resolution is restricted */
+	if(modes == (SDL_Rect **)-1) {
+		LOG_INFO(log_ui_draw,"All resolutions available.");
+	} else {
+		/* Print valid modes */
+		LOG_INFO(log_ui_draw,"Available Modes");
+		for(i=0;modes[i];++i) LOG_INFO(log_ui_draw,"  %d x %d", modes[i]->w, modes[i]->h);
 	}
 
 	/* Register callback for additional events (used for multimedia keys)*/
@@ -299,7 +324,7 @@ static int jiveL_initSDL(lua_State *L) {
 		if ((video_info = SDL_GetVideoInfo())) {
 			/* We may not get the mode we ask for...but the surface is the right size... */
 			if ((screen_w != video_info->current_w) || (screen_h != video_info->current_h)) {
-				LOG_ERROR(log_ui_draw, "Splash Video Mode Fail.");
+				LOG_ERROR(log_ui_draw, "Splash Video Mode Fail surface mode mismatch.");
 				screen_w = video_info->current_w;
         			screen_h = video_info->current_h;
 				srf = jive_surface_set_video_mode(screen_w, screen_h, screen_bpp, fullscreen);
@@ -917,36 +942,40 @@ int jiveL_set_video_mode(lua_State *L) {
 	h = luaL_optinteger(L, 3, 0);
 	bpp = luaL_optinteger(L, 4, 16);
 	isfull = lua_toboolean(L, 5);
+	screen_isfull = jive_surface_isSDLFullScreen(NULL); 
 
 	if (w == screen_w &&
 	    h == screen_h &&
 	    bpp == screen_bpp &&
 	    isfull == screen_isfull) {
+		LOG_DEBUG(log_ui, "Redundant call %dx%d %dbpp full:%s",w,h,bpp,isfull ? "true":"false");
 		return 0;
 	}
-
+	// isfull broken...
 	/* update video mode */
 	srf = jive_surface_set_video_mode(w, h, bpp, isfull);
+	if (!srf) {
+		return 0;
+	}
+	jive_surface_get_size(srf, &screen_w, &screen_h);
 
 	/* store new screen surface */
 	lua_getfield(L, 1, "screen");
 	tolua_pushusertype(L, srf, "Surface");
+
 	lua_setfield(L, -2, "surface");
 
 	lua_getfield(L, -1, "bounds");
-	lua_pushvalue(L, 2); /* width */
-	lua_rawseti(L, -2, 3);
-	lua_pushvalue(L, 3); /* height */
+	lua_pushinteger(L, screen_w);
+        lua_rawseti(L, -2, 3);
+	lua_pushinteger(L, screen_h);
 	lua_rawseti(L, -2, 4);
 	lua_pop(L, 2);
 
-	screen_w = w;
-	screen_h = h;
-	screen_bpp = bpp;
-	screen_isfull = isfull;
+	screen_bpp = bpp; //FIXME assuption
+	screen_isfull = jive_surface_isSDLFullScreen(NULL);
 
 	next_jive_origin++;
-
 	return 0;
 }
 
@@ -1189,7 +1218,7 @@ static int process_event(lua_State *L, SDL_Event *event) {
 		
 		if (event->key.keysym.mod & (KMOD_ALT|KMOD_MODE)) {
 			struct jive_keyir *ir = irmap;
-			LOG_INFO(log_ui, "IR Emulation with Alt or Mode");
+			LOG_INFO(log_ui_input, "IR Emulation with Alt or Mode");
 
 			while (ir->keysym != SDLK_UNKNOWN) {
 				if (ir->keysym == event->key.keysym.sym) {
@@ -1221,8 +1250,10 @@ static int process_event(lua_State *L, SDL_Event *event) {
 			break;
 		}
 
+		// Search for keymapping
 		while (entry->keysym != SDLK_UNKNOWN) {
 			if (entry->keysym == event->key.keysym.sym) {
+				LOG_DEBUG(log_ui_input, "Unicode mapped SDLK(%x) code %x",event->key.keysym.sym,entry->keycode);
 				break;
 			}
 			entry++;
@@ -1243,26 +1274,25 @@ static int process_event(lua_State *L, SDL_Event *event) {
 					//special case for Backspace, where value set is not ascii value, instead pass backspace ascii value
 					jevent.u.text.unicode = 8;
 				} else if (unicode->keysym != SDLK_UNKNOWN && unicode->unicode != 0 ) {
-				         LOG_DEBUG(log_ui, "Unicode mapped SDLK(%x(%c))",event->key.keysym.sym, unicode->unicode);
+				         LOG_DEBUG(log_ui_input, "Unicode mapped SDLK(%x(%c))",event->key.keysym.sym, unicode->unicode);
 					jevent.u.text.unicode = unicode->unicode;
 				} else {
-				         LOG_DEBUG(log_ui, "Unicode Char (%c))",event->key.keysym.unicode);
+				         LOG_DEBUG(log_ui_input, "Unicode Char (%c))",event->key.keysym.unicode);
 					jevent.u.text.unicode = event->key.keysym.unicode;
 				}
 			} else if (event->type == SDL_KEYDOWN) {
-				LOG_DEBUG(log_ui, "Unknown SDLK(%x/%x)",event->key.keysym.sym,event->key.keysym.scancode);
+				LOG_DEBUG(log_ui_input, "Unknown SDLK(%x/%x)",event->key.keysym.sym,event->key.keysym.scancode);
 		        }
-		}
-		/* handle pgup/upgn and cursors as repeatable keys */
-		else if (entry->keysym == SDLK_PAGEUP || entry->keysym == SDLK_PAGEDOWN ||
-				 entry->keysym == SDLK_UP || entry->keysym == SDLK_DOWN || entry->keysym == SDLK_LEFT || entry->keysym == SDLK_RIGHT) {
-			if (event->type == SDL_KEYDOWN) {
-				jevent.type = JIVE_EVENT_KEY_PRESS;
-				jevent.ticks = jive_jiffies();
-				jevent.u.key.code = entry->keycode;
-			}
 		} else if (event->type == SDL_KEYDOWN) {
-			if (key_mask & entry->keycode) {
+			bool repeatable = (entry->keysym == SDLK_PAGEUP || entry->keysym == SDLK_PAGEDOWN ||
+                                 entry->keysym == SDLK_UP || entry->keysym == SDLK_DOWN ) ? true : false;
+				//|| entry->keysym == SDLK_LEFT || entry->keysym == SDLK_RIGHT) ? true : false;
+			//FIXME on JIVE KEY Mapping? & unicode? define in Inputmap?
+			/* handle pgup/pgdn and cursors up/down as repeatable with long hold supported 
+			   we dont do this for left right as that jives us no way of generating back/go as we loose hold functions 
+			   on menu items wthout a go button.*/
+
+			if ((key_mask & entry->keycode) && !repeatable ) {
 				// ignore key repeats
 				return 0;
 			}
@@ -1271,61 +1301,68 @@ static int process_event(lua_State *L, SDL_Event *event) {
 			}
 
 			switch (key_state) {
-			case KEY_STATE_NONE:
-				key_state = KEY_STATE_DOWN;
-				// fall through
+				case KEY_STATE_NONE:
+					if  (repeatable) {
+						key_timeout = now + LONG_HOLD_TIMEOUT;
+					}
+					// fall through
 
-			case KEY_STATE_DOWN: {
-				key_mask |= entry->keycode;
+				case KEY_STATE_DOWN:
+					// For repeatable keys
+					jevent.type = (key_state == KEY_STATE_NONE ) ? JIVE_EVENT_KEY_DOWN : JIVE_EVENT_KEY_PRESS;
+					jevent.u.key.code = entry->keycode;
 
-				jevent.type = JIVE_EVENT_KEY_DOWN;
-				jevent.u.key.code = entry->keycode;
-
-				key_timeout = now + HOLD_TIMEOUT;
+					/* repeatable keys font reset timer*/
+					if  (!repeatable) {
+						key_timeout = now + HOLD_TIMEOUT;
+					}
+					LOG_DEBUG(log_ui_input, "JIVE_EVENT_KEY_%s %x timeout %d",(key_state == KEY_STATE_NONE) ? "DOWN" : "PRESS" ,entry->keycode,key_timeout-now);
+					key_state = KEY_STATE_DOWN;
+					key_mask |= entry->keycode;
 				break;
-			 }
 
-			case KEY_STATE_SENT:
+				case KEY_STATE_SENT:
 				break;
 			}
-		}
-		else /* SDL_KEYUP */ {
+		} else /* SDL_KEYUP */ {
 			if (! (key_mask & entry->keycode)) {
 				// ignore repeated key ups
 				return 0;
 			}
 
 			switch (key_state) {
-			case KEY_STATE_NONE:
+				case KEY_STATE_NONE:
 				break;
 
-			case KEY_STATE_DOWN: {
-				/*
-				 * KEY_PRESSED and KEY_UP events
-				 */
-				JiveEvent keyup;
+				case KEY_STATE_DOWN: {
+					/*
+					* KEY_PRESSED and KEY_UP events
+					*/
+					JiveEvent keyup;
 
-				jevent.type = JIVE_EVENT_KEY_PRESS;
-				jevent.u.key.code = key_mask;
+					jevent.type = JIVE_EVENT_KEY_PRESS;
+					jevent.u.key.code = key_mask;
 
-				memset(&keyup, 0, sizeof(JiveEvent));
-				keyup.type = JIVE_EVENT_KEY_UP;
-				keyup.ticks = jive_jiffies();
-				keyup.u.key.code = entry->keycode;
-				jive_queue_event(&keyup);
+					memset(&keyup, 0, sizeof(JiveEvent));
+					keyup.type = JIVE_EVENT_KEY_UP;
+					keyup.ticks = jive_jiffies();
+					keyup.u.key.code = entry->keycode;
+					jive_queue_event(&keyup);
 
-				key_state = KEY_STATE_SENT;
+					key_state = KEY_STATE_SENT;
+					LOG_DEBUG(log_ui_input, "JIVE_EVENT_KEY_PRESS %x",entry->keycode);
 				break;
-			}
+				}
 
-			case KEY_STATE_SENT: {
-				/*
-				 * KEY_UP event
-				 */
-				jevent.type = JIVE_EVENT_KEY_UP;
-				jevent.u.key.code = entry->keycode;
+				case KEY_STATE_SENT: {
+					/*
+					* KEY_UP event
+					*/
+					jevent.type = JIVE_EVENT_KEY_UP;
+					jevent.u.key.code = entry->keycode;
+					LOG_DEBUG(log_ui_input, "JIVE_EVENT_KEY_UP %x",entry->keycode);
 				break;
-			}
+				}
 			}
 
 			key_timeout = 0;
@@ -1334,15 +1371,15 @@ static int process_event(lua_State *L, SDL_Event *event) {
 				key_state = KEY_STATE_NONE;
 			}
 		}
-		break;
-	}
+	break;
+        }
 
 	case SDL_USEREVENT:
 		assert(event->user.code == JIVE_USER_EVENT_EVENT);
 
 		memcpy(&jevent, event->user.data1, sizeof(JiveEvent));
 		free(event->user.data1);
-		break;
+	break;
 
 	case SDL_VIDEORESIZE: {
 		JiveSurface *srf;
@@ -1378,12 +1415,12 @@ static int process_event(lua_State *L, SDL_Event *event) {
 		
 		/* Avoid mouse_up causing a mouse press event to occur */
 		mouse_state = MOUSE_STATE_NONE;
-		break;
-
+	break;
 	}
 
 	default:
 		return 0;
+	break;
 	}
 
 	return do_dispatch_event(L, &jevent);
@@ -1404,6 +1441,7 @@ static void process_timers(lua_State *L) {
 
 	if (mouse_timeout && mouse_timeout < now) {
 		if (mouse_state == MOUSE_STATE_DOWN) {
+			LOG_INFO(log_ui_input, "JIVE_EVENT_MOUSE_HOLD ");
 			jevent.type = JIVE_EVENT_MOUSE_HOLD;
 			jevent.u.mouse.x = (mouse_timeout_arg >> 0) & 0xFFFF;
 			jevent.u.mouse.y = (mouse_timeout_arg >> 16) & 0xFFFF;
@@ -1416,6 +1454,7 @@ static void process_timers(lua_State *L) {
 
 	if (mouse_long_timeout && mouse_long_timeout < now) {
 		if (mouse_state == MOUSE_STATE_SENT) {
+			LOG_INFO(log_ui_input, "JIVE_EVENT_MOUSE_HOLD (long)");
 			jevent.type = JIVE_EVENT_MOUSE_HOLD;
 			jevent.u.mouse.x = (mouse_timeout_arg >> 0) & 0xFFFF;
 			jevent.u.mouse.y = (mouse_timeout_arg >> 16) & 0xFFFF;
@@ -1434,6 +1473,7 @@ static void process_timers(lua_State *L) {
 		do_dispatch_event(L, &jevent);
 
 		key_timeout = 0;
+		LOG_INFO(log_ui_input, "JIVE_EVENT_KEY_HOLD %x",jevent.u.key.code);
 	}
 }
 
