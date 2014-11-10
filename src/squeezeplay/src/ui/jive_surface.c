@@ -827,7 +827,7 @@ bool jive_surface_isSDLFullScreen(SDL_Surface *surface)
     if (surface == NULL) surface = SDL_GetVideoSurface();
 
     if (surface == NULL) {
-		LOG_ERROR(log_ui_draw, "GetVideoSurface unavailable");
+		LOG_ERROR(log_ui_draw, "GetVideoSurface unavailable (%s)",SDL_GetError());
 		return false;
     }
 
@@ -839,9 +839,9 @@ bool jive_surface_isSDLFullScreen(SDL_Surface *surface)
 }
 
 JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fullscreen) {
-	JiveSurface *srf;
 	SDL_Surface *sdl;
 	const SDL_VideoInfo *video_info;
+	JiveSurface *j;
 	Uint32 flags;
 
 #ifdef SCREEN_ROTATION_ENABLED
@@ -853,14 +853,14 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 		h = tmp;
 	}
 #endif
-
         
         video_info = SDL_GetVideoInfo();
 	LOG_INFO(log_ui_draw, "Window Manager %s available", video_info->wm_available?"is":"is not");
 	LOG_INFO(log_ui_draw, "Video Setup for %sfullscreen", fullscreen?"":"non-");
 
+	//FIXME for squeezeos build opts. SDL_DOUBLEBUF? ALSO may have taken non fullscreen... route
 	if (fullscreen) {
-	    flags = SDL_FULLSCREEN;
+	    flags = SDL_FULLSCREEN | SDL_RESIZABLE | SDL_DOUBLEBUF;
 	}
 	else {
 	    if (video_info->wm_available) {
@@ -869,26 +869,28 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 	    	flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE;
 	    } else {
 		LOG_INFO(log_ui_draw, "SDL Flags forced as windowing not available");
-	        flags = SDL_FULLSCREEN;
+	        flags = SDL_FULLSCREEN | SDL_RESIZABLE | SDL_DOUBLEBUF;
 	    }
 	}
 
 	LOG_INFO(log_ui_draw, "SDL Get Video surface");
 	sdl = SDL_GetVideoSurface();
+	if (!sdl) LOG_ERROR(log_ui_draw, "SDL_GetVideoSurface() Failed: %s",SDL_GetError());
 
 	if (sdl) {
 		Uint32 mask;
-
+		// Fill bpp in for VideoModeOK as 0 doesnt seem to be current so get current
 		/* check if we can reuse the existing suface? */
 		if (video_info->wm_available) {
 			mask = (SDL_FULLSCREEN | SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE);
 		}
 		else {
-			mask = (SDL_HWSURFACE | SDL_DOUBLEBUF);
+			mask = (SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE);
 		}
 
 		if ((sdl->w != w) || (sdl->h != h)) {
 			LOG_INFO(log_ui_draw, "SDL Video surface Cannot be reused Resultion %dx%d/%dx%d",sdl->w,sdl->h,w,h);
+			bpp = ( bpp == 0 ) ? sdl->format->BitsPerPixel : bpp;
 			sdl = NULL;
                 } else if ((bpp > 0 ) && (sdl->format->BitsPerPixel != bpp)) {
 			LOG_INFO(log_ui_draw, "SDL Video surface Cannot be reused depth %d/%d",(sdl->format->BitsPerPixel),bpp);
@@ -896,18 +898,30 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 
 		} else if ((sdl->flags & mask) != (flags & mask)) {
 			LOG_INFO(log_ui_draw, "SDL Video surface Cannot be reused flags %x,%x",(sdl->flags & mask),(flags & mask));
+			bpp = ( bpp == 0 ) ? sdl->format->BitsPerPixel : bpp;
 			sdl = NULL;
+		} else if (bpp == 0 ) {
+			bpp = ( bpp == 0 ) ? sdl->format->BitsPerPixel : bpp;
 		}
 	}
 
 	if (!sdl) {
-                LOG_INFO(log_ui_draw, "Creating new surface %dx%d %dbpp (flags %x): %s",w, h, bpp,flags, SDL_GetError());
+		int rbpp;
+
+		LOG_INFO(log_ui_draw, "Checking mode %dx%d %dbpp (flags %x)",w, h, bpp,flags);
+		rbpp = SDL_VideoModeOK(w, h, (bpp > 0) ? bpp : 16 , flags);
+		if (rbpp == 0) {
+			LOG_ERROR(log_ui_draw,"Mode not available. %dx%d %dbpp, %x flags ",w, h, bpp,flags);
+			//return NULL;
+			//flags &= ~SDL_DOUBLEBUF;
+		}
+                LOG_INFO(log_ui_draw, "Creating new surface %dx%d %dbpp (recommended %d) (flags %x)",w, h, bpp, rbpp, flags);
 		sdl = SDL_SetVideoMode(w, h, bpp, flags);
-                LOG_INFO(log_ui_draw, "Created new surface");
 		if (!sdl) {
-			LOG_ERROR(log_ui_draw, "SDL_SetVideoMode(%d,%d,%d): %s",
-				  w, h, bpp, SDL_GetError());
+			LOG_ERROR(log_ui_draw, "SDL_SetVideoMode(%d,%d,%d): %s", w, h, bpp, SDL_GetError());
 			return NULL;
+		} else {
+			LOG_INFO(log_ui_draw, "Created new surface %dx%d",sdl->w,sdl->h);
 		}
 
 		if ( (sdl->flags & SDL_HWSURFACE) && (sdl->flags & SDL_DOUBLEBUF)) {
@@ -919,17 +933,14 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 #ifdef SCREEN_ROTATION_ENABLED
 		/* orientaion hack */
 		real_sdl = sdl;
-		bpp = sdl->format->BitsPerPixel;
+		bpp = sdl->format->BitsPerPixel; //0?
 		sdl = SDL_CreateRGBSurface(SDL_SWSURFACE, h, w, bpp, 0, 0, 0, 0);
 		SDL_SetAlpha(sdl, SDL_SRCALPHA, SDL_ALPHA_OPAQUE);
 #endif
 	}
-
-	srf = calloc(sizeof(JiveSurface), 1);
-	srf->refcount = 1;
-	srf->sdl = sdl;
-
-	return srf;
+	j = jive_surface_new_SDLSurface(sdl);
+	LOG_INFO(log_ui_draw, "Jive Surface %x SDL %x",j,sdl);
+	return j;
 }
 
 JiveSurface *jive_surface_newRGB(Uint16 w, Uint16 h) {
@@ -987,6 +998,7 @@ JiveSurface *jive_surface_new_SDLSurface(SDL_Surface *sdl_surface) {
 	JiveSurface *srf;
 
 	srf = calloc(sizeof(JiveSurface), 1);
+	// FIXME check allocation
 	srf->refcount = 1;
 	srf->sdl = sdl_surface;
 
@@ -1272,6 +1284,7 @@ void jive_surface_flip(JiveSurface *srf) {
 
 	SDL_Flip(real_sdl);
 #else
+	LOG_DEBUG(log_ui_draw, "Screen Flip %x SDL %x res %dx%d offset %dx%d",srf,srf->sdl,srf->sdl->w,srf->sdl->h,srf->offset_x,srf->offset_y);
 	SDL_Flip(srf->sdl);
 #endif
 
