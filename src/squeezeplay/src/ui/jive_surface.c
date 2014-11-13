@@ -858,19 +858,18 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 	LOG_INFO(log_ui_draw, "Window Manager %s available", video_info->wm_available?"is":"is not");
 	LOG_INFO(log_ui_draw, "Video Setup for %sfullscreen", fullscreen?"":"non-");
 
-	//FIXME for squeezeos build opts. SDL_DOUBLEBUF? ALSO may have taken non fullscreen... route
-	if (fullscreen) {
-	    flags = SDL_FULLSCREEN | SDL_RESIZABLE | SDL_DOUBLEBUF;
-	}
-	else {
-	    if (video_info->wm_available) {
-	        // Note these options will break some HW! raspberry pi in full screen...
+	//FIXME for squeezeos may have taken non fullscreen... route and ended up with HW DB.
+	//FIXME cursor doesn't seem to work in double buffered land ... this is dep on the HW impl (pi)
+	// In the oringial full screen SDL_FULLSCREEN only but see above
+	// flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE; //used to break pi
+	if (video_info->wm_available && !fullscreen) {
+		// Note these options will break some HW! raspberry pi in full screen...
 		LOG_INFO(log_ui_draw, "Flags for windowed enviroment");
-	    	flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE;
-	    } else {
-		LOG_INFO(log_ui_draw, "SDL Flags forced as windowing not available");
-	        flags = SDL_FULLSCREEN | SDL_RESIZABLE | SDL_DOUBLEBUF;
-	    }
+		flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE;
+	} else {
+		if (!fullscreen) LOG_WARN(log_ui_draw, "SDL Flags forced as windowing not available");
+		flags = SDL_FULLSCREEN | SDL_RESIZABLE;
+		flags |= (SDL_getenv("JIVE_NOCURSOR")) ? SDL_DOUBLEBUF : 0 ; //FIXME sp controled option?
 	}
 
 	LOG_INFO(log_ui_draw, "SDL Get Video surface");
@@ -912,8 +911,6 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 		rbpp = SDL_VideoModeOK(w, h, (bpp > 0) ? bpp : 16 , flags);
 		if (rbpp == 0) {
 			LOG_ERROR(log_ui_draw,"Mode not available. %dx%d %dbpp, %x flags ",w, h, bpp,flags);
-			//return NULL;
-			//flags &= ~SDL_DOUBLEBUF;
 		}
                 LOG_INFO(log_ui_draw, "Creating new surface %dx%d %dbpp (recommended %d) (flags %x)",w, h, bpp, rbpp, flags);
 		sdl = SDL_SetVideoMode(w, h, bpp, flags);
