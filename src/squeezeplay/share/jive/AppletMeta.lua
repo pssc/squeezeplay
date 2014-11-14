@@ -159,12 +159,9 @@ function string(self, token, ...)
 	return self._stringsTable:str(token, ...)
 end
 
-
-function registerService(self, service)
-	appletManager:registerService(self._entry.appletName, service)
+function registerService(self, service, multi)
+	return appletManager:registerService(self._entry.appletName, service, multi)
 end
-
-
 --[[
 
 =head1 LICENSE
