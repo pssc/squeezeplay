@@ -170,6 +170,8 @@ function registerApplet(meta)
 		f:close()
 	end
 
+	-- FIXME fb.modes?
+
 	-- appletManager:inhibitApplet("DesktopJive")
 
 	-- Set player device type 
@@ -207,14 +209,12 @@ function registerApplet(meta)
 	end
 
 	-- services
-	--meta:registerService("getBrightness")
-	meta:registerService("setBrightness")
-	meta:registerService("setBrightness0")
+	meta:registerService("setBrightness",true)
         --meta:registerService("getWakeupAlarm")
         --meta:registerService("setWakeupAlarm")
         --meta:registerService("getDefaultWallpaper")
-        --meta:registerService("poweroff")
-        --meta:registerService("reboot")
+        meta:registerService("poweroff")
+        meta:registerService("reboot")
 
 	-- open audio device
 	Decode:open(settings)

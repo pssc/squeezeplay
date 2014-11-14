@@ -1,9 +1,11 @@
-
+-- Base Class for linux based devices...
 local pcall, unpack, tonumber, tostring = pcall, unpack, tonumber, tostring
 
 local oo                     = require("loop.simple")
 local os                     = require("os")
 local io                     = require("io")
+local lfs                    = require("lfs")
+
 local string                 = require("jive.utils.string")
 local table                  = require("jive.utils.table")
 
@@ -23,8 +25,6 @@ local Tile                   = require("jive.ui.Tile")
 local Timer                  = require("jive.ui.Timer")
 local SimpleMenu             = require("jive.ui.SimpleMenu")
 local Window                 = require("jive.ui.Window")
-
-local squeezeos              = nil
 
 local debug                  = require("jive.utils.debug")
 local log                    = require("jive.utils.log").logger("applet.Linux")
@@ -92,30 +92,20 @@ function sysWrite(self, attr, val)
 	fh:flush(val)
 end
 
-
--- read uuid, serial and revision from cpuinfo
-function parseCpuInfo(self)
+function parseCpuInfo(self,keytable)
 	local f = io.open("/proc/cpuinfo")
 	if f then
 		for line in f:lines() do
-			if string.match(line, "UUID") then
-				local uuid = string.match(line, "UUID%s+:%s+([%x-]+)")
-				self._uuid = string.gsub(uuid, "[^%x]", "")
-			end
-
-			if string.match(line, "Serial") then
-				local serial = string.match(line, "Serial%s+:%s+([%x-]+)")
-				self._serial = string.gsub(serial, "[^%x]", "")
-			end
-
-			if string.match(line, "Revision") then
-				self._revision = tonumber(string.match(line, ".+:%s+([^%s]+)"))
+			for k in pairs(keytable) do
+			    if string.match(line, k) then
+				key[k] = string.match(line, k.."%s+:%s+(.+)")
+			    end
 			end
 		end
 		f:close()
 	end
+	return keys
 end
-
 
 local function _errorWindow(self, title)
 	local window = Window("help_info", title)
@@ -163,6 +153,7 @@ function verifyMacUUID(self)
 end
 
 
+-- linux spefic?
 function betaHardware(self, euthanize)
 	log:info("beta hardware")
 
@@ -186,7 +177,9 @@ function betaHardware(self, euthanize)
 	end)
 end
 
-
+-- really inlunx specfic?
+-- genertic wrapper?
+-- clean shutdown?
 function playSplashSound(self)
 	local settings = self:getSettings()
 
@@ -198,7 +191,7 @@ function playSplashSound(self)
 		return
 	end
 
-	settings.cleanReboot = false
+	settings.cleanReboot = false --FIXME really init?
 	self:storeSettings()
 
 	-- The startup sound needs to be played with the minimum
@@ -223,6 +216,7 @@ end
 
 
 -- power off
+-- genertic wrapper?
 function poweroff(self, now)
 	log:info("Shuting down now=", now)
 
@@ -233,7 +227,7 @@ function poweroff(self, now)
 
 	if now then
 		-- force poweroff (don't go through init)
-		squeezeos.poweroff()
+		-- squeezeos.poweroff()
 
 		return
 	end
@@ -257,7 +251,7 @@ function poweroff(self, now)
 	self._poweroffTimer = Timer(4000, function()
 		-- force poweroff (don't go through init)
 		log:info("... now")
-		squeezeos.poweroff()
+		--squeezeos.poweroff()
 	end)
 	self._poweroffTimer:start()
 end
@@ -304,6 +298,7 @@ end
 
 
 -- low battery cancel
+-- battry in seperate applet?
 function lowBatteryCancel(self)
 	if not self.lowBatteryWindow then
 		return
@@ -320,13 +315,51 @@ end
 
 
 -- reboot
-function reboot(self)
+function reboot(self,now)
+	log:info("reboot now=", now)
 	_cleanReboot(self)
 
 	-- force reboot (don't go through init)
-	squeezeos.reboot()
+	--squeezeos.reboot()
 end
 
+-- set framebuffer blanking...
+function setBrightness(self,level)
+        -- FIXME a quick hack to prevent the display from dimming
+        if level == "off" then
+                level = 0
+        elseif level == "on" then
+                level = 1
+        elseif level == nil then
+                return
+        else
+		log:debug("setBrightness: ",level," to ", 1)
+                level = 1
+        end
+	local dir = "/sys/class/graphics"
+	for entry in lfs.dir(dir) do repeat
+		local entrydir = dir.."/"..entry
+
+		--skiplist here
+                local entrymode = lfs.attributes(entrydir, "mode")
+		log:debug("setBrightness: ",entrydir," is ", entrymode)
+                if entry:match("^%.") or (entrymode ~= "directory") then
+			break
+                end
+
+                local mode = lfs.attributes(entrydir.."/".."blank","mode")
+		log:debug("setBrightness: ",entrydir,"/blank is ", mode)
+                if mode == "file" then
+			local fh = io.open(entrydir.."/".."blank","w")
+			if fh then
+				log:info("setBrightness: ",entrydir," to ", level)
+				fh:write(level == 0 and 1 or 0) -- Blanking is the inverse
+				fh:flush()
+				fh:close()
+			end
+                end
+	until true end
+end
 
 --[[
 

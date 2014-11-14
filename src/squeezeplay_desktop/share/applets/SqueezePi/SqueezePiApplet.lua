@@ -39,6 +39,8 @@ function init(self)
 	local fbdev = string.match(os.getenv("SDL_FBDEV") or "", "/dev/fb([0-9]+)")
 
 	sysOpen(self, "/sys/class/graphics/fb"..(fbdev and fbdev or "0").."/", "blank", "rw")
+
+        self:setBrightnessSqueezePi('on')
 end
 
 function settingsAudioSelect(self)
@@ -133,10 +135,10 @@ function settingsAudioSelect(self)
 	return window
 end
 
-function map(f, t)
-  local t2 = {}
-  for k,v in pairs(t) do t2[k] = f(v) end
-  return t2
+
+function setBrightnessSqueezePi(self, ...)
+	log:info("setBrightness: ",...)
+	self:setBrightness(...)
 end
 
 --[[
@@ -144,30 +146,4 @@ function getBrightness(self)
         return sysReadNumber(self, "blank")
 end
 ]]--
-
-function setBrightness(self, ...)
-	local i = 0
-	local name = "setBrightness"..i
-        while appletManager:hasService(name) do
-	log:info("Will call ",name,": ", ...)
-		appletManager:callService(name, ...)
-		i = i + 1
-		name = "setBrightness"..i
-	end
-end
-
-function setBrightness0(self, level)
-        -- FIXME a quick hack to prevent the display from dimming
-        if level == "off" then
-                level = 0
-        elseif level == "on" then
-                level = 1
-        elseif level == nil then
-                return
-        else
-                level = 1
-        end
-        log:info("setBrightness: ", level)
-	sysWrite(self, "blank", level == 0 and 1 or 0) -- Blanking is the inverse
-end
 

@@ -32,7 +32,7 @@ end
 function registerApplet(meta)
 
 	-- Detect adafruitrt28
-	f = io.open("/sys/class/spi_master/spi0/spi0.1/stmpe-gpio.0/gpio/gpiochip250/base") 
+	local f = io.open("/sys/class/spi_master/spi0/spi0.1/stmpe-gpio.0/gpio/gpiochip250/base")
 	if f then
         	f:close()
 		local i = 0 
@@ -46,12 +46,8 @@ function registerApplet(meta)
 			-- Detect fbtft
 			if(string.match(line,"fb_ili9340")) then
 				local settings = meta:getSettings()
-				local j = 0
-        			while appletManager:hasService("setBrightness"..j) do
-					j = j + 1 
-				end
 				if (settings['active']) then
-					meta:registerService("setBrightness"..j)
+					meta:registerService("setBrightness",true)
 					settings['fb'] = i
 					settings['device'] = line
 				end

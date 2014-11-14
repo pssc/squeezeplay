@@ -40,16 +40,11 @@ function init(self)
 	sysWrite(self, "direction", "out") 
 	sysOpen(self, "/sys/class/gpio/gpio252/","value","w")
 
-	local i = 0
-	while appletManager:hasService("setBrightness"..i) do
-		self["setBrightness"..i] = self.setBrightness
-		i = i + 1
-	end
-	self:setBrightness('on')
+	self:setBrightnessfbtft('on')
 end
 
 
-function setBrightness(self, level)
+function setBrightnessfbtft(self, level)
         -- FIXME a quick hack to prevent the display from dimming
         if level == "off" then
                 level = 0
@@ -60,7 +55,7 @@ function setBrightness(self, level)
         else
                 level = 1
         end
-        log:info("setBrightness: ", level)
+        log:info("setBrightnessfbtft: ", level)
 	sysWrite(self, "value", level) -- this is backlight on off
 end
 
