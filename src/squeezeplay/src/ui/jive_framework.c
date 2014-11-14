@@ -207,6 +207,7 @@ static int jiveL_initSDL(lua_State *L) {
         if(SDL_getenv("JIVE_NOCURSOR")) {
             pointer_enable = false;
         }
+	LOG_INFO(log_ui, "Pointer %s",pointer_enable ? "true":"false");
 #ifdef JIVE_NO_DISPLAY
 #   define JIVE_SDL_FEATURES (SDL_INIT_EVENTLOOP)
 #else
@@ -1112,11 +1113,13 @@ static int process_event(lua_State *L, SDL_Event *event) {
 	case SDL_MOUSEBUTTONDOWN:
 		/* map the mouse scroll wheel to up/down */
 		if (event->button.button == SDL_BUTTON_WHEELUP) {
+			LOG_DEBUG(log_ui_input, "SDL_MOUSEBUTTON_WHEELUP");
 			jevent.type = JIVE_EVENT_SCROLL;
 			--(jevent.u.scroll.rel);
 			break;
 		}
 		else if (event->button.button == SDL_BUTTON_WHEELDOWN) {
+			LOG_DEBUG(log_ui_input, "SDL_MOUSEBUTTON_WHEELDOWN");
 			jevent.type = JIVE_EVENT_SCROLL;
 			++(jevent.u.scroll.rel);
 			break;
@@ -1139,6 +1142,7 @@ static int process_event(lua_State *L, SDL_Event *event) {
 		}
 
 		if (event->type == SDL_MOUSEBUTTONDOWN) {
+			LOG_DEBUG(log_ui_input, "SDL_MOUSEBUTTONDOWN:");
 			if (mouse_state == MOUSE_STATE_NONE) {
 				mouse_state = MOUSE_STATE_DOWN;
 				mouse_timeout_arg = (event->button.y << 16) | event->button.x;
@@ -1151,6 +1155,7 @@ static int process_event(lua_State *L, SDL_Event *event) {
 			}
 		}
 		else /* SDL_MOUSEBUTTONUP */ {
+			LOG_DEBUG(log_ui_input, "SDL_MOUSEBUTTONUP:");
 			if (mouse_state == MOUSE_STATE_DOWN) {
 				/*
 				 * MOUSE_PRESSED and MOUSE_UP events
@@ -1174,9 +1179,12 @@ static int process_event(lua_State *L, SDL_Event *event) {
 	case SDL_MOUSEMOTION:
 
 		/* show mouse cursor */
+		LOG_DEBUG(log_ui_input, "SDL_MOUSEMOTION %dx%d ptr %d",event->motion.x,event->motion.y,SDL_ShowCursor(SDL_QUERY));
 		if (pointer_enable && pointer_timeout == 0) {
 			SDL_ShowCursor(SDL_ENABLE);
+			LOG_DEBUG(log_ui_input, "Pointer enable");
 		}
+
 		pointer_timeout = now + POINTER_TIMEOUT;
 
 		if (event->motion.state & SDL_BUTTON(1)) {
@@ -1436,6 +1444,7 @@ static void process_timers(lua_State *L) {
 
 	if (pointer_timeout && pointer_timeout < now) {
 		SDL_ShowCursor(SDL_DISABLE);
+		LOG_DEBUG(log_ui_input, "Pointer disable");
 		pointer_timeout = 0;
 	}
 
