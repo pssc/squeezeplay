@@ -20,7 +20,7 @@ TODO
 -- stuff we use
 local package, pairs, error, load, loadfile, io, assert, os = package, pairs, error, load, loadfile, io, assert, os
 local setfenv, getfenv, require, pcall, unpack = setfenv, getfenv, require, pcall, unpack
-local tostring, tonumber, collectgarbage = tostring, tonumber, collectgarbage
+local tostring, tonumber, collectgarbage, type = tostring, tonumber, collectgarbage, type
 
 local string           = require("jive.utils.string")
                        
@@ -171,7 +171,7 @@ local function _findApplets()
 		log:debug("..in ", dir)
 		
 		local mode = lfs.attributes(dir, "mode")
-		if mode ~= "directory" and mode ~= "link" then
+		if mode ~= "directory" then
 			break
 		end
 
@@ -800,11 +800,21 @@ function addDefaultSetting(self, appletName, settingName, settingValue)
 end
 
 
-function registerService(self, appletName, service)
+function registerService(self, appletName, service, multi)
 	log:debug("registerService appletName=", appletName, " service=", service)
 
+        if multi then
+		if _services[service] and type(_services[service]) ~= "table" then
+			log:warn('registerService called an already non multi service name: ', service)
+			_services[service] = { _services[service] }
+		elseif not _services[service] then
+			_services[service] = {}
+		end
+		table.insert(_services[service], appletName)
+		service = service..appletName
+	end
 	if _services[service] then
-		log:warn('WARNING: registerService called an already existing service name: ', service)
+		log:warn('registerService called an already existing service name: ', service)
 	end
 	_services[service] = appletName
 end
@@ -816,14 +826,22 @@ function hasService(self, service)
 	return _services[service] ~= nil
 end
 
-
 function callService(self, service, ...)
 	log:debug("callService service=", service)
 
 	local _appletName = _services[service]
 
-	if not _appletName then
-		return
+	if not _appletName then return end
+
+	if type(_appletName) == "table" then
+		local t = { [service] = 0 }
+		for k,a in pairs(_appletName) do
+			local name = service..a
+			log:info("Will call service=",k," ",name)
+			t[a] = self:callService(name, ...)
+			t[service] = t[service] + 1
+		end
+		return t
 	end
 
 	local _applet = self:loadApplet(_appletName)
