@@ -308,9 +308,16 @@ function monitordevices(self)
 				--fd.dev:seek("end") -- char dev seems not to be seekable
 				-- consume data on fd
 				local consume = {fd}
-				while(#r > 0) do
-					fd.dev:read(readsize)
-					r,w,err = socket.select(consume,nil,0)
+				local data = 'x'
+				local lr
+				lr, w , err = socket.select(consume,nil,0)
+				while(#lr > 0 and data and not err) do
+					data = fd.dev:read(readsize)
+					lr,w,err = socket.select(consume,nil,0)
+				end
+				if not data or err and err != "timeout" then
+					log:error("data read errror ",fd.file,",",err)
+					readfds = self:readfdsetup(settings.devicelist)
 				end
 			
 				mapping = fd.detail.mapping and fd.detail.mapping or settings.default_mapping
