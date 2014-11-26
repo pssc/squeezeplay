@@ -60,6 +60,7 @@ local Widget          = require("jive.ui.Widget")
 
 local table           = require("jive.utils.table")
 local log             = require("jive.utils.log").logger("squeezeplay.ui")
+local logD             = require("jive.utils.log").logger("squeezeplay.ui.draw")
 
 local ACTION    = jive.ui.ACTION
 local EVENT_ACTION    = jive.ui.EVENT_ACTION
@@ -262,7 +263,7 @@ item.text as a secondary key.
 function itemComparatorWeightAlpha(a, b)
         local w = (a.weight and b.weight) and a.weight - b.weight or 0;
 	if w == 0 then
-		log:debug("jive.ui.Menu.itemComparatorWeightAlph(a,b)=",a.weight,",",b.weight,":",a.text,"<>",b.text)
+		logD:debug("jive.ui.Menu.itemComparatorWeightAlphA(a,b)=",a.weight,",",b.weight,":",a.text,"<>",b.text)
 		return string.lower(tostring(a.text)) < string.lower(tostring(b.text))
 	end
 	return (w < 0)
