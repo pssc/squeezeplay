@@ -50,7 +50,7 @@ end
 
 -- returns true if the task is suspened or false if it is completed
 function resume(self)
-	log:debug("task: ", self.name)
+	log:debug("resume ", self.name)
 
 	taskRunning = self
 
