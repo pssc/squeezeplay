@@ -21,7 +21,7 @@ local Framework   = require("jive.ui.Framework")
 local Task        = require("jive.ui.Task")
 
 local debug       = require("jive.utils.debug")
-local log         = require("jive.utils.log").logger("net.socket")
+local log         = require("jive.utils.log").logger("net.dns")
 
 local jive_dns    = require("jive.dns")
 
@@ -109,10 +109,11 @@ function toip(self, address)
 		return nil, err
 	else
 		if hostent then
+			log:debug(self,":toip ",address,"/",hostent.ip[1])
 			return hostent.ip[1], hostent
 		else
-			log:error(self,":address ",address," resulted in hostent nil")
-			return nil, "hostent nil"
+			log:warn(self,":toip ",address," resulted in no result")
+			return nil, "no ip for "..address
 		end
 	end
 end
