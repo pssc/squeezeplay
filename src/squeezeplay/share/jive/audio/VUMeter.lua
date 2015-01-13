@@ -79,7 +79,7 @@ end
 
 
 function draw(self, surface)
-	if self.style == "vumeter" then
+	if self.style == "vumeter" and self.bgImg then
 		self.bgImg:blit(surface, self:getBounds())
 	end
 
