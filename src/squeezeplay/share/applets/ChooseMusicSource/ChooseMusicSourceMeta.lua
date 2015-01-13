@@ -36,7 +36,7 @@ end
 
 function defaultSettings(meta)
 	return {
-		poll = { ["255.255.255.255"] = "255.255.255.255" }
+		poll = { ["broadcast"] = "255.255.255.255" }
 	}
 end
 

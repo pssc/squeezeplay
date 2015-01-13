@@ -146,10 +146,10 @@ function _showMusicSourceList(self, offerListIfOnlyOneServerExists)
 	-- squeezecenter on the poll list
 	log:debug("Polled Servers:")
 	local poll = appletManager:callService("getPollList")
-	for address,_ in pairs(poll) do
+	for name,address in pairs(poll) do
 		log:debug("\t", address)
 		if address ~= "255.255.255.255" then
-			self:_addServerItem(nil, address)
+			self:_addServerItem(nil, name)
 		end
 	end
 
@@ -811,7 +811,7 @@ function _addRemoteServer(self, address)
 	list[address] = address
 
 	--make sure broadcast is still in the list
-	list["255.255.255.255"] = "255.255.255.255",
+	list["broadcast"] = "255.255.255.255",
 
 	appletManager:callService("setPollList", list)
 	self:getSettings().poll = list
