@@ -1168,6 +1168,8 @@ void FB_InitOSKeymap(_THIS)
 		KEY_to_SDLK(REWIND);
 		case KEY_HOMEPAGE:               keymap[i] = SDLK_HomePage; break;
 		KEY_to_SDLK(EXIT);
+		KEY_to_MapSDLK(POWER2,Standby);
+		KEY_to_MapSDLK(WAKEUP,WakeUp);
 		KEY_to_MapSDLK(PLAY,AudioPlay);
 		KEY_to_SDLK(FASTFORWARD);
 		KEY_to_MapSDLK(SEARCH,Search);

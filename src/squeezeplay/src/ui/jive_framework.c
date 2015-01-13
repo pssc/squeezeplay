@@ -138,6 +138,8 @@ static struct jive_keyuni unimap[] = {
 	{ SDLK_YELLOW,    '/'        },
 	{ SDLK_BLUE,      '.'        },
 	{ SDLK_HELP,      '?'        },
+	{ SDLK_Standby,   'Q'        },
+	{ SDLK_WakeUp,    'G'        },
 	{ SDLK_UNKNOWN,	  0x0        },
 };
 
