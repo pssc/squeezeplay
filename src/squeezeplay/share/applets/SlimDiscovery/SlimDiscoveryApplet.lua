@@ -36,10 +36,12 @@ local System        = require("jive.System")
 
 local Framework     = require("jive.ui.Framework")
 local Timer         = require("jive.ui.Timer")
+local Task          = require("jive.ui.Task")
 
 local SocketUdp     = require("jive.net.SocketUdp")
 local SocketTcp     = require("jive.net.SocketTcp")
 local Udap          = require("jive.net.Udap")
+local DNS           = require("jive.net.DNS")
 
 local hasNetworking, Networking  = pcall(require, "jive.net.Networking")
 
@@ -58,10 +60,11 @@ oo.class(_M, Applet)
 
 
 -- constants
-local PORT    = 3483             -- port used to discover SqueezeCenters
+local PORT              = 3483   -- port used to discover SqueezeCenters
 local DISCOVERY_TIMEOUT = 120000 -- timeout (in milliseconds) before removing SqueezeCenters and Players
-local DISCOVERY_PERIOD = 60000   -- discovery period
-local SEARCHING_PERIOD = 10000   -- searching period
+local PROBE_TIMEOUT     = 30000  -- timeout to query player
+local SEARCHING_PERIOD  = 10000  -- searching period
+local DISCOVERY_PERIOD  = DISCOVERY_TIMEOUT - (PROBE_TIMEOUT + SEARCHING_PERIOD)  -- discovery period when we are connected
 
 
 
@@ -240,7 +243,7 @@ end
 function init(self, ...)
 
 	-- default poll list, udp broadcast
-	self.poll = { [ "255.255.255.255" ] = "255.255.255.255" }
+	self.poll = { [ "broadcast" ] = "255.255.255.255" }
 
 	-- slim discovery socket
 	self.socket = SocketUdp(jnt,
@@ -259,38 +262,58 @@ function init(self, ...)
 		self.wireless = Networking:wirelessInterface(jnt)
 	end
 
-	-- discovery timer
-	self.timer = Timer(DISCOVERY_PERIOD,
-			  function() self:_discover() end)
-
 	-- initial state
 	self.state = 'searching'
 
-	-- start discovering
-	-- FIXME we need a slight delay here to allow the settings to be loaded
-	-- really the settings should be loaded before the applets start.
-	self.timer:restart(2000)
+	-- discovery timer starts in search mode we schedule a task to run asap
+	self.timer = Timer(SEARCHING_PERIOD,  function() self:_trigger() end)
+	jiveMain:registerPostOnScreenInit(function() self.timer:start() end)
 
 	-- subscribe to the jnt so that we get network/server notifications
 	jnt:subscribe(self)
 
+	-- set up task ready to run... on task system start
+	self:_trigger()
 	return self
 end
 
+function _trigger(self)
+	log:debug("_trigger")
+	if not self.task then
+		log:debug("New Discover Task")
+		self.task = Task("Discover", self, _discovertask, nil , Task.PRIORITY_HIGH)
+		self.task:addTask()
+	else
+		log:warn(self.task, " not yet terminated")
+	end
+	log:debug("_triggered")
+end
+
+function _discovertask(self)
+	log:debug("_discovertask")
+	self:_discover()
+	self.task:removeTask()
+	self.task = nil
+	log:debug("_discovertask done")
+end
 
 function _discover(self)
 	-- Broadcast SqueezeCenter discovery
 	for i, address in pairs(self.poll) do
-            -- Special case proxied servers as udp boarcast will not work and proxying the broadcast address will not work.
-            tsocket = address != "255.255.255.255" and SocketTcp(self.jnt, address, 9000, "ServerDiscoveryIsProxied") or nil
-            if  tsocket and tsocket.t_tcp.proxy:isProxied() then
+            -- Special case proxied servers -- as udp boarcast will not work and proxying the broadcast address will not work.
+            local tsocket = address ~= "255.255.255.255" and SocketTcp(jnt, address, 9000, "ServerDiscoveryIsProxied") or nil
+            if  tsocket and tsocket.t_tcp.proxy:isProxied(true) then
+		if DNS:isip(i) then
+			local x, err = DNS:tohostname(i)
+			i = x and x or i
+		end
+		-- ip is used as a uuid
                 -- jive.slim.SlimServer(jnt, ip, name, version)
-                -- FIXME resolve address of proxy? or proxied name from config or query name?
-		pss = SlimServer(jnt, address, "Proxied("..address..")")
+		local pss = SlimServer(jnt, address, "Proxied("..i..")")
                 -- _serverUpdateAddress(self, server, ip, port, name)
-		self:_serverUpdateAddress(pss, address, 9000, "Proxied("..address..")")
+		self:_serverUpdateAddress(pss, address, 9000, "Proxied("..i..")")
             else 
-		log:debug("sending slim discovery to ", address,"/",i)
+		log:debug("sending slim discovery to ", i ,"/", address)
 		self.socket:send(_slimDiscoverySource, address, PORT)
             end
 	end
@@ -340,42 +363,37 @@ function _discover(self)
 	if log:isDebug() then
 		self:_debug()
 	end
-
-	if self.state == 'connected' then
-		self.timer:restart(DISCOVERY_PERIOD)
-	else
-		self.timer:restart(SEARCHING_PERIOD)
-	end
+	log:debug("Discovered")
 end
 
-
 function _setState(self, state)
+	log:debug("_setState ",state," ",self.state)
 	if self.state == state then
-		self.timer:restart(0)
-		return -- no change
+		return -- no change don't reset timers, as this causes issues with discoived items timing out..
 	end
-
-	-- restart discovery if we were disconnected
-	if self.state == 'disconnected' then
-		self.timer:restart(0)
-	end
-
 	self.state = state
 
+	-- ensure we do a restart in status other than disconnected as timer may be stopped
 	if state == 'disconnected' then
 		self.timer:stop()
 		self:_disconnect()
+		if self.task then
+			self.task:removeTask()
+			self.task = nil
+		end
 
 	elseif state == 'searching' then
-		self.timer:restart(0)
+		self.timer:restart(SEARCHING_PERIOD)
 		self:_connect()
+	--	self:_trigger() -- Schedule Task
 
 	elseif state == 'connected' then
+		self.timer:restart(DISCOVERY_PERIOD)
 		self:_idleDisconnect()
 
 	elseif state == 'probing_player' or state == 'probing_server' then
-		self.probeUntil = Framework:getTicks() + 60000
-		self.timer:restart(0)
+		self.probeUntil = Framework:getTicks() + PROBE_TIMEOUT
+		self.timer:restart(PROBE_TIMEOUT)
 		self:_connect()
 
 	else
