@@ -98,7 +98,8 @@ function t_connect(self)
 	-- set no timeout ie non blocking...
 	self.t_sock:settimeout(0)
 
-	if self.t_tcp.proxy:isProxied() then
+	local proxy = self.t_tcp.proxy:isProxied()
+	if proxy then
 	   	self.t_tcp.address = self.t_tcp.proxy:getProxyIpOrServer()
 	   	self.t_tcp.port = self.t_tcp.proxy:getProxyPort()
 	end
@@ -110,7 +111,7 @@ function t_connect(self)
 		return nil, err
 	end
 	
-	if self.t_tcp.proxy:isProxied() then
+	if proxy then
 		-- Do proxy negotiation
 		self.t_addWrite(self,function(...) log:debug(self," Proxy W pump") end,self.t_tcp.proxy:getTimeOut())
 		self.t_addRead(self,function(...) log:debug(self," Proxy R pump") end,self.t_tcp.proxy:getTimeOut())
