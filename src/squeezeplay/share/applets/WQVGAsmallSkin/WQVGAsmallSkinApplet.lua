@@ -243,12 +243,16 @@ end
 
 -- skin
 -- The meta arranges for this to be called to skin the interface.
-function skin(self, s)
-	Framework:setVideoMode(480, 272, 0, false)
+-- (obj, jive.ui.style, reload, useDefaultSize)
+function skin(self, s , reload, useDefaultSize)
+	local screenWidth, screenHeight = 480, 272
 
-	local screenWidth, screenHeight = Framework:getScreenSize()
+	--local screenWidth, screenHeight = Framework:getScreenSize()
+	if not useDefaultSize then
+		screenWidth, screenHeight = Framework:getScreenSize()
+	end
 
-	--init lastInputType so selected item style is not shown on skin load
+	-- init lastInputType so selected item style is not shown on skin load
 	Framework.mostRecentInputType = "mouse"
 
 	-- skin
@@ -3520,8 +3524,7 @@ function skin(self, s)
                 sh = TEXT_SH_COLOR,
         }
 
-	return s
-
+	Framework:setVideoMode(screenWidth, screenHeight, 0, false)
 end
 
 
