@@ -17,12 +17,13 @@ charActionMappings.press = {
 	[","]  = "shuffle_toggle",
 	["."]  = "repeat_toggle",
 	["|"]  = "sleep",
-	["Q"]  = "power",
 
 --END temp shortcuts to test action framework
 --alternatives for common control buttons avoiding keyboard modifiers
 	["f"]  = "go_favorites",
 	["s"]  = "sleep",
+	["Q"]  = "power_off",
+	["G"]  = "power_on",
 	["q"]  = "power",
 
 	["/"]   = "go_search",
@@ -252,7 +253,6 @@ unassignedActionMappings = {
 	"nothing",
 	"disabled",
 	"ignore",
-	"power_off",
 	"power_on",
 	"cancel",
 	"mute",
