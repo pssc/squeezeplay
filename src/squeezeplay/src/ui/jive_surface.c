@@ -858,8 +858,8 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 	LOG_INFO(log_ui_draw, "Window Manager %s available", video_info->wm_available?"is":"is not");
 	LOG_INFO(log_ui_draw, "Video Setup for %sfullscreen", fullscreen?"":"non-");
 
-	//FIXME for squeezeos may have taken non fullscreen... route and ended up with HW DB.
-	//FIXME cursor doesn't seem to work in double buffered land ... this is dep on the HW impl (pi)
+	// FIXME for squeezeos may have taken non fullscreen... route and ended up with HW DB.
+	// FIXME cursor doesn't seem to work in double buffered land ... this is dep on the HW impl (pi)
 	// In the oringial full screen SDL_FULLSCREEN only but see above
 	// flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE; //used to break pi
 	if (video_info->wm_available && !fullscreen) {
