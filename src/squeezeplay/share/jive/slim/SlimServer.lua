@@ -408,9 +408,9 @@ end
 
 --[[
 
-=head2 jive.slim.SlimServer(jnt, ip, name, version)
+=head2 jive.slim.SlimServer(jnt, id, name, version)
 
-Create a SlimServer object at IP address I<ip> with name I<name>. Once created, the
+Create a SlimServer object with id I<id> with name I<name>. Once created, the
 object will immediately connect to slimserver to discover players and other attributes
 of the server.
 
@@ -925,7 +925,7 @@ local function _getArtworkThumbSink(self, cacheKey, size, url)
 
 		-- on error, print something...
 		if err then
-			logcache:error("_getArtworkThumbSink(", url, ") error: ", err)
+			logcache:error(self, ":_getArtworkThumbSink(", url, ") error: ", err)
 		end
 		-- if we have data
 		if chunk then
