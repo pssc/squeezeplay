@@ -3665,6 +3665,7 @@ function notify_playerPlaylistChange(self, player)
 	-- in other words, we're moving from an empty playlist (special case NP window that says "Nothing") to a non-empty playlist
 	-- so in this case only, we need to explicitly push to NowPlaying and remove the emptyStep window
 	elseif _player:isPowerOn() and playlistSize and emptyStep and emptyStep.window then 
+		log:debug('Empty step')
 		-- only move into NowPlaying if screensaver is allowed
 		if Window:getTopNonTransientWindow():canActivateScreensaver() then
 			_goNowPlaying(nil, true)
@@ -3679,7 +3680,6 @@ function notify_playerPlaylistChange(self, player)
 
 	-- does the playlist need loading?
 	_requestStatus()
-
 end
 
 

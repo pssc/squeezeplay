@@ -103,7 +103,7 @@ end
 -- status
 -- Update the DB status from the chunk.
 function updateStatus(self, chunk)
-	-- sanity check on the chunk
+	-- sanity check on the chunk it must be a tale after this...
 	_assert(chunk["count"], "chunk must have count field")
 
 	-- keep the chunk as header, in all cases
@@ -124,25 +124,25 @@ function updateStatus(self, chunk)
 	local reset = false
 	if cCount != self.count then
 		-- count has changed, drop the data
-		log:debug("..store invalid, different count")
+		log:debug("..store invalid, different count ",cCount,"~=",self.count)
 		reset = true
 		
 	elseif ts and self.ts != ts then
 		-- ts has changed, drop the data
-		log:debug("..store invalid, different timestamp")
+		log:debug("..store invalid, different timestamp ",ts,"~=",self.ts )
 		reset = true
 	end
 
 	if reset then
-		self.store = {}
+		-- We dont clear the store on reset only when we have new data...
+		-- As on high latency connections this causes the playlist to blank
 		self.complete = false
 		self.upCompleted = false
 		self.downCompleted = false
-		self.textIndex = {}
+		self.reset = true
 	end
 
-	-- update the window properties
-	if chunk and chunk.window then
+	if chunk.window then
 		local window = chunk.window
 
 		if window.menuStyle then
@@ -153,7 +153,6 @@ function updateStatus(self, chunk)
 			self.windowSpec.windowStyle = window.windowStyle
 		end
 	end
-
 
 	self.ts = ts
 	self.count = cCount
@@ -185,6 +184,14 @@ function menuItems(self, chunk)
 		
 		cFrom = chunk["offset"] + 1
 		cTo = cFrom + #chunk["item_loop"] - 1
+	end
+
+	if self.reset then
+		-- Store needs to be reset now we have new data
+		log:debug("Clearing Store")
+		self.textIndex = {}
+		self.store = {}
+		self.reset = false
 	end
 
 	-- store chunk
@@ -292,7 +299,7 @@ function missing(self, index)
 
 	if not index then
 		-- load first chunk if we don't have it
-		if not self.store[0] then
+		if not self.store[0] or self.reset then
 			return 0, BLOCK_SIZE
 		end
 		-- load the last chunk if we don't have it
