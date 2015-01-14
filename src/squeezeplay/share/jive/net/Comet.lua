@@ -1058,7 +1058,7 @@ _handleAdvice = function(self, cometRequest)
 
 	else
 		log:info(self, ": advice is ", reconnect, ", connect in ",
-			 retry_interval / 1000, " seconds")
+			 retry_interval / 1000, " seconds, failures ",self.failures)
 	
 		self.reconnect_timer:restart(retry_interval)	
 	end
