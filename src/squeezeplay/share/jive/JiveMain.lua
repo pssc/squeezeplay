@@ -88,6 +88,9 @@ local JIVE_VERSION      = jive.JIVE_VERSION
 -- Classes
 local JiveMain = oo.class({}, HomeMenu)
 
+local SPLASH_DELAY = 2000
+local HEAP_DELAY = 60000
+
 
 -- strings
 local _globalStrings
@@ -371,41 +374,33 @@ function JiveMain:__init()
 		true
 	)
 
-	-- show our window!
-	jiveMain.window:show()
-
-	-- load style and applets
-	jiveMain:reload()
 
 	-- debug: set event warning thresholds (0 = off)
 	--Framework:perfwarn({ screen = 50, layout = 1, draw = 0, event = 50, queue = 5, garbage = 10 })
 	--jive.perfhook(50)
 
-	-- show splash screen for five seconds, or until key/scroll events
-	Framework:setUpdateScreen(false)
+	-- Splash screen is displayied in init
+	-- applet load variable so start timers before reload could this be moved further up?
 	local splashHandler = Framework:addListener(ACTION | EVENT_CHAR_PRESS | EVENT_KEY_ALL | EVENT_SCROLL,
 							    function()
 							        JiveMain:performPostOnScreenInit()
 								Framework:setUpdateScreen(true)
-								log:debug("Fired")
+								log:debug("Fired Handler")
 								return EVENT_UNUSED
 							    end)
-	local splashTimer = Timer(2000 - (os.time() - initTime),
+	local splashTimer = Timer(SPLASH_DELAY - (os.time() - initTime),
 		function()
 			JiveMain:performPostOnScreenInit()
 			Framework:setUpdateScreen(true)
 			Framework:removeListener(splashHandler)
-			log:debug("Fired")
+			log:debug("Fired Timer")
 		end,
 		true)
 	splashTimer:start()
 
-	local heapTimer = Timer(60000,
-		function()
-			if not logheap:isDebug() then
-				return
-			end
-
+	if not logheap:isDebug() then
+		local heapTimer = Timer(HEAP_DELAY,
+			function()
 			local s = jive.heap()
 			logheap:debug("--- HEAP total/new/free ---")
 			logheap:debug("number=", s["number"]);
@@ -418,7 +413,26 @@ function JiveMain:__init()
 			logheap:debug("userdata=", s["userdata"], "/", s["new_userdata"], "/", s["free_userdata"]);
 			logheap:debug("lightuserdata=", s["lightuserdata"], "/", s["new_lightuserdata"], "/", s["free_lightuserdata"]);
 		end)
-	heapTimer:start()
+		heapTimer:start()
+	end
+
+	-- show our window!
+	jiveMain.window:show()
+
+	-- detect mode change
+	local sw, sh = Framework:getScreenSize()
+	-- load style and applets
+	jiveMain:reload()
+	local fw, fh = Framework:getScreenSize()
+
+	-- show splash screen for +SPLASH_DELAY seconds, or until key/scroll events (splash displayed by init)
+	-- howerver on mode chnage... we have blanck screen...  FIXME redisplay plash?
+        if fw == sw and sh == fh then
+		Framework:setUpdateScreen(false)
+	else
+		-- Force Update
+		Framework:updateScreen()
+	end
 
 	-- run event loop
 	Framework:eventLoop(jnt:task())
@@ -558,6 +572,7 @@ end
 
 local function _loadSkin(self, skinId, reload, useDefaultSize)
 	if not self.skins[skinId] then
+		log:warn("_load skin: ", skinId, "Failed no skin")
 		return false
 	end
 
