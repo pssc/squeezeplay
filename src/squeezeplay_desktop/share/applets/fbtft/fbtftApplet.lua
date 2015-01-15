@@ -39,13 +39,11 @@ function init(self)
 	sysOpen(self, "/sys/class/gpio/gpio252/","direction","w")
 	sysWrite(self, "direction", "out") 
 	sysOpen(self, "/sys/class/gpio/gpio252/","value","w")
-
-	self:setBrightnessfbtft('on')
 end
 
 
 function setBrightnessfbtft(self, level)
-        -- FIXME a quick hack to prevent the display from dimming
+        log:info("setBrightnessfbtft: ", level)
         if level == "off" then
                 level = 0
         elseif level == "on" then
@@ -55,7 +53,6 @@ function setBrightnessfbtft(self, level)
         else
                 level = 1
         end
-        log:info("setBrightnessfbtft: ", level)
 	sysWrite(self, "value", level) -- this is backlight on off
 end
 
