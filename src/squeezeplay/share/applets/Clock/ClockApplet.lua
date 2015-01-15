@@ -186,7 +186,7 @@ function DotMatrix:__init(ampm, shortDateFormat)
 	log:debug("Init Dot Matrix Clock")
 
 	local skinName   = jiveMain:getSelectedSkin()
-	if not self.skin and skinName ~= self.oldSkinName then
+	if skinName ~= self.oldSkinName then
 		self.oldSkinName = skinName
 		self.skin = DotMatrix:getDotMatrixClockSkin(skinName)
 	end
@@ -370,7 +370,7 @@ function Analog:__init(applet)
 	log:info("Init Analog Clock")
 
 	local skinName   = jiveMain:getSelectedSkin()
-	if not self.skin and skinName ~= self.oldSkinName then
+	if skinName ~= self.oldSkinName then
 		self.oldSkinName = skinName
 		self.skin = Analog:getAnalogClockSkin(skinName)
 	end
@@ -444,7 +444,7 @@ function Digital:__init(applet, ampm)
 
 	local skinName   = jiveMain:getSelectedSkin()
 
-	if not self.skin and skinName ~= self.oldSkinName then
+	if skinName ~= self.oldSkinName then
 		self.oldSkinName = skinName
 		self.skin = Digital:getDigitalClockSkin(skinName)
 	end
@@ -662,7 +662,7 @@ function Radial:__init(applet, weekstart)
 	log:info("Init Radial Clock")
 
 	local skinName   = jiveMain:getSelectedSkin()
-	if not self.skin and skinName ~= self.oldSkinName then
+	if skinName ~= self.oldSkinName then
 		self.oldSkinName = skinName
 		self.skin = Radial:getRadialClockSkin(skinName)
 	end
@@ -755,7 +755,8 @@ function Radial:drawDay()
         end
 	local tokenStub = "SCREENSAVER_CLOCK_DAYSHORT_" 
 
-	local monthString = self.applet:string(token)
+	--token = "SCREENSAVER_CLOCK_MONTH_" .. self:_padString(time.month)
+	--local monthString = self.applet:string(token)
 	for i = 1, 7 do
 		local token = tokenStub .. tostring(days[i])
 		local key = "day" .. tostring(i)
@@ -911,6 +912,9 @@ function DotMatrix:getDotMatrixClockSkin(skinName)
 	-- 10' and 3'UIs send the same clock
 	if skinName == 'WQVGAlargeSkin' then
 		skinName = 'WQVGAsmallSkin'
+		if skinName == self.skinName then
+			return self.skin
+		end
 	end
 
 	self.skinName = skinName
@@ -1363,8 +1367,12 @@ end
 
 -- DIGITAL CLOCK SKIN
 function Digital:getDigitalClockSkin(skinName)
+	log:debug("getDigitalClockSkin ",skinName)
 	if skinName == 'WQVGAlargeSkin' then
 		skinName = 'WQVGAsmallSkin'
+		if self.skinName == skinName then
+			return self.skin
+		end
 	end
 	self.skinName = skinName
 	self.imgpath = _imgpath(self)
@@ -1773,7 +1781,19 @@ function Digital:getDigitalClockSkin(skinName)
 			m2Shadow = { hidden = 1 },
 		})
 
-	elseif skinName == 'QVGAportraitSkin'  then
+	else
+		if (skinName ~= 'QVGAportraitSkin') then
+			local sk = appletManager:callService("getDigitalClock"..skinName)
+			if sk then
+				return sk
+			else
+				skinName = 'QVGAportraitSkin'
+				log:debug("Fall back to ",skinName)
+				self.skinName = skinName
+				self.imgpath = _imgpath(self)
+			end
+		end
+
 		local digitalClockBackground = Tile:loadImage(self.imgpath .. "Clocks/Digital/jive_clock_digital.png")
 		local digitalClockDigit = {
 			font = _font(90),
@@ -1975,6 +1995,9 @@ end
 function Analog:getAnalogClockSkin(skinName)
 	if skinName == 'WQVGAlargeSkin' then
 		skinName = 'WQVGAsmallSkin'
+		if self.skinName == skinName then
+			return self.skin
+		end
 	end
 	self.skinName = skinName
 	self.imgpath = _imgpath(self)
