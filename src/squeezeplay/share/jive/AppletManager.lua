@@ -34,8 +34,11 @@ local log              = require("jive.utils.log").logger("squeezeplay.applets")
 local locale           = require("jive.utils.locale")
 local dumper           = require("jive.utils.dumper")
 local table            = require("jive.utils.table")
+local jd               = require("jive.utils.debug")
 
 local System           = require("jive.System")
+
+local debug 	= 		nil
 
 local JIVE_VERSION     = jive.JIVE_VERSION
 local EVENT_ACTION     = jive.ui.EVENT_ACTION
@@ -827,22 +830,31 @@ function hasService(self, service)
 end
 
 function callService(self, service, ...)
-	log:debug("callService service=", service)
+	if log:isDebug() then
+		debug = debug == nil and require("debug") or debug
+		log:debug(debug.traceback("callService service="..service,2))
+	end
 
 	local _appletName = _services[service]
-
 	if not _appletName then return end
 
 	if type(_appletName) == "table" then
 		local t = { [service] = 0 }
 		for k,a in pairs(_appletName) do
 			local name = service..a
-			log:info("Will call service=",k," ",name)
-			t[a] = self:callService(name, ...)
+			log:debug("Will call service=",service,"(",k,") ",name)
+			t[a] = self:_callService(name, ...)
 			t[service] = t[service] + 1
 		end
 		return t
 	end
+
+	return self:_callService(service, ...)
+end
+
+function _callService(self, service, ...)
+	local _appletName = _services[service]
+	if not _appletName then return end
 
 	local _applet = self:loadApplet(_appletName)
 	if not _applet then
