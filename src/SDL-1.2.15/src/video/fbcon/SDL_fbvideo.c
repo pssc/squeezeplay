@@ -1459,9 +1459,7 @@ static void FB_UnlockHWSurface(_THIS, SDL_Surface *surface)
 
 static void FB_WaitVBL(_THIS)
 {
-#ifdef FBIOWAITRETRACE /* Heheh, this didn't make it into the main kernel */
-	ioctl(console_fd, FBIOWAITRETRACE, 0);
-#endif
+	ioctl(console_fd, FBIO_WAITFORVSYNC, 0);
 	return;
 }
 
