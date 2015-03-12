@@ -964,6 +964,7 @@ end
 
 
 function isAnActionTriggeringKeyEvent(self, event, keyEventMask)
+	log:debug("isAnActionTriggeringKeyEvent ",event:tostring(), " " ,event:getType(),"&", keyEventMask , "=", event:getType() & keyEventMask)
 	if (event:getType() & keyEventMask > 0) then
 		local keycode = event:getKeycode()
 		if keycode == KEY_UP or keycode == KEY_DOWN or keycode == KEY_FWD or keycode == KEY_REW 
