@@ -874,8 +874,6 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 
 	LOG_INFO(log_ui_draw, "SDL Get Video surface");
 	sdl = SDL_GetVideoSurface();
-	if (!sdl) LOG_ERROR(log_ui_draw, "SDL_GetVideoSurface() Failed: %s",SDL_GetError());
-
 	if (sdl) {
 		Uint32 mask;
 		// Fill bpp in for VideoModeOK as 0 doesnt seem to be current so get current
