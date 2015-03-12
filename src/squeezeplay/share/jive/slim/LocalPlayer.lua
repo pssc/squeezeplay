@@ -23,6 +23,7 @@ local JIVE_VERSION   = jive.JIVE_VERSION
 
 -- can be overridden by hardware specific classes
 local DEVICE_ID      = 12
+-- The Device ID of the player. '2' is squeezebox. '3' is softsqueeze, '4' is squeezebox2,. '5' is transporter, '6' is softsqueeze3, '7' is receiver, '8' is squeezeslave, '9' is controller / touch / radio (embeded squeezeplay), '10' is boom, '11' is softboom, '12' is squeezeplay
 local DEVICE_MODEL   = "squeezeplay"
 local DEVICE_NAME    = "SqueezePlay"
 
