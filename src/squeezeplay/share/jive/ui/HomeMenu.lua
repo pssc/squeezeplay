@@ -12,6 +12,7 @@ local Icon          = require("jive.ui.Icon")
 
 local debug         = require("jive.utils.debug")
 local log           = require("jive.utils.log").logger("squeezeplay.ui")
+local logd          = require("jive.utils.log").logger("squeezeplay.ui.draw")
 
 local appletManager = require("jive.AppletManager")
 
@@ -162,7 +163,7 @@ function getComplexWeight(self, id, item)
 end
 
 function setRank(self, item, rank)
-	log:debug('setting rank for ', item.id , ' from ', item.rank, ' to ', rank)
+	logd:debug('setting rank for ', item.id , ' from ', item.rank, ' to ', rank)
 	item.rank = rank
 end
 
@@ -185,7 +186,7 @@ function rankMenuItems(self, node)
         for i, v in ipairs (menu.items) do
                 self:setRank(v, rank)
                 rank = rank + 1
-		log:debug('v.id: ', v.id, ' rank: ', rank, '--->', v)
+		logd:debug('id: ', v.id, ' rank: ', rank, '--->', v)
         end
 
 	menu:setComparator(SimpleMenu.itemComparatorRank)
