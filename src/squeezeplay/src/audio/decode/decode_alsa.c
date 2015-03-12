@@ -101,7 +101,9 @@ static pid_t decode_alsa_fork(const char *device, const char *capture, unsigned 
 
 	path = alloca(PATH_MAX);
 
-	/* jive_alsa [-v] -d <device> -b <buffer_time> -p <period_count> -f <flags> */
+	/* jive_alsa [-v] -d <device> -b <buffer_time> -p <period_count> -s <sample_size> -f <flags>
+	   sample_size = 0 -- auto detect
+	 */
 
 	cmd[idx++] = "jive_alsa";
 
@@ -243,10 +245,12 @@ static int decode_alsa_init(lua_State *L) {
 	/* test if device is available */
 	if (pcm_test(playback_device, &playback_max_rate) < 0) {
 		lua_pop(L, 2);
+		LOG_ERROR(log_audio_output, "Dud Audio device: %s rate %d", effects_device, playback_max_rate);
 		return 0;
 	}
 
 	if (effects_device && pcm_test(effects_device, NULL) < 0) {
+		LOG_WARN(log_audio_output, "Dud Effects device: %s", effects_device);
 		effects_device = NULL;
 	}
 #endif
@@ -262,7 +266,7 @@ static int decode_alsa_init(lua_State *L) {
 		period_count = luaL_optinteger(L, -1, ALSA_DEFAULT_PERIOD_COUNT);
 		lua_pop(L, 2);
 
-		effect_pid = decode_alsa_fork(effects_device, NULL, buffer_time, period_count, 16, FLAG_STREAM_EFFECTS|flags);
+		effect_pid = decode_alsa_fork(effects_device, NULL, buffer_time, period_count, 16, FLAG_STREAM_EFFECTS | flags);
 	}
 
 
@@ -276,11 +280,22 @@ static int decode_alsa_init(lua_State *L) {
 	lua_pop(L, 2);
 
 	playback_pid = decode_alsa_fork(playback_device, capture_device, buffer_time, period_count, sample_size,
-					(effects_device) ? FLAG_STREAM_PLAYBACK : FLAG_STREAM_PLAYBACK | FLAG_STREAM_EFFECTS | flags /*| FLAG_STREAM_NOISE*/);
+				(effects_device) ? FLAG_STREAM_PLAYBACK  | flags : FLAG_STREAM_PLAYBACK | FLAG_STREAM_EFFECTS | flags /*| FLAG_STREAM_NOISE*/);
 
 	lua_pop(L, 2);
 
-	return playback_pid > 0 ? 1 : 0;
+	if (playback_pid > 0 ) {
+		return 1;
+	} else {
+		if (effects_device && effect_pid > 0 ) {
+			LOG_ERROR(log_audio_output, "Effects device: %s kill %d", effects_device, effect_pid);
+			kill(effect_pid, SIGTERM);
+		}
+		decode_audio_lock();
+		decode_audio->running = false;
+		decode_audio_unlock();
+	}
+	return 0;
 }
 
 
