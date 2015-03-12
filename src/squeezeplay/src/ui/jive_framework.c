@@ -518,7 +518,7 @@ int jiveL_set_update_screen(lua_State *L) {
 		lua_call(L, 1, 0);
 
 		/* short delay to allow video buffer to flip */
-		SDL_Delay(50);
+		//SDL_Delay(50); SDL now patched for vsync on frame buffers that support it.
 	}
 
 	return 0;
