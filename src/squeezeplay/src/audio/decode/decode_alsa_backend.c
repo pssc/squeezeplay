@@ -652,6 +652,9 @@ static int _pcm_open(struct decode_alsa *state,
 		LOG_ERROR("hwparam init error: %s(%s)", snd_strerror(err), device);
 		return err;
 	}
+	if (IS_LOG_PRIORITY(LOG_PRIORITY_DEBUG)) {
+		snd_pcm_hw_params_dump (hw_params,output);
+	}
 
 	/* for hw devices - try exact rate first without resampling, otherwise reopen in plug mode with resampling */
 	if (!strncmp(device, "hw:", 3)) {
@@ -796,6 +799,7 @@ static int _pcm_open(struct decode_alsa *state,
  skip_iec958:
 	if (IS_LOG_PRIORITY(LOG_PRIORITY_DEBUG)) {
 		snd_pcm_dump(*pcmp, output);
+		snd_pcm_hw_params_dump (hw_params,output);
 	}
 
 	return 0;
