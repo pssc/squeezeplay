@@ -104,8 +104,8 @@ struct SDL_PrivateVideoData {
 	Uint8 *screen_contents;
 	__u16  screen_palette[3*256];
 
-	void (*wait_vbl)(_THIS);
-	void (*wait_idle)(_THIS);
+	int (*wait_vbl)(_THIS);
+	int (*wait_idle)(_THIS);
 };
 /* Old variable names */
 #define console_fd		(this->hidden->console_fd)

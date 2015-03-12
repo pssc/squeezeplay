@@ -159,8 +159,8 @@ static int FB_AllocHWSurface(_THIS, SDL_Surface *surface);
 static int FB_LockHWSurface(_THIS, SDL_Surface *surface);
 static void FB_UnlockHWSurface(_THIS, SDL_Surface *surface);
 static void FB_FreeHWSurface(_THIS, SDL_Surface *surface);
-static void FB_WaitVBL(_THIS);
-static void FB_WaitIdle(_THIS);
+static int FB_WaitVBL(_THIS);
+static int FB_WaitIdle(_THIS);
 static int FB_FlipHWSurface(_THIS, SDL_Surface *surface);
 
 /* Internal palette functions */
@@ -1457,15 +1457,25 @@ static void FB_UnlockHWSurface(_THIS, SDL_Surface *surface)
 	}
 }
 
-static void FB_WaitVBL(_THIS)
+static int FB_WaitVBL(_THIS)
 {
-	ioctl(console_fd, FBIO_WAITFORVSYNC, 0);
-	return;
+	if (ioctl(console_fd, FBIO_WAITFORVSYNC, 0) < 0 ) {
+		SDL_SetError("ioctl(FBIO_WAITFORVSYNC) failed");
+#ifdef FBCON_DEBUG
+		printf("ioctl(FBIO_WAITFORVSYNC) failed");
+#endif
+		return -1;
+	}
+        return 0;
 }
 
-static void FB_WaitIdle(_THIS)
+static int FB_WaitIdle(_THIS)
 {
-	return;
+#ifdef FBCON_DEBUG
+	printf("FB_WaitIdle Not implmented");
+#endif
+	SDL_SetError("Not implmented");
+	return(-1);
 }
 
 static int FB_FlipHWSurface(_THIS, SDL_Surface *surface)
