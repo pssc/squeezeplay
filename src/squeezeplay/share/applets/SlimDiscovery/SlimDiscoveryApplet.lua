@@ -60,7 +60,8 @@ oo.class(_M, Applet)
 
 
 -- constants
-local PORT              = 3483   -- port used to discover SqueezeCenters
+local PORT 				= 3546   -- port used to discover SqueezeCenters (UEML)
+local PORT 				= 3483   -- port used to discover SqueezeCenters
 local DISCOVERY_TIMEOUT = 120000 -- timeout (in milliseconds) before removing SqueezeCenters and Players
 local PROBE_TIMEOUT     = 30000  -- timeout to query player
 local SEARCHING_PERIOD  = 10000  -- searching period
@@ -335,11 +336,11 @@ function _discover(self)
 
 	-- Special case Squeezenetwork
 	if System:getUUID() then
-                -- comment here to disable inital sn connect
+		--                               id                     name (visible to user)
+        -- comment here to disable inital sn connect
 		squeezenetwork = SlimServer(jnt, "mysqueezebox.com", "mysqueezebox.com")
 		self:_serverUpdateAddress(squeezenetwork, jnt:getSNHostname(), 9000, "mysqueezebox.com")
 	end
-
 
 	-- Remove SqueezeCenters that have not been seen for a while
 	_squeezeCenterCleanup(self)
@@ -369,7 +370,7 @@ end
 function _setState(self, state)
 	log:debug("_setState ",state," ",self.state)
 	if self.state == state then
-		return -- no change don't reset timers, as this causes issues with discoived items timing out..
+		return -- no change don't reset timers, as this causes issues with discovered items timing out..
 	end
 	self.state = state
 
@@ -632,6 +633,7 @@ end
 
 
 --todo:uses serverName but should use uuid when that comes online
+--UE code used s/Name/Uuid/ and ID_mysqueezebox.com
 --service method
 function getInitialSlimServer(self)
 	local serverName = self:getSettings().serverName
