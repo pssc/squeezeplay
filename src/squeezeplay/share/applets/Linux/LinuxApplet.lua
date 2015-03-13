@@ -37,6 +37,8 @@ local appletManager          = appletManager
 module(..., Framework.constants)
 oo.class(_M, Applet)
 
+local skipbacklight = {}
+local skipblanking = {}
 
 function sysOpen(self, path, attr, mode)
 	if not mode or string.match(mode, "r") then
@@ -226,10 +228,12 @@ function poweroff(self, now)
 	_cleanReboot(self)
 
 	if now then
-		-- force poweroff (don't go through init)
-		-- squeezeos.poweroff()
-
-		return
+		log:warn("force poweroff (don't go through init)")
+		local sysreq = io.open("/proc/sysrq-trigger","w")
+		sysreq:write("s")
+		sysreq:write("o")
+		sysreq:write("r")
+		-- Fall trough just in case
 	end
 
 	local popup = Popup("waiting_popup")
@@ -249,13 +253,20 @@ function poweroff(self, now)
 
 	log:info("poweroff ...")
 	self._poweroffTimer = Timer(4000, function()
-		-- force poweroff (don't go through init)
 		log:info("... now")
-		--squeezeos.poweroff()
+		self:powerOff()
 	end)
 	self._poweroffTimer:start()
 end
 
+function powerOff(self)
+        local command = "poweroff 2>&1"
+        local f,err = io.popen(command, "r")
+        if not f then
+                log:warn(command,"-- could not be run ",err,".")
+	end
+	-- Framework:quit()?
+end
 
 -- low battery
 function lowBattery(self)
@@ -313,19 +324,60 @@ function lowBatteryCancel(self)
 	self.lowBatteryWindow = nil
 end
 
+-- action soft_reset?
+function restart(self)
+	log:info("restart")
+	_cleanReboot(self) --FIXME hmmm
+
+        self.popup = Popup("update_popup")
+        self.popup:addWidget(Icon("icon_restart"))
+        self.popup:addWidget(Label("text", self:string("RESTARTING")))
+        self:tieAndShowWindow(self.popup)
+
+        self.timer = Timer(3000,
+                                           function()
+						   Framework:quit()
+                                                   log:info("quit...")
+                                           end,
+                                           true)
+        self.timer:start()
+	-- Reexec?
+end
 
 -- reboot
 function reboot(self,now)
 	log:info("reboot now=", now)
-	_cleanReboot(self)
+	_cleanReboot(self) --FIXME hmmm
 
-	-- force reboot (don't go through init)
-	--squeezeos.reboot()
+        self.popup = Popup("update_popup")
+        self.popup:addWidget(Icon("icon_restart"))
+        self.popup:addWidget(Label("text", self:string("REBOOTING")))
+        self:tieAndShowWindow(self.popup)
+
+        self.timer = Timer(3000,
+                                           function()
+						   Framework:quit()
+                                                   log:info("rebooting...")
+                                           end,
+                                           true)
+        self.timer:start()
+
+	if now then
+		log:warn("force reboot (don't go through init)")
+		local sysreq = io.open("/proc/sysrq-trigger","w")
+		sysreq:write("s")
+		sysreq:write("b")
+		-- fall through
+	end
+        local command = "reboot 2>&1"
+        local f,err = io.popen(command, "r")
+        if not f then
+                log:warn(command,"-- could not be run ",err,".")
+	end
 end
 
--- set framebuffer blanking...
+-- framebuffer blanking... and backlight
 function setBrightness(self,level)
-        -- FIXME a quick hack to prevent the display from dimming
         if level == "off" then
                 level = 0
         elseif level == "on" then
@@ -336,28 +388,44 @@ function setBrightness(self,level)
 		log:debug("setBrightness: ",level," to ", 1)
                 level = 1
         end
-	local dir = "/sys/class/graphics"
+
+	-- Blanking is the inverse of level
+	local val = level == 0 and 1 or 0
+	dirNodeSetValue("/sys/class/graphics","blank",val,skipblanking)
+	-- /sys/class/backlight/soc\:backlight/bl_power
+	-- Control BACKLIGHT power, values are FB_BLANK_* from fb.h
+	-- FB_BLANK_UNBLANK (0)   : power on
+	-- FB_BLANK_POWERDOWN (4) : power off
+	val = level == 0 and 4 or 0
+	dirNodeSetValue("/sys/class/backlight","bl_power",val,skipbacklight)
+end
+
+function dirNodeSetValue(dir,node,val,skip)
 	for entry in lfs.dir(dir) do repeat
 		local entrydir = dir.."/"..entry
 
-		--skiplist here
+		if skip and skip[entry] then
+			break
+		end
                 local entrymode = lfs.attributes(entrydir, "mode")
-		log:debug("setBrightness: ",entrydir," is ", entrymode)
+		log:debug("dirNodeSetValue: ",entrydir," is ", entrymode)
                 if entry:match("^%.") or (entrymode ~= "directory") then
 			break
                 end
 
-                local mode = lfs.attributes(entrydir.."/".."blank","mode")
-		log:debug("setBrightness: ",entrydir,"/blank is ", mode)
+		local fblank = entrydir.."/"..node
+                local mode = lfs.attributes(fblank,"mode")
+		log:debug("dirNodeSetValue: ",fblank," mode is ", mode)
                 if mode == "file" then
-			local fh = io.open(entrydir.."/".."blank","w")
+			local fh = io.open(fblank,"w")
 			if fh then
-				log:info("setBrightness: ",entrydir," to ", level)
-				fh:write(level == 0 and 1 or 0) -- Blanking is the inverse
+				log:info("dirNodeSetValue: ",fblank," to ",val)
+				fh:write(val)
 				fh:flush()
 				fh:close()
 			end
                 end
+		break -- oddness as we are in a double loop
 	until true end
 end
 
@@ -366,6 +434,7 @@ end
 =head1 LICENSE
 
 Copyright 2010 Logitech. All Rights Reserved.
+Copyright 2014,2015 Phillip Camp. All Rights Reserved.
 
 This file is licensed under BSD. Please see the LICENSE file for details.
 
