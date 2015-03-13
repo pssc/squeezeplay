@@ -7,6 +7,8 @@
 # Absolute path to top of SQUEEZEPLAY directories
 #
 
+ARCH ?= $(shell arch)
+
 SRC_DIR = $(realpath ${PWD})
 BASE_DIR = $(dir ${SRC_DIR})
 
@@ -15,14 +17,15 @@ export BUILD_TOP=$(BASE_DIR)/build/linux
 DESTDIR=${BUILD_TOP}
 export PREFIX=${DESTDIR}
 
-export CFLAGS=-I${PREFIX}/include -I${PREFIX}/include/SDL -I${PREFIX}/include/freetype2 -g -fPIC
+export CFLAGS=-I${PREFIX}/include -I${PREFIX}/include/SDL -I${PREFIX}/include/freetype2 -O2 -fPIC -g
 export LDFLAGS=-L${PREFIX}/lib
 
 export TOOLPATH = $(shell dirname `which gcc`)
 
 export SDL_CONFIG = ${BUILD_TOP}/bin/sdl-config
 
-ENABLE_PROFILING=--enable-profiling --disable-shared
+# lua.so needed for wicd intergration
+#ENABLE_PROFILING=--enable-profiling --disable-shared
 USE_MMX=--disable-mmx
 
 # Override to yes to build closed source squeezeplay libraries 
@@ -49,8 +52,9 @@ all: sdl-all lua-all app
 .PHONY: sdl-all freetype tslib sdl sdl-image sdl-tff sdl-gfx c-ares
 sdl-all: freetype tslib sdl sdl-ttf sdl-image sdl-gfx
 
-generated:
+generated/.m:
 	mkdir -p generated
+	cd generated && touch .m
 
 
 # freetype
@@ -60,12 +64,13 @@ freetype-2.1.10/config.mk:
 freetype: freetype-2.1.10/config.mk
 	cd freetype-2.1.10; make; make install
 
+generated/tslib/autogen.sh: generated/.m
+	cd generated/ && ( cd tslib || git clone --depth 1 https://github.com/kergoth/tslib.git -b release/1.1 tslib )
 
-generated/tslib/configure: generated
-	cd generated/ && git clone https://github.com/kergoth/tslib.git -b release/1.1 tslib
+generated/tslib/configure: generated/tslib/autogen.sh
 	cd generated/tslib/ && ./autogen.sh
 
-generated/tslib/Makefile: generated/tslib/configure 
+generated/tslib/Makefile: generated/tslib/configure
 	cd generated/tslib/ && ./configure --host=${HOST} --target=${TARGET} --prefix=${PREFIX} 
 
 tslib: generated/tslib/Makefile
@@ -197,14 +202,19 @@ flac: flac-1.2.1/Makefile
 
 #libmad
 LIBMAD_DIR=libmad-0.15.1b
-generated/${LIBMAD_DIR}/Makefile.am:
-	mkdir -p generated; cd generated; wget ftp://ftp.mars.org/pub/mpeg/${LIBMAD_DIR}.tar.gz; tar xvf ./${LIBMAD_DIR}.tar.gz; \
+generated/${LIBMAD_DIR}.tar.gz.downloaded: generated/.m
+	cd generated && wget ftp://ftp.mars.org/pub/mpeg/${LIBMAD_DIR}.tar.gz
+	[ -s generated/${LIBMAD_DIR}.tar.gz ] && touch generated/${LIBMAD_DIR}.tar.gz.downloaded
 
+generated/${LIBMAD_DIR}/Makefile.am: generated/${LIBMAD_DIR}.tar.gz.downloaded
+	cd generated && tar xvf ./${LIBMAD_DIR}.tar.gz
 		
-generated/${LIBMAD_DIR}/Makefile: generated/${LIBMAD_DIR}/Makefile.am 
-	cd generated/${LIBMAD_DIR}; ./configure --host=${HOST} --target=${TARGET} --prefix=${PREFIX} --enable-fpm=arm
+generated/${LIBMAD_DIR}/Makefile: generated/${LIBMAD_DIR}/Makefile.am
+	cd generated/${LIBMAD_DIR} && cp configure configure.copy && sed -s 's/-fforce-mem//' configure.copy > configure
+	cd generated/${LIBMAD_DIR} && ./configure --host=${HOST} --target=${TARGET} --prefix=${PREFIX} --enable-fpm=`echo ${ARCH}| sed -s 's/armv.*/arm/'| sed -s 's/i686/intel/'| sed -s 's/x86_64/64bit/'`
+	# -fforce-mem removed fron configure script gcc 4.7 unkown arg.
 
-libmad: generated/${LIBMAD_DIR}/Makefile.am generated/${LIBMAD_DIR}/Makefile
+libmad: generated/${LIBMAD_DIR}/Makefile
 	cd generated/${LIBMAD_DIR}; make && make install
 
 
@@ -320,7 +330,7 @@ clean:
 	-cd luamd5; make MYNAME=sha1 clean
 	-cd luamd5; make MYNAME=md5 clean
 	-cd tolua++-1.0.92/src/lib; rm libtolua++.so; rm *.o
-	-cd portaudio_v19_20111121; make distclean
+	#cd portaudio_v19_20111121; make distclean
 	-cd flac-1.2.1; make distclean
 	-cd libmad-0.15.1b; make distclean
 	-cd Tremor; make distclean
