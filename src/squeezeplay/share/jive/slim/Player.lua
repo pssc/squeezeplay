@@ -920,9 +920,10 @@ end
 -- call
 -- sends a command
 function call(self, cmd, useBackgroundRequest)
-	log:debug("Player:call():")
---log:error('traceback')
---debug.dump(cmd)
+	if log:isDebug() then
+		log:debug("Player:call():",debug.view(cmd))
+		log:error("Traceback")
+	end
 
 	if useBackgroundRequest then
 		self.slimServer:request(
