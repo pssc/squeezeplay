@@ -1,10 +1,24 @@
 --[[
 Methods to respond to the following udap requests:
  - discover
+ - get_ip
+ - set_ip - not implmented
+ - reset - not implmented
+ - get_data - not implmented
+ - set_data - limited
+ - 	set server address
+ - 	set slimserver address
  - advanced discover
- - set server address
- - set slimserver address
- - get uuid
+ - no implmentation
+ - get_uuid
+ - set_volume
+ - pause
+ - get_pin
+ - no implmentation
+ - fwd
+ - rev
+ - preset
+ - set_power
 --]]
 
 local pairs, tonumber, tostring = pairs, tonumber, tostring
@@ -40,25 +54,18 @@ oo.class(_M, Applet)
 function _udapSink( self, chunk, err)
 
 	if chunk == nil then
+		log:error("Sink nil Chunk")
 		return -- ignore errors
 	end
 
+	log:debug("udapSink chunk ip: ", chunk.ip ," port: ", chunk.port, " data len: ", #chunk.data)
 	local pkt = Udap.parseUdap( chunk.data)
+	log:debug("udapSink {", Udap.tostringUdap(pkt," / "),"}")
 
 	if pkt.uapMethod == nil then
+		log:error("udapMethod nil")
 		return
 	end
-
---	log:debug("*** UDAP: pkt.dest: ", pkt.dest)
---	log:debug("*** UDAP: pkt.source: ", pkt.source)
-
---	log:debug("*** UDAP: seqno: ", pkt.seqno)
---	log:debug("*** UDAP: chunk.data length: ", #chunk.data)
---	log:debug("*** UDAP: chunk.ip: ", chunk.ip)
---	log:debug("*** UDAP: chunk.port: ", chunk.port)
-
---	log:debug("*** UDAP: uapMethod: ", pkt.uapMethod)
---	log:debug("*** UDAP: udapFlag: ", pkt.udapFlag)
 
 	-- We are not interested in udap responses here - only requests from other devices
 	if pkt.udapFlag ~= 0x01 then
@@ -66,23 +73,47 @@ function _udapSink( self, chunk, err)
 		return
 	end
 
-	local ownMacAddress = System:getMacAddress()
+	local ownMacAddress = System:getMacAddress() -- FIXME which one?
 	ownMacAddress = string.gsub(ownMacAddress, "[^%x]", "")
 
 	-- Discard packets from ourself
 	if ownMacAddress == pkt.source then
 		log:debug("UDAP: self origined packet - discard packet")
+		self.ip = chunk.ip
 		return
 	end
 
 	-- There are some requests we can and will handle without a current player
 	-- but we do need a LocalPlayer
 	local localPlayer = Player:getLocalPlayer()
-	
-	if localPlayer and pkt.dest == ownMacAddress then
+
+	if localPlayer and pkt.uapMethod == "get_pin" and localPlayer:getSlimServer() then
+		-- Provide a PIN to register this player with an account, if not already registered
+		local sink = function(result, err)
+			if result.error then
+				log:debug(result.error)
+			end
+
+			-- Maybe SN will provide a nonce in the response that needs to be signed
+			-- with the player's UUID as a verifier. In this case sign the nonce
+			-- and append it to the value, separated with a colon.
+
+			local packet = Udap.createGetPinResponse(ownMacAddress, pkt.source, pkt.seqno,
+				(result.data and result.data.result and result.data.result ~= 0) and result.data.result or nil,
+				localPlayer:getName())
+			self.udap:send(function() return packet end, chunk.ip, chunk.port)
+		end
+
+		localPlayer:getSlimServer():request(sink, localPlayer:getId(), {'service', 'get_nonce'})
+
+		return
+
+	elseif localPlayer and pkt.dest == ownMacAddress then
+		if pkt.uapMethod and log:isDebug() then
+			log:debug("UDAP - ",pkt.uapMethod," request received - ",localPlayer)
+		end
+
 		if pkt.uapMethod == "get_ip" then
-			log:debug("UDAP - get_ip request received - sending answer...")
-			
 			local ip_address, ip_subnet
 			local ifObj = hasNetworking and Networking:activeInterface()
 		
@@ -94,24 +125,60 @@ function _udapSink( self, chunk, err)
 			else
 				log:warn('Cannot find active network interface')
 			end
+			if not ip_address and self.ip then
+				local a1, b1, c1, d1 = string.match(self.ip,"^([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)$")
+				if ( d1 ~= nil ) then
+					-- FIXME ip pack and upack in udap?
+					ip_address = string.char(a1) .. string.char(b1) .. string.char(c1) .. string.char(d1)
+				end
+			end
 			
 			if not ip_address then return end                                
 			
 			local packet = Udap.createGetIpResponse(ownMacAddress, pkt.source, pkt.seqno, ip_address)
-			self.udap:send(function() return packet end, chunk.ip, chunk.port)
-			
+			self.udap:send(function()
+						log:debug("UDAP - ",pkt.uapMethod," sending answer...",table.concat({string.byte(ip_address, 1, 4)},"."))
+						return packet
+						--end, "255.255.255.255", chunk.port)
+						end, chunk.ip, chunk.port)
 			return
 			
+		elseif pkt.uapMethod == "get_data" then
+			return
 		elseif pkt.uapMethod == "pause" then
-			log:debug("UDAP - pause request received")
 			localPlayer:pause(false, true)
 			return
 			
 		elseif pkt.uapMethod == "set_volume" then
-			log:debug("UDAP - set_volume request received: seq=", pkt.data.seq, ", vol=", pkt.data.volume)
-			localPlayer:volumeFromController(pkt.data.volume, pkt.source, pkt.data.seq)
+			log:debug("UDAP - set_volume request received: seq=", pkt.data.seq, ", vol=", pkt.data.octet)
+			-- Sets local volume only SC updated from controller?
+			localPlayer:volumeFromController(pkt.data.octet, pkt.source, pkt.data.seq)
 			return
 			
+		elseif pkt.uapMethod == "fwd" then
+			localPlayer:fwd()
+			return
+
+		elseif pkt.uapMethod == "rev" then
+			localPlayer:rew()
+			return
+
+		elseif pkt.uapMethod == "preset" then
+			-- Seq not used
+			localPlayer:presetPress(pkt.data.octet)
+			return
+
+		elseif pkt.uapMethod == "set_power" then
+			-- Seq not used
+			-- Actions?
+			if System:hasSoftPower() then
+				jiveMain:setSoftPowerState(pkt.data.octet == 0 and "off" or "on")
+			end
+			--localPlayer:setPower(pkt.data.octet, pkt.data.seq, false)
+			return
+
+		else
+			log:debug("UDAP - ",pkt.uapMethod, "unknown method - ",localPlayer)
 		end
 	end
 
@@ -161,7 +228,7 @@ function _udapSink( self, chunk, err)
 	end
 
 	-- Check if local player is connected
-	if currentPlayer:isConnected() then
+	if currentPlayer:isConnected() and pkt.uapMethod != "adv_discover" then
 		log:debug("UDAP: current local player is connected - discard packet")
 		return
 	end
@@ -169,16 +236,13 @@ function _udapSink( self, chunk, err)
 	local deviceName = currentPlayer:getName()
 	local deviceModel = currentPlayer:getModel()
 
+	log:debug("UDAP - ",pkt.uapMethod," request received")
 	if pkt.uapMethod == "discover" then
 
-		log:debug("UDAP - discover request received - sending answer...")
-
 		local packet = Udap.createDiscoverResponse(ownMacAddress, pkt.source, pkt.seqno, deviceName, deviceModel)
-		self.udap:send(function() return packet end, "255.255.255.255", chunk.port)
+		self.udap:send(function() log:debug("UDAP - ",pkt.uapMethod," sending answer...") return packet end, "255.255.255.255", chunk.port)
 
 	elseif pkt.uapMethod == "adv_discover" then
-
-		log:debug("UDAP - advanced discover request received - sending answer...")
 
 		local deviceId = currentPlayer:getDeviceType()
 		deviceId = tostring(deviceId)
@@ -191,12 +255,9 @@ function _udapSink( self, chunk, err)
 
 		local packet = Udap.createAdvancedDiscoverResponse(ownMacAddress, pkt.source, pkt.seqno, deviceName,
 								   deviceModel, deviceId, deviceStatus)
-		self.udap:send(function() return packet end, "255.255.255.255", chunk.port)
+		self.udap:send(function() log:debug("UDAP - ",pkt.uapMethod," sending answer...") return packet end, "255.255.255.255", chunk.port)
 
 	elseif pkt.uapMethod == "set_data" then
-
-		log:debug("UDAP - set data request received - sending answer...")
-
 		if pkt.data["server_address"] and pkt.data["slimserver_address"] then
 			local serverip = pkt.data["server_address"]
 			local a1, b1, c1, d1 = string.byte(serverip, 1, 4)
@@ -226,15 +287,15 @@ function _udapSink( self, chunk, err)
 		end
 
 		local packet = Udap.createSetDataResponse(ownMacAddress, pkt.source, pkt.seqno)
-		self.udap:send(function() return packet end, "255.255.255.255", chunk.port)
+		self.udap:send(function() log:debug("UDAP - ",pkt.uapMethod," sending answer...") return packet end, "255.255.255.255", chunk.port)
 
 	elseif pkt.uapMethod == "get_uuid" then
 
-		log:debug("UDAP - get uuid request received - sending answer...")
-
 		local packet = Udap.createGetUUIDResponse(ownMacAddress, pkt.source, pkt.seqno)
-		self.udap:send(function() return packet end, "255.255.255.255", chunk.port)
+		self.udap:send(function() log:debug("UDAP - ",pkt.uapMethod," sending answer...") return packet end, "255.255.255.255", chunk.port)
 
+	else
+		log:debug("UDAP - ",pkt.uapMethod, "unknown method")
 	end
 end
 

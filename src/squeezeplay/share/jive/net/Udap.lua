@@ -59,12 +59,18 @@ local ucpMethods = {
 	"get_data",				-- 5
 	"set_data",				-- 6
 	"error",				-- 7
-	"credentials_error",	-- 8
-	"adv_discover",			-- 9
+	"credentials_error",			-- 8
+	"adv_discover",				-- 9
 	nil,					-- 10
 	"get_uuid",				-- 11
-	"set_volume",			-- 12
+	"set_volume",				-- 12
 	"pause",				-- 13
+	"get_pin",				-- 14
+	nil,					-- 15
+	"fwd",					-- 16
+	"rev",					-- 17
+	"preset",				-- 18
+	"set_power",				-- 19
 }
 
 
@@ -268,10 +274,10 @@ function parseGetUUID(pkt, recv, offset)
 	pkt.uuid = table.concat(pkt.uuid)
 end
 
-function parseSetVolume(pkt, recv, offset)
+function parseOctetSequenced(pkt, recv, offset)
 	pkt.data = {}
 
-	pkt.data.volume, offset = unpackNumber(recv, offset, 1)
+	pkt.data.octet, offset = unpackNumber(recv, offset, 1)
 	pkt.data.seq, offset = unpackNumber(recv, offset, 4)
 end
 
@@ -289,7 +295,7 @@ local ucpMethodHandlers = {
 	[ "get_uuid" ] = parseGetUUID,
 }
 
--- Handlers for udap requests we receive from other devices and need to send an response
+-- Handlers for udap requests we receive from other devices and need to process
 local ucpMethodHandlersRequest = {
 	[ "discover" ] = parseDiscover,
 	[ "get_ip" ] = parseDiscover,
@@ -301,8 +307,13 @@ local ucpMethodHandlersRequest = {
 	[ "credentials_error" ] = nil,
 	[ "adv_discover" ] = parseDiscover,
 	[ "get_uuid" ] = nil,
-	[ "set_volume" ] = parseSetVolume,
+	[ "set_volume" ] = parseOctetSequenced,
 	[ "pause" ] = nil,
+	[ "get_pin"] = nil,
+	[ "fwd" ] = nil,
+	[ "rev" ] = nil,
+	[ "preset" ] = parseOctetSequenced,
+	[ "set_power" ] = parseOctetSequenced,
 }
 
 
@@ -342,7 +353,13 @@ function parseUdap(recv)
 	pkt.uapClass, offset = unpackString(recv, offset, 4)
 	pkt.uapMethodId, offset = unpackNumber(recv, offset, 2)
 	
+         
 	pkt.uapMethod = ucpMethods[pkt.uapMethodId]
+
+	if not pkt.uapMethod then
+		log:error("uknown medthod " .. pkt.uapMethodId)
+		pkt.uapMethod = pkt.uapMethodId
+	end
 
 	-- Handle udap responses we receive upon requests we've sent
 	if pkt.udapFlag == 0x00 then
@@ -491,16 +508,17 @@ function createSetData(mac, seq, args)
 end
 
 
-function tostringUdap(pkt)
+function tostringUdap(pkt,sep)
 	local t = {
 		"source:\t\t" .. pkt.source,
 		"dest:\t\t" .. pkt.dest,
 		"seq:\t\t" .. pkt.seqno,
 		"udap type:\t" .. string.format("%04x", pkt.udapType),
-		"udap flag:\t" .. string.format("%02x", pkt.udapFlag),
+		"udap flag:\t" .. ((pkt.udapFlag == 0x01 or pkt.udapFlag == 0x00) and ((pkt.udapFlag == 0x01) and "req" or "reply" ) or string.format("%02x", pkt.udapFlag)),
 		"uap class:\t" .. pkt.uapClass,
 		"uap method:\t" .. pkt.uapMethod,
 	}
+
 	if pkt.ucp then
 		for k,v in pairs(pkt.ucp) do
 			t[#t + 1] = k .. ":\t" .. ucpStrings[k](v)
@@ -508,19 +526,22 @@ function tostringUdap(pkt)
 	end
 	if pkt.data then
 		for k,v in pairs(pkt.data) do
-			local hex = ""
-			for i = 1,#v do
-				hex = hex .. string.format("%02x", string.byte(string.sub(v, i, i)))
+			if type == number then
+				t[#t + 1] = k .. " (#" .. "N" .. "):\t" .. v
+			else
+				local hex = ""
+				for i = 1,#v do
+					hex = hex .. string.format("%02x", string.byte(string.sub(v, i, i)))
+				end
+				t[#t + 1] = k .. " (#" .. #v .. "):\t" .. hex
 			end
-
-			t[#t + 1] = k .. " (#" .. #v .. "):\t" .. hex
 		end
 	end
 	if pkt.uuid then
 		t[#t + 1] = "uuid:\t\t" .. pkt.uuid
 	end
 
-	return table.concat(t, "\n")
+	return table.concat(t, sep and sep or "\n")
 end
 
 
@@ -560,6 +581,27 @@ function createGetIpResponse(srcmac, destmac, seq, ip)
 				  packNumber(0x05, 1),			-- ip_addr
 				  packNumber(#ip, 1),			-- ip_addr len
 				  ip
+	)
+end
+
+function createGetPinResponse(srcmac, destmac, seq, pin1, name)
+	local pindata = ''
+	if (pin1) then
+		local pin = tostring(pin1)
+		pindata = table.concat({
+				  packNumber(0x01, 1),			-- PIN
+				  packNumber(#pin, 1),			-- pin len
+				  pin
+		})
+	end
+	return createUdapResponse(srcmac,
+				  destmac,
+				  seq,
+				  packNumber(14, 2),			-- get_pin
+				  packNumber(0x02, 1),			-- Name
+				  packNumber(#name, 1),			-- Name len
+				  name,
+				  pindata
 	)
 end
 
