@@ -391,13 +391,17 @@ function setBrightness(self,level)
 
 	-- Blanking is the inverse of level
 	local val = level == 0 and 1 or 0
-	dirNodeSetValue("/sys/class/graphics","blank",val,skipblanking)
+	if self:getSettings()["blanking"] then
+		dirNodeSetValue("/sys/class/graphics","blank",val,skipblanking)
+	end
 	-- /sys/class/backlight/soc\:backlight/bl_power
 	-- Control BACKLIGHT power, values are FB_BLANK_* from fb.h
 	-- FB_BLANK_UNBLANK (0)   : power on
 	-- FB_BLANK_POWERDOWN (4) : power off
 	val = level == 0 and 4 or 0
-	dirNodeSetValue("/sys/class/backlight","bl_power",val,skipbacklight)
+	if self:getSettings()["backlight"] then
+		dirNodeSetValue("/sys/class/backlight","bl_power",val,skipbacklight)
+	end
 end
 
 function dirNodeSetValue(dir,node,val,skip)
