@@ -146,7 +146,7 @@ function getInputDetectorMapping(self)
 			log:warn(self,":getInputDetectorMapping task resumed")
 		end	
 	else
-		--log:warn(self,":getInputDetectorMapping task nil")
+		mapping = 4 -- IGNORE by default
 		self:monitordevices()
 	end
 	
@@ -158,20 +158,13 @@ function getInputDetectorDevice(self)
 	return device and device.name.."("..device.handler..(device.mi and device.mi or device.ei ) or tostring(self:string('UNINIT'))..")"
 end
 
+
 function startInputDetector(self)
 	local settings = self:getSettings()
-	mapping = settings.default_mapping
 	for k,v in pairs(settings) do log:debug(self,":startInputDetector settings [",k,"]=",v) end
 	for k,v in pairs(settings.devicelist) do log:debug(self,":startInputDetector devlist [",k,"]=",v) end
+	mapping = 4 -- IGNORE
 	readfds = self:readfdsetup(settings.devicelist)
-
-	if not task and false then
-		task = Task("InputDectector", self, monitordevicesloop)
-			
-		if not task:addTask("InputDectectorLoop") then
-			log:error(":startInputDectector Task add failed")
-		end
-	end
 end
 
 function map(f, t)
@@ -266,64 +259,55 @@ end
 
 
 function readfdsetup(self,t)
+	local readfds = {}
 	for n,r in pairs(t) do 
 		local device = "/dev/input/"..t[n].event..t[n].ei
-		log.debug(self,":readfdsetup",n, r.name, r.event, r.handler,r.ei, device)
-		if not (r.mapping and r.mapping == "IGNORE") then
+		log:debug(self,":readfdsetup ",n," ", r.name," ", r.event," ", r.handler, " ", r.ei, " ", device)
+		if not (r.mapping and r.mapping == 4) then -- IGNORE
 			local dev, err = io.open(device,"rb")
 			if err then
 				log:warn(device, " open ", err)
 			else
-				readfds[n] = { getfd = function() return dev.fileno and dev:fileno() or lfs.fileno(dev) end, dev = dev, detail = t[n] , file = device }
+				readfds[#readfds+1] = { getfd = function() return dev.fileno and dev:fileno() or lfs.fileno(dev) end, dev = dev, detail = t[n] , file = device }
 			end
 		else
-			log:debug(self,":readfdsetup",n, r.name,r.mapping)
+			log:debug(self,":readfdsetup (ignored) ",n," ",r.name," ",r.mapping)
 		end
 	end
 
-	log:debug(":readfdsetup",#readfds)
+	log:debug(":readfdsetup ",#readfds)
 	return readfds
 end
 
-function monitordevicesloop(self)
-	-- select over all devices last device matches selected devices?
-	-- run in task thread... this can get called alot so keep small and tight
-	while (true) do
-		Task:yield()
-		self:monitordevices()
-	end
-end
-
 function monitordevices(self)
-		local r,w,err = socket.select(readfds,nil,0) -- -1 if true thread but not we yield... so non blocking for now
+		local r,w,err = socket.select(readfds,nil,0) -- non blocking
 		local settings = self:getSettings()
 
-		if err and err != "timeout" then
-			
+		if err and err ~= "timeout" then
 			log:error(self,":monitordevices select error", err)
 			settings.devicelist = self:getDeviceList(settings.devicelist)
 			readfds = self:readfdsetup(settings.devicelist)
-		else
+		elseif err ~= "timeout" then
 			for n,fd in ipairs(r) do
 				--fd.dev:seek("end") -- char dev seems not to be seekable
 				-- consume data on fd
 				local consume = {fd}
 				local data = 'x'
-				local lr
-				lr, w , err = socket.select(consume,nil,0)
+				local lr, w, err = socket.select(consume,nil,0)
 				while(#lr > 0 and data and not err) do
-					data = fd.dev:read(readsize)
+					data = fd.dev:read(readsize) -- blocking
 					lr,w,err = socket.select(consume,nil,0)
 				end
-				if not data or err and err != "timeout" then
-					log:error("data read errror ",fd.file,",",err)
+				if not data or err and err ~= "timeout" then
+					log:error("select data read errror ",fd.file,",",err)
+					settings.devicelist = self:getDeviceList(settings.devicelist)
 					readfds = self:readfdsetup(settings.devicelist)
-				end
-			
-				mapping = fd.detail.mapping and fd.detail.mapping or settings.default_mapping
-				device = fd.detail
+				else
+					mapping = fd.detail.mapping and fd.detail.mapping or settings.default_mapping
+					device = fd.detail
 
-				log:debug(self,":monitordevices ",fd.file,"=",mapping)
+					log:debug(self,":monitordevices ",fd.file,"=",mapping)
+				end
 			end
 		end
 end
