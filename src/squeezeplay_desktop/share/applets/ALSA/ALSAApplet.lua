@@ -55,19 +55,19 @@ function deviceMenu(self, menuItem, firstUse)
 		local items = {}
 
 		if curr == "default" then
-			--if not firstUse then
+			if not firstUse then
 				items[#items+1] = {
 					text = tostring(self:string("DEFAULT")) .. tostring(self:string("CURRENT")) ,
 				}
-			--end
+			end
 		else
-				items[#items+1] = {
+			items[#items+1] = {
 				text = self:string("DEFAULT"),
 				sound = "WINDOWSHOW",
 				callback = function(event, menuItem)
-							   timer:stop()
-							   self:_setCardAndReboot({ id = "default" }, false)
-						   end,
+						timer:stop()
+						self:_setCardAndReboot({ id = "default" }, false)
+					   end,
 			}
 		end
 		
@@ -77,12 +77,12 @@ function deviceMenu(self, menuItem, firstUse)
 					text = card.desc,
 					sound = "WINDOWSHOW",
 					callback = function(event, menuItem)
-								   timer:stop()
-								   -- FIXME plughw support...
-									   self:_setCardAndReboot(card, false)
-							   end,
+							timer:stop()
+							-- FIXME hw and plughw support...
+							self:_setCardAndReboot(card, false)
+						   end,
 				}
-			elseif (card.type == "asound-virtual") then
+			elseif (card.nostats) then
 				items[#items+1] = {
 					text = card.desc .. tostring(self:string("CURRENT")),
 				}
@@ -91,9 +91,9 @@ function deviceMenu(self, menuItem, firstUse)
 					text = card.desc .. tostring(self:string("INFO")),
 					sound = "WINDOWSHOW",
 					callback = function(event, menuItem)
-								   timer:stop()
-								   self:_showStats(card.hw, card.desc)
-							   end,
+							timer:stop()
+							self:_showStats(card.hw, card.desc)
+						   end,
 				}
 			end
 		end
@@ -149,14 +149,16 @@ function optionsMenu(self, menuItem)
 		callback = function(event, menuItem)
 					   local options = {
 						   { desc = "BUFFER_DEFAULT", time =  20000, count =   2 },
+						   { desc = "BUFFER_MINITR",  time =  92790, count =   4 },
 						   { desc = "BUFFER_LARGE",   time = 100000, count =   4 },
 						   { desc = "BUFFER_SMALL",   time =   4000, count =   2 },
+						   { desc = "BUFFER_TT",      time =   3400, count =   2 },
 						   { desc = "BUFFER_RAND",    time = 100000, count = 104 },
 						   { desc = "BUFFER_VLARGE",  time =4000000, count =   4 },
 						   { desc = "BUFFER_VLRAND",  time =4000000, count = 104 },
 						   { desc = "BUFFER_SPDF",    time =  30000, count =   3 },
 						   { desc = "BUFFER_SLDF",    time =     40, count =   4 },
-						   { desc = "BUFFER_SPPI",    time =     50, count =   5 },
+						   { desc = "BUFFER_SPPI",    time = 113378, count =   5 },
 					   }
 					   local window = Window("text_list", menuItem.text)
 					   local menu = SimpleMenu("menu")
@@ -241,7 +243,7 @@ function optionsMenu(self, menuItem)
 	})
 
 	menu:addItem({
-		text = self:string("SELECT_OUTPUT")..self:string("EFFECTS"),
+		text = tostring(self:string("SELECT_OUTPUT"))..tostring(self:string("EFFECTS")),
 		sound = "WINDOWSHOW",
 		callback = function(event, menuItem)
 					   self:deviceMenu(menuItem, false, "effects")
@@ -255,7 +257,7 @@ function optionsMenu(self, menuItem)
                          function(object, isSelected)
                                   self:getSettings()["active"] = isSelected
                                   self:storeSettings()
-                                  self:_restart()
+				  appletManager:callService("restart")
                                   end,
                                   self:getSettings()["active"]
                          ),
@@ -273,16 +275,19 @@ function _parseCards(self)
 	local cards,err = io.open("/proc/asound/cards", "r")
 
 	if err then
-		log:error("/proc/asound/cards could not be opened",err)
+		log:error("/proc/asound/cards could not be opened ",err)
 		return
 	end
 
 	-- read and parse entries
 	for line in cards:lines() do
 		local num, id, desc = string.match(line, "(%d+)%s+%[(.-)%s*%]:%s+(.*)")
-			-- if usb card - get bitdepth info FIXME
-			local info = self:_parseStreamInfo(id)
-			t[#t+1] = { id = id, desc = tostring(self:string("DIRECT_HW")).." "..desc }
+			-- if usb card - get bitdepth info FIXME check match? force more robust parser....
+			if num and id and desc then
+				local info = self:_parseStreamInfo(id)
+				t[#t+1] = { id = id, desc = tostring(self:string("DIRECT_HW")).." "..desc , type = "asound-card" }
+				t[#t+1] = { id = id, desc = tostring(self:string("PLUG_HW")).." "..desc , type = "asound-plughw" }
+			end
 	end
 	cards:close()
 
@@ -293,8 +298,10 @@ function _parseCards(self)
 	end
 
 	local id, card, desc
+	-- split :
+	-- split ,
 	for line in pcms:lines()  do
-		local pcm,hw  = string.match(line, "^([%w]+):CARD=([%w]+)")
+		local pcm, hw, rem = string.match(line, "^([%w]+):CARD=([%w]+)(.*)")
 		if not pcm then
 			pcm = string.match(line, "^([%w]+)$")
 			if pcm then
@@ -311,6 +318,9 @@ function _parseCards(self)
 
 			if hw then
 				id = pcm..":"..hw
+				if rem then
+					id = id..rem --get full pcm
+				end
 			else
 				id = pcm
 			end
@@ -321,8 +331,9 @@ function _parseCards(self)
 			desc = id ..", " .. desc
 		end
 	end
-	local info = card and self:_parseStreamInfo(card) or { needshub = false }
-	t[#t+1] = { id = id, desc = desc, type = (card) and "asound-pcm" or "asound-virtual", hw = card, needshub = info.needshub }
+	local info = self:_parseStreamInfo(card)
+
+	t[#t+1] = { id = id, desc = desc, type = (card) and "asound-pcm" or "asound-virtual", hw = card, needshub = info.needshub , nostats = info.nostream}
 
 	pcms:close()
 
@@ -331,15 +342,17 @@ end
 
 
 function _parseStreamInfo(self, card)
+	if not card then return end
 	local bits, needhub, async
-	local t = {}
+	local t = { needshub = false , nostream = true}
 	
-	local cards = io.open("/proc/asound/" .. card .. "/stream0", "r")
+	local cards,err = io.open("/proc/asound/" .. card .. "/stream0", "r")
 	
 	if cards == nil then
-		log:info("/proc/asound/" .. card .. "/stream0 could not be opened")
+		log:warn("/proc/asound/" .. card .. "/stream0 could not be opened ",err)
 		return t
 	end
+	t.nostream = false
 	
 	-- parsing helper functions
 	local last
@@ -430,11 +443,12 @@ function _setCardAndReboot(self, card ,device)
 
 	self:storeSettings()
 
-	self:_restart()
+	appletManager:callService("restart")
 end
 
 
 function _showStats(self, card, desc)
+	if not card then return end
 	-- check we can open the /proc file
 	local info = io.open("/proc/asound/" .. card .. "/stream0", "r")
 
@@ -510,21 +524,5 @@ function _showStats(self, card, desc)
 		end,
 		true
 	)
-end
-
-
-function _restart(self)
-	self.popup = Popup("update_popup")
-	self.popup:addWidget(Icon("icon_restart"))
-	self.popup:addWidget(Label("text", self:string("REBOOTING")))
-	self:tieAndShowWindow(self.popup)
-
-	self.timer = Timer(3000,
-					   function()
-						   log:info("rebooting...")
-						   appletManager:callService("reboot")
-					   end,
-					   true)
-	self.timer:start()
 end
 

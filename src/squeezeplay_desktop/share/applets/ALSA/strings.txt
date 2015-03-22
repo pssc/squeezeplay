@@ -31,10 +31,10 @@ DEFAULT
 	EN	Default
 
 HELP_FIRST_USE
-	EN	Connect DAC and select output.  Supports external USB and SPDIF dacs up to 192k sampling rates.\nChange@ Settings > Audio Settings > Digital Output
+	EN	Connect DAC and select output.  Supports external USB and SPDIF dacs up to 192k sampling rates.\nChange @ Settings > Audio Settings > Digital Output
 
 BUFFER_TUNING
-	EN      Buffer Tuning
+	EN	Buffer Tuning
 
 HELP_BUFFER_TUNING
 	EN	Tuning buffer size may impact sound quality
@@ -50,6 +50,12 @@ BUFFER_SMALL
 
 BUFFER_RAND
 	EN	Large + Randomise CPU
+
+BUFFER_TT
+	EN	Touch Toolbox
+
+BUFFER_MINITR
+	EN	Large For Minimun Interrupts
 
 BUFFER_VLARGE
 	EN	Very Large (USB Only)

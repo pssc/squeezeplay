@@ -98,15 +98,20 @@ function registerApplet(meta)
 	local playbackDeviceFound = true
 
 	if settings.playbackDevice != "default" then
-		local card = settings.playbackHW and settings.playbackHW or settings.playbackDevice
-		log:debug("Find playback device card=",card," playbackDevice=",settings.playbackDevice," playbackHW=",settings.playbackHW)
+		local card = settings.playbackDevice
 		
-
-		-- FIXME pssc card none or virtual
+		local pcm,hw  = string.match(card, "^([%w]+):([%w=]+)")
+		if hw then
+			local cd = string.match(hw,"CARD=([%w]+)")
+			hw = cd and cd or hw
+			card = hw
+			log:debug("Munged card ",card)
+		end
+		log:debug("Find playback device card=",card," playbackDevice=",settings.playbackDevice)
 		local fh = io.open("/proc/asound/" .. card)
 
-		if fh == nil then
-			log:warn("playback device not found - waiting")
+		if not fh then
+			log:warn("playback device not found")
 			playbackDeviceFound = false
 			local timer, rebootTime
 
@@ -147,17 +152,16 @@ function registerApplet(meta)
 	end
 
 	if playbackDeviceFound then
-
 		-- init the decoder with our settings - we are loaded earlier than SqueezeboxFab4, decode:open ignores reopen
 		local playbackDevice = "default"
 		if settings.playbackDevice != "default" then
 		
 			if settings.playbackType == "asound-card" then
-				playbackDevice = "hw:CARD=" .. settings.playbackHW
+				playbackDevice = "hw:CARD=" .. settings.playbackDevice
 			elseif settings.playbackType == "asound-plughw" then
-				playbackDevice = "plughw:CARD=" .. settings.playbackHW
+				playbackDevice = "plughw:CARD=" .. settings.playbackDevice
 			else
-				playbackDevice = settings.playbackDevice ..":".. settings.playbackHW
+				playbackDevice = settings.playbackDevice
 			end
 		end
 		log:info("playbackDevice: ", playbackDevice, " bufferTime: ", settings.bufferTime, " periodCount: ", settings.periodCount)
@@ -165,23 +169,23 @@ function registerApplet(meta)
 		local effectsDevice = "default"
 		if settings.effectsDevice and settings.effectsDevice != "default" then
 			if settings.effectsType == "asound-card" then
-				effectsDevice = "hw:CARD="  .. settings.effectsHW
+				effectsDevice = "hw:CARD="  .. settings.effectsDevice
 			elseif settings.playbackType == "asound-plughw" then
-				effectsDevice = "plughw:CARD=" .. settings.effectsHW
+				effectsDevice = "plughw:CARD=" .. settings.effectsdevice
 			else
-				effectsDevice = settings.effectsDevice ..":CARD=".. settings.effectsHW
+				effectsDevice = settings.effectsDevice
 			end
 		end
 		log:info("effectsDevice: ", effectsDevice )
 
-		--FIXME test for patched/updated version... jive_alsa updated so... sample size can be fiddled with
+		-- jive_alsa updated so... sample size can be fiddled with
 		Decode:open({
 			alsaPlaybackDevice = playbackDevice,
 			alsaSampleSize = settings.sampleSize and settings.sampleSize or 0, -- system == 'fab4' and 24 or 16, -- auto detected on patched versions, will honor setting now 0 for auto.
 			alsaPlaybackBufferTime = settings.bufferTime,
 			alsaPlaybackPeriodCount = settings.periodCount,
 			alsaEffectsDevice = effectsDevice,
-                        alsaFlags = settings.nommap and FLAG_NOMMAP or nil
+                        alsaFlags = settings.nommap and FLAG_NOMMAP or nil,
 		})
 		
 	end
@@ -200,7 +204,7 @@ function registerApplet(meta)
 	)
 
 	-- first use dialog
-	if not updating and settings.firstUse then
+	if settings.firstUse then
 		settings.firstUse = false
 		meta:storeSettings()
 		local applet = appletManager:loadApplet('ALSA')
