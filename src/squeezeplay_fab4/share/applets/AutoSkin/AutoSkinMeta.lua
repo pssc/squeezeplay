@@ -33,9 +33,15 @@ end
 
 
 function defaultSettings(meta)
-	return {}
+	-- use a fast transition 0.2 second
+	return { transitionDuration = 200 }
 end
 
+function upgradeSettings(meta,settings)
+	if not settings.transitionDuration then
+		settings.transitionDuration = meta:defaultSettings()["transitionDuration"]
+	end
+end
 
 function registerApplet(meta)
 	meta:registerService("getActiveSkinType")
