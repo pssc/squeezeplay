@@ -154,9 +154,8 @@ end
 -- closes our socket
 function close(self)
 	--log:debug(self, ":close()")
-	
 	self:t_setConnected(false)
-	
+	self.t_tcp.proxy:reset()
 	Socket.close(self)
 end
 
@@ -237,10 +236,10 @@ function t_addRead(self, pump, timeout)
                   end
 		 
                   while ps > 0 do
-			line, err = source()
+			local line, err = source()
 			if err then
 			   log:error(err)
-			   self:close(err)
+			   self:close()
 			   return
 			end
 			ps, data = self.t_tcp.proxy:step(line)
@@ -271,9 +270,9 @@ function t_addWrite(self, pump, timeout)
 			       local err = socket.skip(1, self.t_sock:send(data))
 
                 		if err then
-                      			log:error(self, ":t_connect: proxy send: ", data, err)
-                       			self:close(err)
-                      			return 
+					log:error(self, ":t_connect: proxy send: ", data, err)
+					self:close()
+					return err
 				end
                                 log:debug(self,":_addWrite:source=",line," err=",err)
 		   end
@@ -281,18 +280,19 @@ function t_addWrite(self, pump, timeout)
 		   while ps > 0 do
 			ps, data = self.t_tcp.proxy:step(nil)
 			if data then
-				sink(data)
+				local err = sink(data) --? err in this context?
 				if err then
-					log:error(err)
-					self:close(err)
-					return
+					log:error(self, ":t_addWrite: Proxy step ", ps," : ", err)
+					self:close()
+					return err
 				end
 				
 			elseif ps > 0 then -- >=? fix for tunnel atm
 			  _, networkErr = Task:yield(false)
                           if networkErr then
-                                      log:warn(self, ":_addWite: yeild on write error: ", networkErr)
+                                      log:warn(self, ":_addWite: yeild on network write error: ", networkErr)
                                       self:close()
+                                      return networkErr
                           end
 			end
 		   end

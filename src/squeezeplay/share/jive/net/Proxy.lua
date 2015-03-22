@@ -22,22 +22,17 @@ at runtime based on the connection details of ip, hostname and port.
 -- stuff we use
 local _assert, ipairs, pairs, setmetatable, tostring, tonumber, type = _assert, ipairs, pairs, setmetatable, tostring, tonumber, type
 
--- stuff we use
-local _assert, tostring = _assert, tostring
-
-local debug    = require("debug")
-
-local socket   = require("socket")
 local oo       = require("loop.simple")
 
-local log      = require("jive.utils.log").logger("net.http")
+local debug    = require("debug")
+local string   = require("string")
+local table    = require("table")
+local socket   = require("socket")
 
-local string      = require("string")
-local table       = require("table")
-
-local DNS         = require("jive.net.DNS")
-
-
+local DNS      = require("jive.net.DNS")
+local Task     = require("jive.ui.Task")
+local log      = require("jive.utils.log").logger("net.proxy")
+local jd       = require("jive.utils.debug")
 
 
 -- jive.net.proxy is a base class
@@ -293,25 +288,29 @@ function isProxying(self)
 	return self.proxied
 end
 
-function resetProxy(self) 
-     self.proxy_ip = nil
-     self.proxied = false
+function reset(self)
+	if self.proxied then
+		log:info(self,":reset()")
+	else
+		log:debug(self,":reset()")
+	end
+	self.proxy_ip = nil
+	self.proxied = nil
 end
 
-function isProxied(self)
+function isProxied(self,test)
         if not proxy then
                 return false
 	end
-	if self.proxied == true then
-		return true
+	if self.proxied == true or self.proxied == false then
+		return self.proxied
 	end
 
-
         -- IDX 1 Gobal defults...
-	idx = 1  
-        proxying  = false
-        while idx < table.getn(proxies) and proxying == false do
-                idx = idx + 1;
+	local idx = 1
+	local proxying = false
+	while idx < table.getn(proxies) and proxying == false do
+                idx = idx + 1
 		if self:getActive(idx) then
                         proxying = true
                 	for i,n in ipairs(self:getNoProxy(idx)) do
@@ -322,15 +321,34 @@ function isProxied(self)
                                         end
                         	elseif self:getMethod(idx) == 'PF_SERVER' then
                                         proxying = false
-                                elseif (n == self.ip) and (self:getMethod(idx)!= 'PF_SERVER') then --dont noporxy the proxy IP
-					log:info(self,":self denied own proxy[",n,":",self.host,"]=",self.ip)
+                                elseif (n == self.ip) and (self:getMethod(idx) ~= 'PF_SERVER') then -- doni't noporxy the proxy IP
+					log:warn(self,":self denied own proxy[",n,":",self.host,"]=",self.ip)
                                 	proxying = false
-                        	end
+				else
+					if n and not DNS:isip(n) then
+						log:debug(self,":isProxied DNS:toip (",n,") ")
+						local ip,err
+						if Task:running() then
+							ip,err = DNS:toip(tostring(n))
+						else
+							log:error(self,":isProxied DNS:toip no task for ",self.host," resolving ",n)
+						end
+						if not ip and err then
+							log:warn(self,":isProxied DNS:toip (",n,") ",jd.view(err)," ",debug.traceback())
+						elseif ip and string.find(self.host,ip) then
+							proxying = false
+						end
+					end
+				end
                 	end
 		end
         end 
         if not proxying then
-           return false
+	   log:info(self,":isProxied ",self.host," false")
+	   if proxying == false then
+		self.proxied = false
+	   end
+           return self.proxied
         end
         self.proxied = true
 	self.state = 100
@@ -348,13 +366,16 @@ function isProxied(self)
 	self.proxy_ip = self:getProxyIp(idx)
 	self.idx = idx
 
-	for x,y in pairs(self) do
-		log:debug(self,":proxy[",x,"]=",y)
+	if log:isDebug() then
+		for x,y in pairs(self) do
+			log:debug(self,":isProxied proxy[",x,"]=",y)
+		end
+	end
+	if not test or log:isDebug() then
+		log:info(self,":isProxied proxied(", self.host, ":", self.port, ") via (",self.proxy_server,":",self.proxy_port,") method ",self.proxy_method )
 	end
 
-	log:info(self,":proxied(", self.host, ":", self.port, ") via (",self.proxy_server,":",self.proxy_port,") method ",self.proxy_method )
-
-        return true
+        return self.proxied
 end
 
 
@@ -363,6 +384,7 @@ function step(self,data)
         log:debug(self,":step(",data,")")
 	local send = nil
 	local state = self.state
+	local ip,err
 
             if not self:getProxyIp() and DNS:isip(self:getProxyServer()) then
                ip = self:getProxyServer()
@@ -417,7 +439,7 @@ function step(self,data)
 					-- FIXME stash?
                         else   
                                         if self.statusCode ~= 200 then
-                                                log:error(self," Proxy status ",self.statusLine)
+                                                log:error(self," Proxy(",self.ip or self.ip and self.host,":",self.port,") Error status ",self.statusLine)
                                         	state = -2
 					end	
 					state = 0

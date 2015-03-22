@@ -212,19 +212,12 @@ function t_sendResolve(self)
 
 	local t = nil
 
-	if  self.t_tcp.proxy:isProxying() then
-		-- failed or reconnect... re-resolve;
-		self.t_tcp.address = nil
-		self.t_tcp.port = self.t_tcp.proxy:getHostPort()
-		self.t_tcp.proxy:resetProxy();
-        end
-
 	if self.t_tcp.address and DNS:isip(self.t_tcp.address) then
 		-- Called with host ip set...
-		if self.t_tcp.proxy:isProxied() then 
-			log:debug(self, " is proxied ",self.t_tcp.proxy:getProxyServer(),"(",self.t_tcp.proxy:getProxyIp(),")")
-			if not self.t_tcp.proxy:getProxyIp() then
-				t = Task(tostring(self) .. "(D)", self, function()
+		t = Task(tostring(self) .. "(P)", self, function()
+			if self.t_tcp.proxy:isProxied() then
+				log:debug(self, " is proxied ",self.t_tcp.proxy:getProxyServer(),"(",self.t_tcp.proxy:getProxyIp(),")")
+				if not self.t_tcp.proxy:getProxyIp() then
 					local proxy = self.t_tcp.proxy:getProxyServer()
 					log:debug(self, " DNS loopup for proxy ", proxy)
 
@@ -243,18 +236,18 @@ function t_sendResolve(self)
 
 					self.t_tcp.proxy:setProxyIp(ip)
                         		self:t_nextSendState(true, 't_sendConnect')
-                		end)
+				else
+					log:debug("Using cached proxy ip address: ", self.t_tcp.proxy:getProxyIp(), " for: ", self.t_tcp.proxy:getProxyServer())
+					-- don't lookup an ip address
+					self:t_nextSendState(true, 't_sendConnect')
+					return
+				end
 			else
-		   		log:debug("Using cached proxy ip address: ", self.t_tcp.proxy:getProxyIp(), " for: ", self.t_tcp.proxy:getProxyServer())
-				-- don't lookup an ip address
+				-- Rresolved and not proxied.
 				self:t_nextSendState(true, 't_sendConnect')
 				return
 			end
-		else
-			-- Rresolved and not proxied.
-			self:t_nextSendState(true, 't_sendConnect')
-			return
-		end
+		end)
 	elseif self.cachedIp then
 		-- only used for ensuring comet requests to go from same ip...
 		log:debug(self," Using cached ip address: ", self.cachedIp, " for: ", self.host)
