@@ -30,3 +30,18 @@ REVISION
 
 MAKER
 	EN	Maker
+
+APPLET_NAME
+	EN	SqueezePi
+
+REBOOT
+	EN	Reboot
+
+POWEROFF
+	EN	Power Off
+
+RESTART
+	EN	Restart
+
+Quit
+	EN	Quit

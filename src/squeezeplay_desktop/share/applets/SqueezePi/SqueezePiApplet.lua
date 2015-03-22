@@ -25,6 +25,7 @@ local SimpleMenu	     = require("jive.ui.SimpleMenu")
 local LinuxApplet            = require("applets.Linux.LinuxApplet")
 local log                    = require("jive.utils.log").logger("applet.SqueezePi")
 
+local socket		= require("socket")
 local appletManager = appletManager
 local jnt                    = jnt
 
@@ -36,11 +37,11 @@ local AUDIO_SELECT = { "AUTO", "SOCKET", "HDMI" }
 
 
 function init(self)
-	local fbdev = string.match(os.getenv("SDL_FBDEV") or "", "/dev/fb([0-9]+)")
-
-	sysOpen(self, "/sys/class/graphics/fb"..(fbdev and fbdev or "0").."/", "blank", "rw")
-
-        self:setBrightnessSqueezePi('on')
+	--local fbdev = string.match(os.getenv("SDL_FBDEV") or "", "/dev/fb([0-9]+)")
+	--sysOpen(self, "/sys/class/graphics/fb"..(fbdev and fbdev or "0").."/", "blank", "rw")
+	-- FIXME on screen init? timered ? or just do on reg? app unloads?
+        --self:setBrightnessSqueezePi('on')
+        --log:debug("init end")
 end
 
 function settingsAudioSelect(self)
@@ -107,10 +108,11 @@ function settingsAudioSelect(self)
                 },
 	})
 
-        f,err = io.popen("tvservice -a 2>&1", "r")
+	local command = "tvservice -a 2>&1"
+        local f,err = io.popen(command, "r")
         if not f then
-                log:warn("tvservice -a could not be run ",err,".")
-                window:addWidget(Textarea("text", "tvservice -a"..err.."."))
+                log:warn(command,"-- could not be run ",err,".")
+                window:addWidget(Textarea("text", command.."\n"..err.."."))
         end
         -- "    PCM supported: Max channels: 2, Max samplerate:  32kHz, Max samplesize 16 bits."
         local i = 0
@@ -136,9 +138,76 @@ function settingsAudioSelect(self)
 end
 
 
-function setBrightnessSqueezePi(self, ...)
-	log:info("setBrightness: ",...)
-	self:setBrightness(...)
+function setBrightnessSqueezePi(self, level)
+	log:info("setBrightnessSqueezePi: ", level)
+	-- we may have displays than honour the blanking...
+	local mylevel
+        if level == "off" then
+                mylevel = 0
+        elseif level == "on" then
+                mylevel = 1
+        elseif level == nil then
+                return
+        else
+                log:debug("setBrightness: mylevel ",level," to 1")
+                mylevel = 1
+        end
+
+	-- super class call for generic linux blanking code blanking and backlight.
+	self:setBrightness(level)
+
+	if (self:getSettings()['display_power']) then
+		local off = nil
+		local command = "vcgencmd display_power"
+		local f,err = io.popen(command, "r")
+		if f then
+			for line in f:lines() do
+				-- display_power=1
+				local sc = string.match(line, "^display_power=([%d]+)")
+				if sc then
+					sc = tonumber(sc) or 0
+					if sc == 0 then
+						off=true
+					else
+						off=false
+					end
+					log:debug("state ",sc," ",off)
+				else
+					log:warn("Parse error for ",command)
+					log:warn("line '",line,"'")
+				end
+			end
+			f:close()
+		else
+			log:warn(command,"-- failed ",err)
+		end
+
+		-- best efforts this is a heavy weight operation now using vcgencmd display_power we still have to wait for the screen/display to detect and catch up with us.
+		command = (mylevel == 0) and "vcgencmd display_power 0 2>&1" or "vcgencmd display_power 1 2>&1"
+		if (mylevel == 0 and off == true) then
+			log:info("Allready off")
+		elseif (mylevel == 1 and off == false) then
+			log:info("Allready on")
+		else
+			log:info(command)
+			f,err = io.popen(command, "r")
+			if f then
+				f:close()
+				if mylevel == 0 then
+					-- pause for effect ?
+					--blaking will allready possibly be active
+					-- socket.select(nil, nil, 2) -- sleep
+				else
+					-- force redraw
+					socket.select(nil, nil, 2) -- sleep
+					Framework:reDraw(nil)
+				end
+			else
+				log:warn(command,"-- failed ",err,".")
+			end
+		end
+	end
+
 end
 
 --[[
@@ -147,3 +216,34 @@ function getBrightness(self)
 end
 ]]--
 
+function openAdvSettings(self, menuItem)
+        local menu = SimpleMenu("menu",
+                {
+                        {
+                                text = self:string("REBOOT"),
+                                style = 'item_choice',
+                                callback = function(event, menu_item)
+                                                   appletManager:callService("reboot")
+                                           end
+                        },
+                        {
+                                text = self:string("POWEROFF"),
+				style = 'item_choice',
+                                callback = function(event, menu_item)
+                                                   appletManager:callService("poweroff")
+                                           end
+                        },
+                })
+
+        local window = Window("text_list", menuItem.text, 'advsettingstitle')
+        window:addWidget(menu)
+
+        self:tieAndShowWindow(window)
+        return window
+end
+
+function map(f, t)
+  local t2 = {}
+  for k,v in pairs(t) do t2[k] = f(v) end
+  return t2
+end

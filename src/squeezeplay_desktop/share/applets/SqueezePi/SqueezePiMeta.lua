@@ -41,8 +41,11 @@ function defaultSettings(meta)
 --		audio_select = "AUTO" we dont hold the state alsa does...
 		alsaSampleSize = 16,
                 alsaPlaybackDevice = "default",
-                alsaPlaybackBufferTime = 50,
+                alsaPlaybackBufferTime = 113378,
                 alsaPlaybackPeriodCount = 5,
+		display_power = true,
+		backlight = true,
+		blanking = true,
 	}
 end
 
@@ -194,7 +197,7 @@ function registerApplet(meta)
 
 	-- settings
 	jiveMain:addItem(meta:menuItem('piaudio_selector', 'settingsAudio', "AUDIO_SELECT", function(applet, ...) applet:settingsAudioSelect(...) end))
-
+	jiveMain:addItem(meta:menuItem('appletSqueezePi', 'advancedSettings', "APPLET_NAME",  function(applet, ...) applet:openAdvSettings(...) end))
 
         -- sp default 8MB -- FIXME make tunebale this is per slimserver... FIXME...
 	if (settings['pi']['memory'] > 256) then
@@ -207,12 +210,14 @@ function registerApplet(meta)
 		--appletManager:addDefaultSetting("ArtworkCache", "enableSetting", 1)
 		--appletManager:addDefaultSetting("ArtworkCache", "defaultSize", 12*1024*1024)
 	end
+	appletManager:addDefaultSetting("ScreenSaver", "poweron_window_time", 12000)
 
 	-- services
 	meta:registerService("setBrightness",true)
         --meta:registerService("getWakeupAlarm")
         --meta:registerService("setWakeupAlarm")
         --meta:registerService("getDefaultWallpaper")
+        meta:registerService("restart")
         meta:registerService("poweroff")
         meta:registerService("reboot")
 
