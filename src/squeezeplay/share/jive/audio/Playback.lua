@@ -59,6 +59,11 @@ local PROXY_LISTEN_PORT = 9001
 
 local LOCAL_PAUSE_STOP_TIMEOUT = 400
 
+local DECODE_THRESHOLD = 1024 * 4 -- *2
+local DECODE_HIGH_BITRATE_THRESHOLD = 254 * 1024
+local DECODE_HIGH_RATE_THRESHOLD = 976 * 1024
+local OUTPUT_TIME_THRESHOLD = 100 --was 50
+
 -- Handlers to allow applets to extend playback capabilties via spdr:// urls
 local streamHandlers = {}
 
@@ -169,7 +174,7 @@ function __init(self, jnt, slimproto)
 	self.sentOutputUnderrunEvent = false
 	self.sentAudioUnderrunEvent = false
 	self.ignoreStream = false
-	self.decodeThreshold = 2048
+	self.decodeThreshold = DECODE_THRESHOLD
 	
 	self.proxy = nil
 	self.proxyListener = nil
@@ -178,7 +183,11 @@ function __init(self, jnt, slimproto)
 end
 
 
-function setDecodeThreshold(self, threshold)
+function setDecodeThreshold(self, threshold, default)
+	log:debug(self,"setDecodeThreshold ",threshold)
+	if default then
+		DECODE_THRESHOLD = threshold
+	end
 	self.decodeThreshold = threshold
 end
 
@@ -419,7 +428,7 @@ function _timerCallback(self)
 	if status.tracksStarted == 0 and
 		status.audioState & DECODE_STOPPING == 0 and
 		(status.bytesReceivedL > self.threshold or not self.stream) and
-		status.outputTime > 50 then
+		status.outputTime > OUTPUT_TIME_THRESHOLD then
 
 --	FIXME in a future release we may change the the threshold to use
 --	the amount of audio buffered, see Bug 6442
@@ -493,67 +502,68 @@ function _streamConnect(self, serverIp, serverPort, reader, writer, slaves)
 
 	self.stream_proxy = Proxy(self.jnt, _ipstring(serverIp), serverPort, "stream")
 
-	-- Stream proxy check...
-	if self.stream_proxy:isProxied() then
-		serverIp = self.stream_proxy:getProxyIp()
-		serverPort = self.stream_proxy:getProxyPort()
-		-- stream connect really really only likes Ip's
-		if not serverIp then
-			log:debug(self,"DNS:toip for proxy",self.stream_proxy:getProxyServer())
-			serverIp, err = DNS:toip(self.stream_proxy:getProxyServer())
+	Task("streamProxy check", self, function (self, ...)
+		if self.stream_proxy:isProxied() then
+			serverIp = self.stream_proxy:getProxyIp()
+			serverPort = self.stream_proxy:getProxyPort()
+			-- stream connect really really only likes Ip's
 			if not serverIp then
-				log:error(self,":_streamconnect:Proxy DNS failure",self.stream_proxy:getProxyServer()," err=",err)
-				self:_streamDisconnect(TCP_CLOSE_LOCAL_RST)
-				return
-			else
-				self.stream_proxy:setProxyIp(serverIp)
-				log:warn(self,":_streamconnect:Proxy DNS Lookup ",self.stream_proxy:getProxyServer(),"(",serverIp,")")
+				log:debug(self,"DNS:toip for proxy",self.stream_proxy:getProxyServer())
+				serverIp, err = DNS:toip(self.stream_proxy:getProxyServer())
+				if not serverIp then
+					log:error(self,":_streamconnect:Proxy DNS failure",self.stream_proxy:getProxyServer()," err=",err)
+					self:_streamDisconnect(TCP_CLOSE_LOCAL_RST)
+					return
+				else
+					self.stream_proxy:setProxyIp(serverIp)
+					log:warn(self,":_streamconnect:Proxy DNS Lookup ",self.stream_proxy:getProxyServer(),"(",serverIp,")")
+				end
 			end
+
 		end
 
-	end
+		self.stream = Stream:connect(serverIp, serverPort)
 
-	self.stream = Stream:connect(serverIp, serverPort)
+		-- The following manipluates the metatable for the stream object to allow Http and other streaming
+		-- to use different read and write methods while using a common constructor which reuses the same
+		-- C userdata for the object (and hence the same metatable)
+		local m = getmetatable(self.stream)
 
-	-- The following manipluates the metatable for the stream object to allow Http and other streaming
-	-- to use different read and write methods while using a common constructor which reuses the same
-	-- C userdata for the object (and hence the same metatable)
-	local m = getmetatable(self.stream)
+		-- stash the location of the standard stream methods stream:read and stream:write on first use
+		if m._streamRead == nil then
+			m._streamRead  = m.read
+			m._streamWrite = m.write
+		end
 
-	-- stash the location of the standard stream methods stream:read and stream:write on first use
-	if m._streamRead == nil then
-		m._streamRead  = m.read
-		m._streamWrite = m.write
-	end
-
-	if reader and writer then
-		log:debug(self,"use given stream methods")
-		m.read  = reader
-		m.write = writer
-	elseif self.flags & 0x20 == 0x20 then
-		log:debug(self,"use Rtmp methods, load Rtmp module on demand")
-		Rtmp = require("jive.audio.Rtmp")
-		m.read  = Rtmp.read
-		m.write = Rtmp.write
-	elseif self.mode == 'n' then
-		log:debug(self,"network test, use specific read method")
-		m.read = m.readToNull
-		m.write = m._streamWrite
-	else
-		log:debug(self,"use standard stream methods")
-		m.read  = m._streamRead
-		m.write = m._streamWrite
-	end 
+		if reader and writer then
+			log:debug(self,"use given stream methods")
+			m.read  = reader
+			m.write = writer
+		elseif self.flags & 0x20 == 0x20 then
+			log:debug(self,"use Rtmp methods, load Rtmp module on demand")
+			Rtmp = require("jive.audio.Rtmp")
+			m.read  = Rtmp.read
+			m.write = Rtmp.write
+		elseif self.mode == 'n' then
+			log:debug(self,"network test, use specific read method")
+			m.read = m.readToNull
+			m.write = m._streamWrite
+		else
+			log:debug(self,"use standard stream methods")
+			m.read  = m._streamRead
+			m.write = m._streamWrite
+		end
 	
-	self:_proxyInit(slaves, self.stream)
+		self:_proxyInit(slaves, self.stream)
 
-	local wtask = Task("streambufW", self, _streamWrite, nil, Task.PRIORITY_AUDIO)
-	self.jnt:t_addWrite(self.stream, wtask, STREAM_WRITE_TIMEOUT)
+		local wtask = Task("streambufW", self, _streamWrite, nil, Task.PRIORITY_AUDIO)
+		self.jnt:t_addWrite(self.stream, wtask, STREAM_WRITE_TIMEOUT)
 	
-	self.rtask = Task("streambufR", self, _streamRead, nil, Task.PRIORITY_AUDIO)
-	self:_proxyAndStream(true)
+		self.rtask = Task("streambufR", self, _streamRead, nil, Task.PRIORITY_AUDIO)
+		self:_proxyAndStream(true)
 
-	self.slimproto:sendStatus('STMc')
+		self.slimproto:sendStatus('STMc')
+	end, nil, Task.PRIORITY_AUDIO):addTask()
 end
 
 function _proxyQueueSegment(self, chunk)
@@ -939,7 +949,7 @@ function _streamRead(self, networkErr)
 	end
 
 	self:_streamDisconnect((n == false) and TCP_CLOSE_FIN or TCP_CLOSE_REMOTE_RST)
-    log:debug(self, ":_streamRead:disconnect ",(n == false) and TCP_CLOSE_FIN or TCP_CLOSE_REMOTE_RST)
+	log:debug(self, ":_streamRead:disconnect ",(n == false) and TCP_CLOSE_FIN or TCP_CLOSE_REMOTE_RST)
 end
 
 
@@ -989,6 +999,7 @@ function _strm(self, data)
 		self.header = data.header
 		self.autostart = data.autostart
 		self.threshold = data.threshold * 1024
+		log:debug("threshold ",self.threshold)
 
 		-- Is this a reconnect (bit 0x40)?
 		if (self.flags & 0x40 ~= 0 and self.flags & 0x10 == 0) then
@@ -1026,14 +1037,16 @@ function _strm(self, data)
 		self.sentAudioUnderrunEvent = false
 		self.isLooping = false
 		self.ignoreStream = false
-		self.decodeThreshold = 2048
+		self.decodeThreshold = DECODE_THRESHOLD
 
 		if self.mode == 'o' then
 			-- For Vorbis, where we should use the buffer threshold value
 			-- Even this may not be enough for files with large comments...
 			self.decodeThreshold = self.threshold
+			log:debug("Setting self.decodeThreshold(buffer) to threshold",self.threshold)
 		
-		elseif self.threshold > (254 * 1024) and (self.mode == 'f' or self.mode == 'p' or self.mode == 'l') then 
+		elseif self.threshold > DECODE_HIGH_BITRATE_THRESHOLD and
+			(self.mode == 'f' or self.mode == 'p' or self.mode == 'l') then
 			-- For lossless (high bit-rate) formats, lets try to get a much bigger chunk so that
 			-- any server-side delay in streaming caused by playlist updates, etc., do not cause undue problems.
 			--
@@ -1043,8 +1056,8 @@ function _strm(self, data)
 			-- For a radio stream transcoded to FLAC (50% compression) from 44100/16/2, 1MB => 11s
 			-- which is a long time but this should not generally happen because self.threshold should be < 255KiB
 			-- in that case.
-			
-			self.threshold = 1000000
+			self.threshold = DECODE_HIGH_RATE_THRESHOLD
+			log:debug("Setting threshold for lossless high bit-rate formats ",self.threshold)
 		end
 
 		if self.flags & 0x10 ~= 0 then
