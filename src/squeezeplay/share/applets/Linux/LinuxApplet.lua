@@ -377,6 +377,7 @@ function reboot(self,now)
 end
 
 -- framebuffer blanking... and backlight
+-- Screen on/off support for standard fbdevices or at lease as close as we can get
 function setBrightness(self,level)
         if level == "off" then
                 level = 0
