@@ -39,9 +39,16 @@ function defaultSettings(self)
 		whenPlaying = "NowPlaying:openScreensaver",
 		whenOff = "false:false",
 		timeout = 30000,
+		poweron_window_time = 10000,
 	}
 end
 
+function upgradeSettings(self, settings)
+        if settings.poweron_window_time == nil then
+              settings.poweron_window_time = 5000
+        end
+        return settings
+end
 
 function registerApplet(meta)
 
@@ -54,6 +61,9 @@ function registerApplet(meta)
 
 	-- Menu for configuration
 	jiveMain:addItem(meta:menuItem('appletScreenSavers', 'screenSettings', "SCREENSAVERS", function(applet, ...) applet:openSettings(...) end))
+
+	jiveMain:addItem(meta:menuItem('appletScreenSavers', 'advancedSettings', "SCREENSAVERS",  function(applet, ...) applet:openAdvSettings(...) end))
+
 end
 
 

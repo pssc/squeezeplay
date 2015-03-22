@@ -77,6 +77,15 @@ SCREENSAVER_DELAY
 	RU	Задержка
 	SV	Fördröjning
 
+SCREENSAVER_DELAY_PLAYING
+	EN	Delay Playing
+
+SCREENSAVER_DELAY_STOPPED
+	EN	Delay Stopped
+
+SCREENSAVER_POWERON_WINDOW_TIME
+	EN	PowerOn Display Time
+
 SCREENSAVER_SELECT_HELP
 	CS	Pro výběr šetřiče obrazovky stiskněte prostřední tlačítko, pro náhled tlačítko Play.
 	DA	Tryk på midterknappen for at vælge en pauseskærm; afspil viser eksempel.
@@ -181,6 +190,21 @@ SCREENSAVER_SELECT_OFF_HELP_FAB4
 	PL	Wybierz wygaszacz ekranu wyświetlany po wyłączeniu tego urządzenia Squeezebox. Naciśnij przycisk odtwarzania, aby wyświetlić podgląd wygaszacza ekranu.
 	RU	Коснитесь здесь, чтобы выбрать заставку, отображаемую, когда Squeezebox выключен. Коснитесь и удерживайте, чтобы просмотреть заставку.
 	SV	Peka för att välja en skärmsläckare som ska visas när Squeezebox-spelaren är avstängd. Tryck och håll ner om du vill förhandsgranska den.
+
+DELAY_5_SEC
+	CS	5 vteřin
+	DA	5 sekunder
+	DE	5 Sekunden
+	EN	5 seconds
+	ES	5 segundos
+	FI	5 sekuntia
+	FR	5 secondes
+	IT	5 secondi
+	NL	5 seconden
+	NO	5 sekunder
+	PL	5 sekund
+	RU	5 секунд
+	SV	5 sekunder
 
 DELAY_10_SEC
 	CS	10 vteřin

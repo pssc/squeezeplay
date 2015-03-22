@@ -36,7 +36,6 @@ local System           = require("jive.System")
 local Textarea         = require("jive.ui.Textarea")
 local string           = require("string")
 local table            = require("jive.utils.table")
-local debug            = require("jive.utils.debug")
 local Player           = require("jive.slim.Player")
 
 local appletManager    = appletManager
@@ -51,6 +50,7 @@ oo.class(_M, Applet)
 local _globalSsAllowedActions = {
 			["pause"] = 1,
 			["shutdown"] = 1,
+			["power_off"] = 1,
 		}
 
 function init(self, ...)
@@ -70,19 +70,20 @@ function init(self, ...)
 	) 
 
 	self.timeout = self:getSettings()["timeout"]
+	self.extension = 0
 
 	self.active = {}
 	self.demoScreensaver = nil
 	self.isScreenSaverActive = false
 
-	-- wait for at least a minute after we start before activating a screensaver,
-	-- otherwise the screensaver may have started when you exit the bootscreen
-	self.timer = Timer(60000, function() self:_activate() end, true)
-	self.timer:start()
+	self.timer = Timer(self.timeout, function() self:_activate() end, true)
+	--as we need the time as of then... in case some other event restarted us.
+	jiveMain:registerPostOnScreenInit(function() self.timer:restart() end)
 
 	self.defaultSettings = self:getDefaultSettings()
 
 	-- listener to restart screensaver timer
+	-- FIXME Nav KEYS?
 	Framework:addListener(ACTION | EVENT_SCROLL | EVENT_MOUSE_ALL | EVENT_MOTION | EVENT_IR_ALL,
 		function(event)
 			if (event:getType() & EVENT_IR_ALL) > 0 then
@@ -91,8 +92,9 @@ function init(self, ...)
 				end
 			end
 			
-			-- restart timer if it is running
-			self.timer:setInterval(self.timeout)
+			log:debug("restart timer event=",event:tostring()," to ",self.timeout)
+			self.timer:restart(self.timeout)
+			self.extension = 0
 			return EVENT_UNUSED
 		end,
 		true
@@ -101,14 +103,13 @@ function init(self, ...)
 	Framework:addListener(ACTION | EVENT_KEY_PRESS | EVENT_KEY_HOLD | EVENT_SCROLL | EVENT_MOUSE_PRESS | EVENT_MOUSE_HOLD | EVENT_MOUSE_DRAG,
 		function(event)
 
-			self.isScreenSaverActive = false
-			-- screensaver is not active
 			if #self.active == 0 then
+				log:debug("screensaver is not active")
 				return EVENT_UNUSED
 			end
 
 			if Framework:isAnActionTriggeringKeyEvent(event, EVENT_KEY_ALL ) then
-				--will come back as an ACTION, let's respond to it then to give other action listeners a chance
+				log:debug("will come back as an ACTION, let's respond to it then to give other action listeners a chance")
 				return 	EVENT_UNUSED
 			end
 
@@ -141,8 +142,8 @@ function init(self, ...)
 
 				end
 			end
-			log:debug("Closing screensaver event=", event:tostring())
 
+			log:debug("Closing screensaver event=", event:tostring())
 			self:deactivateScreensaver()
 
 			-- keys should close the screensaver, and not
@@ -177,14 +178,12 @@ function init(self, ...)
 	Framework:addListener(ACTION | EVENT_SCROLL | EVENT_MOUSE_PRESS | EVENT_MOUSE_HOLD | EVENT_MOUSE_DRAG,
 		function(event)
 
-			self.isScreenSaverActive = false
 			-- screensaver is not active
 			if #self.active == 0 then
 				return EVENT_UNUSED
 			end
 
-			log:debug("Closing screensaver(2) event=", event:tostring())
-
+			log:debug("Closing screensaver last resort event=", event:tostring())
 			self:deactivateScreensaver()
 
 			if event:getType() == ACTION then
@@ -227,11 +226,23 @@ end
 -- the force arg is set to true for preview, allowing screensavers that might be not shown in certain circumstances to still be previewed
 -- see ClockApplet for example
 function _activate(self, the_screensaver, force, isServerRequest)
-	log:debug("Screensaver activate")
+	log:debug("Screensaver activate ", self.timeout)
 
 	-- what screensaver, check the playmode of the current player
 	if the_screensaver == nil then
-		self.currentSS = self:_getDefaultScreensaver()
+		-- get timer compare to current timeout and reset timer temoprarily for extended run
+		local to, extension
+		self.currentSS, to = self:_getDefaultScreensaver()
+		extension = to-self.timeout
+		if extension > 0 and  self.extension < extension then
+			self.extension = extension - self.extension
+			self.timer:restart(self.extension)
+			log:debug("Extension for ",self.currentSS," for ",extension)
+			return
+		elseif self.extension > 0 then
+			log:debug("Extension finished ",self.currentSS," for ",self.extension)
+			self.extension = 0
+		end
 	else
 		self.currentSS = the_screensaver
 	end
@@ -244,7 +255,7 @@ function _activate(self, the_screensaver, force, isServerRequest)
 		log:warn("BlankScreen SS is currently active and we're trying to reactivate it. Nothing to activate then, so return")
 		return
 	else
-		log:debug('DEBUG: self:isScreensaverActive()', self:isScreensaverActive(), ' self.current: ', self.current)
+		log:debug('_activate isScreensaverActive()=', self:isScreensaverActive(), ' self.current: ', self.current)
 	end
 
 	-- check if the top window will allow screensavers, if not then
@@ -254,7 +265,9 @@ function _activate(self, the_screensaver, force, isServerRequest)
 		Framework.windowStack[1]:addListener(EVENT_WINDOW_INACTIVE,
 			function()
 				if not self.timer:isRunning() then
-					self.timer:restart(10000)
+					log:debug('Screen Saver Retry')
+					self.timer:restart(10000) -- FIXME
+					self.extension = 0
 				end
 			end)
 		return
@@ -292,11 +305,12 @@ function _activate(self, the_screensaver, force, isServerRequest)
 		-- screensaverWindow, and open then itself
 		local instance = appletManager:loadApplet(screensaver.applet)
 		if instance[screensaver.method](instance, force, screensaver.methodParam) ~= false then
-			log:info("activating " .. screensaver.applet .. " screensaver")
+			log:info("activated " .. screensaver.applet .. " screensaver")
 		end
+		self.timer:stop() -- ?
 		self.isScreenSaverActive = true
-	-- special case for screensaver of NONE
 	else
+		-- special case for screensaver of NONE
 		log:info('There is no screensaver applet available for this mode')
 	end
 end
@@ -305,6 +319,7 @@ end
 
 --service method
 function activateScreensaver(self, isServerRequest)
+	log:debug("activateScreensaver service")
 	self:_activate(nil, _, isServerRequest)
 end
 
@@ -324,7 +339,7 @@ function _closeAnyPowerOnWindow(self)
 		if ss then
 			local screensaver = self.screensavers[ss]
 			if not screensaver or not screensaver.applet then
-				-- no screensaver, do nothing
+				log:debug("no screensaver, do nothing")
 				return
 			end
 
@@ -356,20 +371,22 @@ end
 
 function _getDefaultScreensaver(self)
 	local ss
+	local dd = 0
+	local set = self:getSettings()
 
 	local ssMode = self:_getMode()
 	if ssMode == 'whenOff' then
 		ss = self:_getOffScreensaver()
-		log:debug("whenOff: ", ss)
 	elseif ssMode == 'whenPlaying' then
-		ss = self:getSettings()["whenPlaying"]
-		log:debug("whenPlaying: ", ss)
+		ss = set["whenPlaying"]
+		dd = set["whenPlayingDelay"] or 0
 	else
-		ss = self:getSettings()['whenStopped']
-		log:debug("whenStopped: ", ss)
+		ss = set['whenStopped']
+		dd = set['whenStoppedDelay'] or 0
 	end
+	log:debug("_getDefaultScreensaver ",ssMode,": ", ss," ",dd)
 
-	return ss
+	return ss, dd
 end
 
 
@@ -403,6 +420,7 @@ function _deactivate(self, window, the_screensaver)
 		instance[screensaver.closeMethod](instance, screensaver.methodParam)
 	end
 	window:hide(Window.transitionNone)
+	self.isScreenSaverActive = false
 	self.demoScreensaver = nil
 
 end
@@ -416,14 +434,14 @@ function notify_playerModeChange(self, player, mode)
 	local oldActive = self.active
 
 	if #oldActive == 0 then
-		-- screensaver is not active
+		log:debug("screensaver is not active")
 		return
 	end
 
 	self.active = {}
 	self:_activate(nil)
 
-	-- close active screensaver
+	log:debug("close active screensaver")
 	for i, window in ipairs(oldActive) do
 		_deactivate(self, window, self.demoScreensaver)
 	end
@@ -461,7 +479,7 @@ function _powerActionHandler(self, actionEvent)
 		return
 	end
 
-	--else show power on window (if the specific SS allows it)
+	log:debug("show power on window (if the specific SS allows it)")
 	self:_showPowerOnWindow()
 end
 
@@ -476,7 +494,7 @@ function _showPowerOnWindow(self)
 	if ss then
 		local screensaver = self.screensavers[ss]
 		if not screensaver or not screensaver.applet then
-			-- no screensaver, do nothing
+			log:debug("no screensaver, do nothing")
 			return
 		end
 
@@ -502,7 +520,7 @@ function _showPowerOnWindow(self)
 						end)
 	self.powerOnWindow:show(Window.transitionNone)
 
-	self.powerOnWindow:addTimer(    5000,
+	self.powerOnWindow:addTimer(    self:getSettings()['poweron_window_time'],
 					function ()
 						self:_closeAnyPowerOnWindow()
 					end,
@@ -539,7 +557,7 @@ function screensaverWindow(self, window, scrollAllowed, ssAllowedActions, mouseA
 	-- the screensaver is active when this window is pushed to the window stack
 	window:addListener(EVENT_WINDOW_PUSH,
 			   function(event)
-				   log:debug("screensaver opened ", #self.active)
+				   log:debug("screensaver opened on Push ", #self.active," ",ssName)
 
 				   table.insert(self.active, window)
 				   self.current = ssName
@@ -554,15 +572,16 @@ function screensaverWindow(self, window, scrollAllowed, ssAllowedActions, mouseA
 				   self.current = nil
 				   if #self.active == 0 then
 					   log:debug("screensaver inactive")
-					   self.timer:start()
+					   self.timer:restart(self.timeout)
+					   self.extension = 0
 				   end
 
-				   log:debug("screensaver closed ", #self.active)
+				   log:debug("screensaver closed on Pop ", #self.active, " ", ssName)
 				   return EVENT_UNUSED
 			   end)
 
 	if not self:isSoftPowerOn() then
-		--allow input to pass through, so that the following listeners will be honored
+		-- allow input to pass through, so that the following listeners will be honored
 	        self:_setSSAllowedActions(true, {}, true)
 
 		window:ignoreAllInputExcept(    { "power", "power_on", "power_off" },
@@ -589,17 +608,21 @@ end
 
 --service method
 function restartScreenSaverTimer(self)
+	log:debug("restartScreenSaverTimer() Service")
+	self.extension = 0
 	self.timer:restart()
 end
 
 
 --service method
 function isScreensaverActive(self)
+	log:debug("isScreensaverActive=",self.isScreenSaverActive)
 	return self.isScreenSaverActive
 end
 
 --service method
 function deactivateScreensaver(self)
+	log:debug("deactivateScreensaver Service")
 
 	-- close all screensaver windows -0 do oldActive swap to avoid deleting iterated values when there is more than one window
 	local oldActive = self.active
@@ -670,9 +693,19 @@ function setScreenSaver(self, mode, key)
 end
 
 
-function setTimeout(self, timeout)
-	self:getSettings()["timeout"] = timeout
+function setTimeout(self, timeout, timer)
+	local set = self:getSettings()
 
+	if timer then
+		set[timer]=timeout
+		if timeout > self.timeout then
+			-- timer runs on shortest timer , as it will be extended
+			timeout = self.timeout
+		end
+	end
+	-- setting a long master timer suppresses shorter specific timers
+	-- setting short spec time pushes down master timer.
+	set["timeout"] = timeout
 	self.timeout = timeout
 	self.timer:setInterval(self.timeout)
 end
@@ -737,63 +770,104 @@ function screensaverSetting(self, menuItem, mode)
 	return window
 end
 
-
-function timeoutSetting(self, menuItem)
+function timeoutSetting(self, menuItem, timer)
 	local group = RadioGroup()
 
-	local timeout = self:getSettings()["timeout"]
+	local timeout = self:getSettings()[timer] or self:getSettings()['timeout']
 	
 	local window = Window("text_list", menuItem.text, 'settingstitle')
+
+	local settings = false
 	window:addWidget(SimpleMenu("menu",
 		{
 			{
+				text = self:string('DELAY_5_SEC'),
+				style = 'item_choice',
+				check = RadioButton("radio", group, function() self:setTimeout(10000, timer) settings=true end, timeout == 5000),
+			},
+			{
 				text = self:string('DELAY_10_SEC'),
 				style = 'item_choice',
-				check = RadioButton("radio", group, function() self:setTimeout(10000) end, timeout == 10000),
+				check = RadioButton("radio", group, function() self:setTimeout(10000, timer) settings=true end, timeout == 10000),
 			},
 			{
 				text = self:string('DELAY_20_SEC'),
 				style = 'item_choice',
-				check = RadioButton("radio", group, function() self:setTimeout(20000) end, timeout == 20000),
+				check = RadioButton("radio", group, function() self:setTimeout(20000, timer) settings=true end, timeout == 20000),
 			},
 			{
 				text = self:string('DELAY_30_SEC'),
 				style = 'item_choice',
-				check = RadioButton("radio", group, function() self:setTimeout(30000) end, timeout == 30000),
+				check = RadioButton("radio", group, function() self:setTimeout(30000, timer) settings=true end, timeout == 30000),
 			},
 			{
 				text = self:string('DELAY_1_MIN'),
 				style = 'item_choice',
-				check = RadioButton("radio", group, function() self:setTimeout(60000) end, timeout == 60000),
+				check = RadioButton("radio", group, function() self:setTimeout(60000, timer) settings=true end, timeout == 60000),
 			},
 			{ 
 				text = self:string('DELAY_2_MIN'),
 				style = 'item_choice',
-				check = RadioButton("radio", group, function() self:setTimeout(120000) end, timeout == 120000),
+				check = RadioButton("radio", group, function() self:setTimeout(120000, timer) settings=true end, timeout == 120000),
 			},
 			{
 				text = self:string('DELAY_5_MIN'),
 				style = 'item_choice',
-				check = RadioButton("radio", group, function() self:setTimeout(300000) end, timeout == 300000),
+				check = RadioButton("radio", group, function() self:setTimeout(300000, timer) settings=true end, timeout == 300000),
 			},
 			{ 
 				text = self:string('DELAY_10_MIN'),
 				style = 'item_choice',
-				check = RadioButton("radio", group, function() self:setTimeout(600000) end, timeout == 600000),
+				check = RadioButton("radio", group, function() self:setTimeout(600000, timer) settings=true end, timeout == 600000),
 			},
 			{ 
 				text = self:string('DELAY_30_MIN'),
 				style = 'item_choice',
-				check = RadioButton("radio", group, function() self:setTimeout(1800000) end, timeout == 1800000),
+				check = RadioButton("radio", group, function() self:setTimeout(1800000, timer) settings=true end, timeout == 1800000),
 			},
 		}))
 
-	window:addListener(EVENT_WINDOW_POP, function() self:storeSettings() end)
+	window:addListener(EVENT_WINDOW_POP, function() if settings then self:storeSettings() end end)
 
 	self:tieAndShowWindow(window)
 	return window
 end
 
+function openAdvSettings(self, menuItem)
+	local menu = SimpleMenu("menu",
+		{
+			{
+				text = self:string("SCREENSAVER_DELAY_PLAYING"),
+				weight = 5,
+				sound = "WINDOWSHOW",
+				callback = function(event, menu_item)
+						   self:timeoutSetting(menu_item, 'whenPlayingDelay')
+					   end
+			},
+			{
+				text = self:string("SCREENSAVER_DELAY_STOPPED"),
+				weight = 5,
+				sound = "WINDOWSHOW",
+				callback = function(event, menu_item)
+						   self:timeoutSetting(menu_item ,'whenStoppedDelay')
+					   end
+			},
+			{
+				text = self:string("SCREENSAVER_POWERON_WINDOW_TIME"),
+				weight = 5,
+				sound = "WINDOWSHOW",
+				callback = function(event, menu_item)
+						   self:timeoutSetting(menu_item ,'poweron_window_time')
+					   end
+			},
+		})
+
+	local window = Window("text_list", menuItem.text, 'advsettingstitle')
+	window:addWidget(menu)
+
+	self:tieAndShowWindow(window)
+	return window
+end
 
 function openSettings(self, menuItem)
 
