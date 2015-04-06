@@ -5,15 +5,19 @@
 ##
 
 ## Change these if you changed your install path
-INSTALL_DIR=/opt/squeezeplay/
-LIB_DIR=$INSTALL_DIR/lib
-INC_DIR=$INSTALL_DIR/inc
+SP_INSTALL_DIR=${SP_INSTALL_DIR:-"/opt/squeezeplay"}
+# /usr/lib added to pick up system codecs such as libmad as they are not ditrbuted with squeezeplay by default
+LIB_DIR=${SP_INSTALL_DIR}/lib/`uname -m`:${SP_INSTALL_DIR}/lib:/usr/lib
+
+#SDL Options thay may be available to us.
+# no wait for vsync
+#SDL_FBCON_NOVBL=1
+#export SDL_FBCON_NOVBL
 
 ## Start up
-export LD_LIBRARY_PATH=$LIB_DIR:$LD_LIBRARY_PATH
-export LD_INCLUDE_PATH=$INC_DIR:$LD_INCLUDE_PATH
-export PATH=$PATH:$INSTALL_DIR/bin
+LD_LIBRARY_PATH=$LIB_DIR:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH
+PATH=$PATH:${SP_INSTALL_DIR}/bin
+export PATH
 
-cd $INSTALL_DIR/bin
-./jive
-
+cd ${SP_INSTALL_DIR}/bin && exec ./jive
