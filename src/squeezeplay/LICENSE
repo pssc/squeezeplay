@@ -23,3 +23,36 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
+Addional code Copyright 2013-2015, Phillip Camp, phillip.camp<remove>@gmail.com.
+
+These additions are subject to the same license as above.
+
+Logitech copyright notices are retained in all files which were authored by Logitech.
+
+Grid layout code by GWENDESIGN / Felix Mueller
+
+Visualizer support based on code by presslab-us (https://github.com/presslab-us/jivelite)
+
+Jivelite based and additional code:
+
+Copyright 2013-2014, Adrian Smith, triode1@btinternet.
+
+These additions are subject to the same license as above.
+
+Also includes image resize adapted from libgd - see source of resize.c for license.
+
+
+Repository also includes source for the following libraries.  These are unchanged except for include file modification
+to support installation from source:
+and follow their own licenses:
+- cjson
+- luafilesystem
+- luaexpat
+- luamd5
+- luasocket
+The repository also includes other libraries are disbruted under their own licence
+
+Repository also includes the following additional skins:
+- Joggler, by "justblair" and others: http://www.justblair.co.uk/more-fixing-of-squeezeplay-for-the-joggler.html
+
