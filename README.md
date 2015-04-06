@@ -4,6 +4,7 @@ Squeezeplay Fork
 
 All patches and pull requests considered...
 
+Efforts are currently focused on our SqueezePi release for Pi based solutions.
 
 Please lodge issues here and use:-
 
