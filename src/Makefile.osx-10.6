@@ -215,12 +215,12 @@ LIBMAD_DIR=libmad-0.15.1b
 generated/${LIBMAD_DIR}/_patched.txt:
 	mkdir -p generated; cd generated; ftp ftp://ftp.mars.org/pub/mpeg/${LIBMAD_DIR}.tar.gz; tar xvf ./${LIBMAD_DIR}.tar.gz; \
 	touch ${LIBMAD_DIR}/aclocal.m4; \
-	patch -p0 < ../libmad-0.15.1b-universal-configure.ac.patch; \
-	patch -p0 < ../libmad-0.15.1b-universal-config.h.in.patch; \
+	patch -p0 < ../${LIBMAD_DIR}/ibmad-0.15.1b-universal-configure.ac.patch; \
+	patch -p0 < ../${LIBMAD_DIR}/libmad-0.15.1b-universal-config.h.in.patch; \
 	touch ${LIBMAD_DIR}/Makefile.am ; \
 	touch ${LIBMAD_DIR}/config.h ; \
 	touch ${LIBMAD_DIR}/Makefile.in ; \
-	patch -p0 < ../libmad-0.15.1b-universal-configure.patch; \
+	patch -p0 < ../${LIBMAD_DIR}/libmad-0.15.1b-universal-configure.patch; \
 	touch ${LIBMAD_DIR}/_patched.txt
 
 		
