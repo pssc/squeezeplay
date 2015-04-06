@@ -1,0 +1,98 @@
+Notes On Alsa Buffer Tunning Settings
+
+1 frame = # channels x sample_bytes.
+1 frame corresponds to 2 channels x 16 bits = 4 bytes.
+
+The periods is the number of periods in a ring-buffer.  In OSS, called
+as "fragments".
+
+period_size = period time * frame_size
+buffer_size = period_size * periods
+period_bytes = period_size * bytes_per_frame
+
+The "period" defines the frequency to update the status, usually via
+the invokation of interrupts.  The "period_size" defines the frame
+sizes corresponding to the "period time".  This term corresponds to
+the "fragment size" on OSS.  On major sound hardwares, a ring-buffer
+is divided to several parts and an irq is issued on each boundary.
+The period_size defines the size of this chunk.
+
+On some hardwares, the irq is controlled on the basis of a timer.  In
+this case, the period is defined as the timer frequency to invoke an
+irq.
+
+--------------------
+
+periodCount  : 4
+bufferTime   : 92790 (μs) (10^-6)
+
+
+period_time  : 23197 = bufferTime / periodCount
+period_time = bufferTime / periodCount
+period_size : 92790
+
+buffer_size = bufferTime rate
+
+channels     : 2
+rate         : 44100
+msbits       : 16
+buffer_size  : 4092 (frames)
+period_size  : 1023 (frames)
+
+bytes_per_frame = channels x msbits / 8
+4 = (16 x 2 / 8)
+
+period_bytes = period_time * bytes_per_frame
+
+period_size = buffer_size / bytes_per_frame
+
+periodsize * period is your total buffer size
+
+0.08 * 44100 = 3528
+buffer_size(us) = bufferTime * 10^-6 * rate
+
+
+periodCount  : 8
+bufferTime   : 80000
+
+  channels     : 2
+  rate         : 44100
+  msbits       : 16
+  buffer_size  : 3528
+  period_size  : 441
+  period_time  : 10000
+
+5ms latency?
+
+latency = periodsize * periods / (rate * bytes_per_frame) 
+(441*8) / (44100 * 4)
+
+# Worked Examples
+
+6000/44100
+.13605442176870748299
+
+ bufferTime : 136054
+ periodCount : 6
+
+period_size  : 1000 ~4k for 16bit 44.1
+buffer_size  : 6000 ~24k
+
+# pt=5 
+5000/44100*10^6
+.11337868480725623582
+113378.68480725623582000000
+
+1023 * 5
+5115
+5115/44100
+.11598639455782312925
+1023*4
+4092
+: 115986
+
+# For effects output?
+# 44.1 16 bit 
+pc = 3
+period_size = 1000 
+bt=68027
