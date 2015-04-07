@@ -179,9 +179,23 @@ tolua++: lua
 #
 # squeezeplay
 #
-.PHONY: app flac libmad tremor squeezeplay squeezeplay_desktop squeezeplay_contrib squeezeplay_private freefont freefont-debian axtls rtmp
+.PHONY: app flac libmad tremor squeezeplay squeezeplay_desktop squeezeplay_contrib squeezeplay_private freefont freefont-debian axtls rtmp jivelite squeezeplay_wicd_frontend 800x480Skin
 app: flac libmad tremor ${SPPRIVATE_TARGETS} squeezeplay squeezeplay_desktop squeezeplay_contrib freefont rtmp squeezeplay-tgz 
 
+generated/jivelite/Makefile: generated/.m
+	cd generated/ && ( cd jivelite || git clone https://github.com/pssc/jivelite.git -b master jivelite )
+
+jivelite:  generated/jivelite/Makefile
+
+generated/squeezeplay_wicd_frontend/README: generated/.m
+	cd generated/ && ( cd squeezeplay_wicd_frontend || git clone https://github.com/pssc/squeezeplay-wicd-frontend.git -b master squeezeplay_wicd_frontend )
+
+squeezeplay_wicd_frontend: generated/squeezeplay_wicd_frontend/README
+
+generated/800x480Skin/800x480SkinMeta.lua: generated/.m
+	cd generated/ && ( cd 800x480Skin || git clone https://github.com/pssc/Squeezeplay-800x480Skin.git -b master 800x480Skin )
+
+800x480Skin: generated/800x480Skin/800x480SkinMeta.lua
 
 # portaudio
 portaudio_v19_20111121/Makefile:
@@ -288,6 +302,7 @@ freefont:
 # This builds the .tarball. It's called by 'all' so no need to run it manually
 # 
 squeezeplay-tgz: squeezeplay/Makefile
+	-rm ../build/linux/lib/libmad.*
 	cd squeezeplay; make squeezeplay-tgz
 
 #
@@ -311,9 +326,8 @@ clean_generated:
 # clean
 #
 
-.PHONY: clean
+.PHONY: clean clean-generated
 clean:
-	-rm -rf generated
 	-cd freetype-2.1.10; make distclean
 	-cd SDL-1.2.15; make distclean; rm -f include/SDL_config.h;
 	-cd SDL_image-1.2.5; make distclean
@@ -337,4 +351,3 @@ clean:
 	-cd squeezeplay; make distclean
 	-cd squeezeplay_private; make distclean
 	-cd squeezeplay_desktop; make distclean
-	-rm -rf generated
