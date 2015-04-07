@@ -1,6 +1,9 @@
-Squeezeplay Fork
-================
+Squeezeplay - Graphical SqueezeBox Music Player
+===============================================
 
+Requires the Logtech Media Server(aka Slim Server, Squeeze Centre and Squeezebox Server).
+
+This is a fork of the Logitech offical public source.
 
 All patches and pull requests considered...
 
