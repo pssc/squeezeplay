@@ -49,6 +49,7 @@
 #include "SDL_fbriva.h"
 
 /*#define FBCON_DEBUG*/
+#define FBACCEL_DEBUG
 
 #if defined(i386) && defined(FB_TYPE_VGA_PLANES)
 #define VGA16_FBCON_SUPPORT
@@ -63,6 +64,11 @@ static inline void outb (unsigned char value, unsigned short port)
 } 
 */
 #endif /* FB_TYPE_VGA_PLANES */
+/* Various screen update functions available */
+static void FB_DirectUpdate(_THIS, int numrects, SDL_Rect *rects);
+#ifdef VGA16_FBCON_SUPPORT
+static void FB_VGA16Update(_THIS, int numrects, SDL_Rect *rects);
+#endif
 
 /* A list of video resolutions that we query for (sorted largest to smallest) */
 /* http://en.wikipedia.org/wiki/Graphics_display_resolution */
@@ -161,6 +167,7 @@ static void FB_UnlockHWSurface(_THIS, SDL_Surface *surface);
 static void FB_FreeHWSurface(_THIS, SDL_Surface *surface);
 static int FB_WaitVBL(_THIS);
 static int FB_WaitIdle(_THIS);
+static int FB_NULL(_THIS);
 static int FB_FlipHWSurface(_THIS, SDL_Surface *surface);
 
 /* Internal palette functions */
@@ -183,8 +190,9 @@ static int SDL_getpagesize(void)
 	return 4096;  /* this is what it USED to be in Linux... */
 #endif
 }
-
+#ifdef FBCON_DEBUG
 static void print_finfo(struct fb_fix_screeninfo *finfo);
+#endif
 
 
 /* Small wrapper for mmap() so we can play nicely with no-mmu hosts
@@ -250,7 +258,8 @@ static SDL_VideoDevice *FB_CreateDevice(int devindex)
 		return(0);
 	}
 	SDL_memset(this->hidden, 0, (sizeof *this->hidden));
-	wait_vbl = FB_WaitVBL;
+
+	wait_vbl = SDL_getenv("SDL_FBCON_NOVBL") ? FB_NULL : FB_WaitVBL;
 	wait_idle = FB_WaitIdle;
 	mouse_fd = -1;
 	keyboard_fd = -1;
@@ -260,7 +269,12 @@ static SDL_VideoDevice *FB_CreateDevice(int devindex)
 	this->ListModes = FB_ListModes;
 	this->SetVideoMode = FB_SetVideoMode;
 	this->SetColors = FB_SetColors;
+#ifdef VGA16_FBCON_SUPPORT
+	/* Set the update rectangle function in the Video Mode change function */
 	this->UpdateRects = NULL;
+#else
+	this->UpdateRects = FB_DirectUpdate;
+#endif
 	this->VideoQuit = FB_VideoQuit;
 	this->AllocHWSurface = FB_AllocHWSurface;
 	this->CheckHWBlit = NULL;
@@ -792,7 +806,7 @@ static int FB_VideoInit(_THIS, SDL_PixelFormat *vformat)
 			break;
 		    default:
 #ifdef FBACCEL_DEBUG
-			printf("Unknown hardware accelerator.\n");
+			printf("Unknown hardware accelerator %x.\n",finfo.accel);
 #endif
 			break;
 		}
@@ -831,11 +845,6 @@ static SDL_Rect **FB_ListModes(_THIS, SDL_PixelFormat *format, Uint32 flags)
 	return(SDL_modelist[((format->BitsPerPixel+7)/8)-1]);
 }
 
-/* Various screen update functions available */
-static void FB_DirectUpdate(_THIS, int numrects, SDL_Rect *rects);
-#ifdef VGA16_FBCON_SUPPORT
-static void FB_VGA16Update(_THIS, int numrects, SDL_Rect *rects);
-#endif
 
 #ifdef FBCON_DEBUG
 static void print_vinfo(struct fb_var_screeninfo *vinfo)
@@ -1214,14 +1223,13 @@ static SDL_Surface *FB_SetVideoMode(_THIS, SDL_Surface *current,
 	/* Update for double-buffering, if we can */
 	if ( flags & SDL_DOUBLEBUF ) {
 		if ( vinfo.yres_virtual >= (vinfo.yres*2) ) {
+			/* offsets for mode change are 0 so we start drawing on 2nd buffer */
 			current->flags |= SDL_DOUBLEBUF;
-			flip_page = 0;
 			flip_address[0] = (char *)current->pixels;
 			flip_address[1] = (char *)current->pixels+
 					current->h*current->pitch;
-			this->screen = current;
-			FB_FlipHWSurface(this, current);
-			this->screen = NULL;
+			flip_page = 0;
+			current->pixels = flip_address[1];
 #ifdef FBCON_DEBUG
                         fprintf(stderr, "SDL_DOUBLEBUF 0:%x 1:%x pitch %x\n",(unsigned int)flip_address[0],(unsigned int) flip_address[1],current->pitch);
 #endif
@@ -1229,8 +1237,10 @@ static SDL_Surface *FB_SetVideoMode(_THIS, SDL_Surface *current,
 		}
 	}
 
+#ifdef VGA16_FBCON_SUPPORT
 	/* Set the update rectangle function */
 	this->UpdateRects = FB_DirectUpdate;
+#endif
 
 	/* We're done */
 	return(current);
@@ -1469,6 +1479,11 @@ static int FB_WaitVBL(_THIS)
         return 0;
 }
 
+static int FB_NULL(_THIS)
+{
+	return 0;
+}
+
 static int FB_WaitIdle(_THIS)
 {
 #ifdef FBCON_DEBUG
@@ -1485,7 +1500,7 @@ static int FB_FlipHWSurface(_THIS, SDL_Surface *surface)
 	}
 
 #ifdef FBCON_DEBUG
-	fprintf(stderr, "Flip vinfo offset changing to %d current:\n",flip_page*cache_vinfo.yres);
+	fprintf(stderr, "Flip %d vinfo offset changing to %d current:\n",flip_page,flip_page*cache_vinfo.yres);
 	print_vinfo(&cache_vinfo);
 #endif
 	/* Wait for vertical retrace and then flip display */
@@ -1498,8 +1513,11 @@ static int FB_FlipHWSurface(_THIS, SDL_Surface *surface)
 		SDL_SetError("ioctl(FBIOPAN_DISPLAY) failed");
 		return(-1);
 	}
-	flip_page = !flip_page;
+	flip_page ^= 1;
 
+#ifdef FBCON_DEBUG
+	fprintf(stderr, " surface->pixels changing to %x current:\n",flip_address[flip_page]);
+#endif
 	surface->pixels = flip_address[flip_page];
 	return(0);
 }
@@ -1977,6 +1995,7 @@ static void FB_VideoQuit(_THIS)
 
 		/* If the framebuffer is not to be cleared, make sure that we won't
 		 * display the previous frame when disabling double buffering. */
+		//Dubious restor to 0 first?
 		if ( dontClearPixels && flip_page == 0 ) {
 			SDL_memcpy(flip_address[0], flip_address[1], this->screen->pitch * this->screen->h);
 		}
