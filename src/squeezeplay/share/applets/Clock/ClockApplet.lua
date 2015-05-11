@@ -1365,6 +1365,91 @@ function DotMatrix:getDotMatrixClockSkin(skinName)
 	return s
 end
 
+local ppi = 96
+-- : https://css-tricks.com/viewport-sized-typography/
+function _vwfont(pt)
+-- 240 x 320 QVGA (PORTRAIT)
+-- 90pt
+	local screenWidth, screenHeight = Framework:getScreenSize()
+	local ptSize = 1/72
+
+        local vw =  240/100
+        local i = ptSize * pt
+        local px = i * ppi
+	local vws = px/vw
+-- 1280 x 720   
+        --local cwx = 1280/100
+        local cvw = screenWidth/100
+        local cpx = vws*cvw
+        local ci = cpx / ppi
+        local npt = math.floor(ci / ptSize)
+
+	log:warn("_vwfont ",pt,"/",wxSize,"/", npt)
+        return _font(npt)
+end
+
+-- : https://css-tricks.com/viewport-sized-typography/
+function _vhfont(ptSize)
+-- 240 x 320 QVGA (PORTRAIT)
+-- 90pt
+	local screenWidth, screenHeight = Framework:getScreenSize()
+        local pt = 1/72
+
+        local wx = 320/100
+        local i = ptSize * pt
+        local px = i * ppi
+	local wxSize = px/wx
+-- 1280 x 720   
+        --local cwx = 1280/100
+        local cwx = screenHeight/100
+        local cpx = wxSize*cwx
+        local ci = cpx / ppi
+        local npt = math.floor(ci / pt)
+
+	log:warn("_vhfont ",ptSize,"/",wxSize,"/", npt)
+        return _font(npt)
+end
+
+function _vw(px)
+	local screenWidth, screenHeight = Framework:getScreenSize()
+	local wx = 240/100
+	local wxSize = px/wx
+
+	local cwx = screenWidth/100
+        local cpx = math.floor(wxSize*cwx)
+
+	log:warn("_vw ",px,"/", wxSize,"/",cpx)
+	return cpx
+end
+
+function _vh(px)
+	local screenWidth, screenHeight = Framework:getScreenSize()
+	local wx = 320/100
+	local wxSize = px/wx
+
+	local cwx = screenHeight/100
+        local cpx = math.floor(wxSize*cwx)
+
+	log:warn("_vh ", px,"/",wxSize, "/", cpx)
+	return cpx
+end
+
+function _vmin(px)
+	return math.min(_vw(px),_vh(px))
+end
+
+function _vmax(px)
+	return math.max(_vw(px),_vh(px))
+end
+
+function _vminfont(pt)
+	return _vh(1) < _vw(1) and _vhfont(pt) or _vwfont(pt)
+end
+
+function _vminfront(pt)
+	return _vh(1) > _vw(1) and _vhfont(pt) or _vwfont(pt)
+end
+
 -- DIGITAL CLOCK SKIN
 function Digital:getDigitalClockSkin(skinName)
 	log:debug("getDigitalClockSkin ",skinName)
@@ -1782,48 +1867,57 @@ function Digital:getDigitalClockSkin(skinName)
 		})
 
 	else
+		-- VIEW PORT SIZED based on 240x320
+		local _font = _font
+		--local _vw = function (x) return x end
+		--local _vh = function (x) return x end
+		--local _vmin = function (x) return x end
+		--local _vmax = function (x) return x end
 		if (skinName ~= 'QVGAportraitSkin') then
 			local sk = appletManager:callService("getDigitalClock"..skinName)
 			if sk then
 				return sk
 			else
 				skinName = 'QVGAportraitSkin'
-				log:debug("Fall back to ",skinName)
+				log:debug("Fall back to Scaling ",skinName)
 				self.skinName = skinName
 				self.imgpath = _imgpath(self)
+				_font = _vminfont
 			end
 		end
 
 		local digitalClockBackground = Tile:loadImage(self.imgpath .. "Clocks/Digital/jive_clock_digital.png")
+		--[[
 		local digitalClockDigit = {
 			font = _font(90),
 			fg = { 0xcc, 0xcc, 0xcc },
 			w = WH_FILL,
 		}
 		local shadow = {
-			w = 62,
+			w = _vw(62),
 		}
+		--]]
 		local _clockDigit = {
 			position = LAYOUT_NONE,
 			font = _font(90),
 			align = 'right',
 			fg = { 0xcc, 0xcc, 0xcc },
-			w = 62,
-			y = 123,
+			w = _vmin(62),
+			y = _vh(123),
 			zOrder = 10,
 		}
 		local _digitShadow = _uses(_clockDigit, {
-			y = 185,
+			y = _vh(185),
 			padding = { 4, 0, 0, 0 },
 			zOrder = 1,
 		})
 	
 		local x = {}
-                x.h1 = 0
-                x.h2 = x.h1 + 49
-                x.dots = x.h2 + 62
-                x.m1 = x.dots + 4
-                x.m2 = x.m1 + 49
+                x.h1 = _vw(240) - ( _vmin(115) + _vw(125) ) 
+                x.h2 = x.h1 + _vmin(49)
+                x.dots = x.h2 + _vmin(49) + _vmin(13)
+                x.m1 = x.dots + _vmin(4)
+                x.m2 = x.m1 + _vmin(49)
                 x.alarm = x.h1
 
 		s.icon_digitalClockDropShadow = {
@@ -1848,7 +1942,7 @@ function Digital:getDigitalClockSkin(skinName)
 		}
 
 		s.icon_digitalClockVDivider = {
-			w = 3,
+			w = _vw(3),
 			img = _loadImage(self, "Clocks/Digital/divider_vert_digital.png"),
 			align = 'center',
 		}
@@ -1856,7 +1950,7 @@ function Digital:getDigitalClockSkin(skinName)
 		s.icon_digitalDots = {
 			img = _loadImage(self, 'Clocks/Digital/clock_dots_digital.png'),
 			align = 'center',
-			w = 18,
+			w = _vmin(18),
 			padding = { 0, 0, 0, 0 },
 		}
 
@@ -1880,8 +1974,8 @@ function Digital:getDigitalClockSkin(skinName)
 			}),
 			dots = _uses(_clockDigit, {
 				x = x.dots,
-				w = 18,
-				y = 143,
+				w = _vw(18),
+				y = _vh(143),
 			}),
 			m1 = _uses(_clockDigit, {
 				x = x.m1,
@@ -1898,7 +1992,7 @@ function Digital:getDigitalClockSkin(skinName)
 
 			today = {
 				position = LAYOUT_NORTH,
-				h = 83,
+				h = _vh(83),
 				zOrder = 2,
 				w = WH_FILL,
 				align = 'center',
@@ -1908,37 +2002,37 @@ function Digital:getDigitalClockSkin(skinName)
 
 			ampm = {
 				position = LAYOUT_NONE,
-				x = 203,
-				y = 208,
+				x = _vw(240) - ( _vmin(115) + _vw(125) ) + _vmin(203),
+				y = _vh(208),
 				font = _font(14),
 				align = 'bottom',
 				fg = { 0xcc, 0xcc, 0xcc },
 			},
 			alarm = {
 				position = LAYOUT_NONE,
-				x = 12,
-				y = 209,
+				x = _vw(12),
+				y = _vh(209),
 			},
 			horizDivider = {
 				position = LAYOUT_NONE,
-				x = 0,
-				y = 320 - 84,
+				x = x.h1,
+				y = _vh(320 - 84),
 			},
 			horizDivider2 = {
 				position = LAYOUT_NONE,
-				x = 0,
-				y = 84,
+				x = x.h1,
+				y = _vh(84),
 			},
 			date = {
 				position = LAYOUT_SOUTH,
 				order = { 'month', 'vdivider1', 'dayofmonth' },
 				w = WH_FILL,
-				h = 83,
+				h = _vh(84),
 				padding = { 0, 10, 0, 0 },
 				dayofweek = { hidden = 1 },
 				vdivider1 = {
 					align = 'center',
-					w = 2,
+					w = _vw(2),
 					h = WH_FILL,
 				},
 				month = {
@@ -1951,7 +2045,7 @@ function Digital:getDigitalClockSkin(skinName)
 				},
 				dayofmonth = {
 					font = _font(48),
-					w = 86,
+					w = _vw(86),
 					h = WH_FILL,
 					align = 'center',
 					fg = { 0xcc, 0xcc, 0xcc },
