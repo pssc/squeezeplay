@@ -22,7 +22,12 @@ static int width_ttf_font(JiveFont *font, const char *str);
 
 static SDL_Surface *draw_ttf_font(JiveFont *font, Uint32 color, const char *str);
 
-
+void jive_ttf_quit(void) {
+	if (TTF_WasInit()) {
+		TTF_Quit();
+		LOG_WARN(log_ui_draw, "TTF_Quit at exit");
+	}
+}
 
 JiveFont *jive_font_load(const char *name, Uint16 size) {
 
@@ -39,9 +44,12 @@ JiveFont *jive_font_load(const char *name, Uint16 size) {
 	}
 
 	/* Initialise the TTF api when required */
-	if (!TTF_WasInit() && TTF_Init() == -1) {
-		LOG_WARN(log_ui_draw, "TTF_Init: %s\n", TTF_GetError());
-		exit(-1);
+	if (!TTF_WasInit()) {
+		if ( TTF_Init() == -1 ) {
+			LOG_WARN(log_ui_draw, "TTF_Init: %s\n", TTF_GetError());
+			exit(-1);
+		}
+		atexit(jive_ttf_quit);
 	}
 
 	ptr = calloc(sizeof(JiveFont), 1);
@@ -97,6 +105,7 @@ void jive_font_free(JiveFont *font) {
 
 	/* Shutdown the TTF api when all fonts are free */
 	if (fonts == NULL && TTF_WasInit()) {
+		LOG_WARN(log_ui_draw, "TTF_Quit as front freed");
 		TTF_Quit();
 	}
 }
