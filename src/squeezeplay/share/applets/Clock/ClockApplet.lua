@@ -24,6 +24,7 @@ local Surface          = require("jive.ui.Surface")
 local Tile             = require("jive.ui.Tile")
 local Window           = require("jive.ui.Window")
 local SnapshotWindow   = require("jive.ui.SnapshotWindow")
+local ViewPort         = require("jive.ui.ViewPort")
 
 local Player           = require("jive.slim.Player")
                        
@@ -95,7 +96,9 @@ function displayName(self)
 	return "Clock (NEW)"
 end
 
+
 Clock  = oo.class()
+
 
 function Clock:notify_playerAlarmState(player, alarmSet)
 	if not player:isLocal() then
@@ -106,6 +109,7 @@ function Clock:notify_playerAlarmState(player, alarmSet)
 
 	self:Draw()
 end
+
 
 function Clock:__init(skin, windowStyle)
 	log:debug("Init Clock")
@@ -396,7 +400,6 @@ end
 
 function Analog:Draw()
 	self.canvas:reDraw()
-
 end
 
 
@@ -438,11 +441,12 @@ end
 Digital = oo.class({}, Clock)
 
 function Digital:__init(applet, ampm)
-	log:debug("Init Digital Clock")
+	log:debug("Init Digital Clock ",ampm)
 	
 	local windowStyle = applet.windowStyle or 'Clock'
 
 	local skinName   = jiveMain:getSelectedSkin()
+
 
 	if skinName ~= self.oldSkinName then
 		self.oldSkinName = skinName
@@ -450,7 +454,6 @@ function Digital:__init(applet, ampm)
 	end
 
 	obj = oo.rawnew(self, Clock(self.skin, windowStyle))
-
 	-- store the applet's self so we can call self.applet:string() for localizations
 	obj.applet = applet
 
@@ -782,7 +785,6 @@ end
 
 
 function Radial:_reDraw(screen)
-
 	-- Draw Background
 	local x, y, facew, faceh
 	
@@ -811,7 +813,6 @@ function Radial:_reDraw(screen)
 		tmp:blit(screen, x, y)
 		tmp:release()
 	end
-
 end
 
 
@@ -1365,91 +1366,6 @@ function DotMatrix:getDotMatrixClockSkin(skinName)
 	return s
 end
 
-local ppi = 96
--- : https://css-tricks.com/viewport-sized-typography/
-function _vwfont(pt)
--- 240 x 320 QVGA (PORTRAIT)
--- 90pt
-	local screenWidth, screenHeight = Framework:getScreenSize()
-	local ptSize = 1/72
-
-        local vw =  240/100
-        local i = ptSize * pt
-        local px = i * ppi
-	local vws = px/vw
--- 1280 x 720   
-        --local cwx = 1280/100
-        local cvw = screenWidth/100
-        local cpx = vws*cvw
-        local ci = cpx / ppi
-        local npt = math.floor(ci / ptSize)
-
-	log:warn("_vwfont ",pt,"/",wxSize,"/", npt)
-        return _font(npt)
-end
-
--- : https://css-tricks.com/viewport-sized-typography/
-function _vhfont(ptSize)
--- 240 x 320 QVGA (PORTRAIT)
--- 90pt
-	local screenWidth, screenHeight = Framework:getScreenSize()
-        local pt = 1/72
-
-        local wx = 320/100
-        local i = ptSize * pt
-        local px = i * ppi
-	local wxSize = px/wx
--- 1280 x 720   
-        --local cwx = 1280/100
-        local cwx = screenHeight/100
-        local cpx = wxSize*cwx
-        local ci = cpx / ppi
-        local npt = math.floor(ci / pt)
-
-	log:warn("_vhfont ",ptSize,"/",wxSize,"/", npt)
-        return _font(npt)
-end
-
-function _vw(px)
-	local screenWidth, screenHeight = Framework:getScreenSize()
-	local wx = 240/100
-	local wxSize = px/wx
-
-	local cwx = screenWidth/100
-        local cpx = math.floor(wxSize*cwx)
-
-	log:warn("_vw ",px,"/", wxSize,"/",cpx)
-	return cpx
-end
-
-function _vh(px)
-	local screenWidth, screenHeight = Framework:getScreenSize()
-	local wx = 320/100
-	local wxSize = px/wx
-
-	local cwx = screenHeight/100
-        local cpx = math.floor(wxSize*cwx)
-
-	log:warn("_vh ", px,"/",wxSize, "/", cpx)
-	return cpx
-end
-
-function _vmin(px)
-	return math.min(_vw(px),_vh(px))
-end
-
-function _vmax(px)
-	return math.max(_vw(px),_vh(px))
-end
-
-function _vminfont(pt)
-	return _vh(1) < _vw(1) and _vhfont(pt) or _vwfont(pt)
-end
-
-function _vminfront(pt)
-	return _vh(1) > _vw(1) and _vhfont(pt) or _vwfont(pt)
-end
-
 -- DIGITAL CLOCK SKIN
 function Digital:getDigitalClockSkin(skinName)
 	log:debug("getDigitalClockSkin ",skinName)
@@ -1464,26 +1380,47 @@ function Digital:getDigitalClockSkin(skinName)
 
 	local s = {}
 
+	-- If someone has a skin use it...
+	local sk = appletManager:callService("getDigitalClock"..skinName)
+	if sk then
+		return sk
+	end
+
+	local screen_width, screen_height = Framework:getScreenSize()
+
+	-- FIXME Skin override
+	-- Select Portrait or Wide Scale skin...
+	if skinName ~= 'WQVGAsmallSkin' and skinName ~= 'QVGAlandscapeSkin'
+	and skinName ~= 'QVGAportraitSkin' then
+		-- 'WQVGAsmallSkin' and 'QVGAportraitSkin' Scale
+		if screen_width > screen_height then
+			log:info("Scaling... ",screen_width,"x", screen_height," ",skinName, " Widescreen")
+			skinName = 'WQVGAsmallSkin'
+			self.skinName = skinName
+			self.imgpath = _imgpath(self)
+		end
+		-- Will fall throght to QVGAportraitSkin
+	end
+
 	if skinName == 'WQVGAsmallSkin' then
+		-- 480x272
+		local _font = _font
+		local v = ViewPort(480,272,screen_width,screen_height)
+		local _vw = function (x) return v:sw(x) end
+		local _vh = function (x) return v:sh(x) end
+		local _vmin = function (x) return v:smin(x) end
+		local _rf = _font
+		_font = function (x) return _rf(v:sminfont(x)) end
 
 		local digitalClockBackground = Tile:loadImage(self.imgpath .. "Clocks/Digital/wallpaper_clock_digital.png")
-		local digitalClockDigit = {
-			font = _font(143),
-			align = 'center',
-			fg = { 0xcc, 0xcc, 0xcc },
-			w = 76,
-		}
-		local shadow = {
-			w = 76,
-		}
 
 		local x = {}
-                x.h1 = 48
-                x.h2 = x.h1 + 75
-                x.dots = x.h2 + 75
-                x.m1 = x.dots + 39
-                x.m2 = x.m1 + 86 
-                x.alarm = x.m2 + 80
+                x.h1 = _vmin(48)
+                x.h2 = x.h1 + _vmin(75)
+                x.dots = x.h2 + _vmin(75)
+                x.m1 = x.dots + _vmin(39)
+                x.m2 = x.m1 + _vmin(86)
+                x.alarm = x.m2 + _vmin(80)
 		x.ampm = x.alarm
 
 		local _clockDigit = {
@@ -1491,11 +1428,11 @@ function Digital:getDigitalClockSkin(skinName)
 			font = _font(143),
 			align = 'center',
 			fg = { 0xcc, 0xcc, 0xcc },
-			y = 54,
+			y = _vh(54),
 			zOrder = 10,
 		}
 		local _digitShadow = _uses(_clockDigit, {
-			y = 54 + 100,
+			y = _vh(54 + 100),
 			zOrder = 1,
 		})
 	
@@ -1503,7 +1440,7 @@ function Digital:getDigitalClockSkin(skinName)
 			img = _loadImage(self, "Clocks/Digital/drop_shadow_digital.png"),
 			align = 'center',
 			padding = { 4, 0, 0, 0 },
-			w = 76,
+			w = _vw(76),
 		}
 
 		s.icon_digitalClockNoShadow = _uses(s.icon_digitalClockDropShadow, {
@@ -1523,7 +1460,7 @@ function Digital:getDigitalClockSkin(skinName)
 		}
 
 		s.icon_digitalClockVDivider = {
-			w = 3,
+			w = _vw(3),
 			img = _loadImage(self, "Clocks/Digital/divider_vert_digital.png"),
 			align = 'center',
 		}
@@ -1531,13 +1468,13 @@ function Digital:getDigitalClockSkin(skinName)
 		s.icon_digitalDots = {
 			img = _loadImage(self, "Clocks/Digital/clock_dots_digital.png"),
 			align = 'center',
-			w = 40,
+			w = _vw(40),
 			border = { 14, 0, 12, 0 },
 		}
 
 		s.icon_digitalClockBlank = {
 			img = false,
-			w = 40,
+			w = _vw(40),
 		}
 
 		s.Clock = {
@@ -1556,8 +1493,8 @@ function Digital:getDigitalClockSkin(skinName)
 			}),
 			dots = _uses(_clockDigit, {
 				x = x.dots,
-				y = 93,
-				w = 40,
+				y = _vh(93),
+				w = _vw(40),
 			}),
 			m1 = _uses(_clockDigit, {
 				x = x.m1,
@@ -1575,7 +1512,7 @@ function Digital:getDigitalClockSkin(skinName)
 			ampm = {
 				position = LAYOUT_NONE,
 				x = x.ampm,
-				y = 112,
+				y = _vh(112),
 				font = _font(11),
 				align = 'bottom',
 				fg = { 0xcc, 0xcc, 0xcc },
@@ -1583,12 +1520,12 @@ function Digital:getDigitalClockSkin(skinName)
 			alarm = {
 				position = LAYOUT_NONE,
 				x = x.alarm,
-				y = 56,
+				y = _vh(56),
 			},
 			ampm = {
 				position = LAYOUT_NONE,
-				x = 403,
-				y = 144,
+				x = _vmin(403),
+				y = _vh(144),
 				font = _font(20),
 				align = 'bottom',
 				fg = { 0xcc, 0xcc, 0xcc },
@@ -1597,18 +1534,19 @@ function Digital:getDigitalClockSkin(skinName)
 			today = { hidden = 1 },
 			horizDivider = {
 				position = LAYOUT_NONE,
+				--_vw(240) - ( _vmin(115) + _vw(125) ) FIXME
 				x = 0,
-				y = 194,
+				y = _vh(194),
 			},
 			date = {
 				position = LAYOUT_SOUTH,
 				order = { 'dayofweek', 'vdivider1', 'dayofmonth', 'vdivider2', 'month' },
 				w = WH_FILL,
-				h = 70,
+				h = _vh(70),
 				padding = { 0, 0, 0, 6 },
 				dayofweek = {
 					align = 'center',
-					w = 190,
+					w = _vw(190),
 					h = WH_FILL,
 					font = _font(20),
 					fg = { 0xcc, 0xcc, 0xcc },
@@ -1616,11 +1554,11 @@ function Digital:getDigitalClockSkin(skinName)
 				},
 				vdivider1 = {
 					align = 'center',
-					w = 3,
+					w = _vw(3),
 				},
 				dayofmonth = {
 					font = _font(56),
-					w = 95,
+					w = _vw(95),
 					h = WH_FILL,
 					align = 'center',
 					fg = { 0xcc, 0xcc, 0xcc },
@@ -1628,7 +1566,7 @@ function Digital:getDigitalClockSkin(skinName)
 				},
 				vdivider2 = {
 					align = 'center',
-					w = 3,
+					w = _vw(3),
 				},
 				month = {
 					font = _font(20),
@@ -1640,7 +1578,7 @@ function Digital:getDigitalClockSkin(skinName)
 				},
 				year = {
 					font = _boldfont(20),
-					w = 50,
+					w = _vw(50),
 					h = WH_FILL,
 					align = 'left',
 					fg = { 0xcc, 0xcc, 0xcc },
@@ -1677,11 +1615,9 @@ function Digital:getDigitalClockSkin(skinName)
 			m2Shadow = { hidden = 1 },
 		})
 	elseif skinName == 'QVGAlandscapeSkin'  then
+		-- 320x240
 
 		local digitalClockBackground = Tile:loadImage(self.imgpath .. "Clocks/Digital/bb_clock_digital.png")
-		local shadow = {
-			w = 62,
-		}
 		local _clockDigit = {
 			position = LAYOUT_NONE,
 			font = _font(100),
@@ -1867,12 +1803,16 @@ function Digital:getDigitalClockSkin(skinName)
 		})
 
 	else
-		-- VIEW PORT SIZED based on 240x320
+		-- Default Portrait Scalable Skin...
+		-- 240 x 320 QVGA (PORTRAIT)
 		local _font = _font
-		--local _vw = function (x) return x end
-		--local _vh = function (x) return x end
-		--local _vmin = function (x) return x end
-		--local _vmax = function (x) return x end
+		local v = ViewPort(240,320)
+		local _vw = function (x) return v:sw(x) end
+		local _vh = function (x) return v:sh(x) end
+		local _vmin = function (x) return v:smin(x) end
+		local _rf = _font
+		_font = function (x) return _rf(v:sminfont(x)) end
+
 		if (skinName ~= 'QVGAportraitSkin') then
 			local sk = appletManager:callService("getDigitalClock"..skinName)
 			if sk then
@@ -1882,21 +1822,10 @@ function Digital:getDigitalClockSkin(skinName)
 				log:debug("Fall back to Scaling ",skinName)
 				self.skinName = skinName
 				self.imgpath = _imgpath(self)
-				_font = _vminfont
 			end
 		end
 
 		local digitalClockBackground = Tile:loadImage(self.imgpath .. "Clocks/Digital/jive_clock_digital.png")
-		--[[
-		local digitalClockDigit = {
-			font = _font(90),
-			fg = { 0xcc, 0xcc, 0xcc },
-			w = WH_FILL,
-		}
-		local shadow = {
-			w = _vw(62),
-		}
-		--]]
 		local _clockDigit = {
 			position = LAYOUT_NONE,
 			font = _font(90),
