@@ -540,7 +540,7 @@ end
 -- hideConnectingToPlayer
 -- hide the full screen popup that appears until server and menus are loaded
 function hideConnectingToServer(self)
-	log:info("Hiding popup, exists?: " , self.connectingPopup)
+	log:debug("Hiding popup, exists?: " , self.connectingPopup)
 
 	if self.connectingPopup then
 		log:info("connectingToServer popup hide")
