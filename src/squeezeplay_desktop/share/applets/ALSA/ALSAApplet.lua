@@ -39,7 +39,7 @@ module(..., Framework.constants)
 oo.class(_M, Applet)
 
 
-function deviceMenu(self, menuItem, firstUse)
+function deviceMenu(self, menuItem, firstUse, device)
 	local window = Window("text_list", self:string("SELECT_OUTPUT"))
 	local menu = SimpleMenu("menu")
 	local system = System:getMachine()
@@ -66,7 +66,7 @@ function deviceMenu(self, menuItem, firstUse)
 				sound = "WINDOWSHOW",
 				callback = function(event, menuItem)
 						timer:stop()
-						self:_setCardAndReboot({ id = "default" }, false)
+						self:_setCardAndReboot({ id = "default" }, false, device)
 					   end,
 			}
 		end
@@ -192,7 +192,7 @@ function optionsMenu(self, menuItem)
 						   { desc = "SAMPLE_A",    size =      0 },
 						   { desc = "SAMPLE_32",   size =     32 },
 						   { desc = "SAMPLE_24",   size =     24 },
-						   { desc = "SAMPLE_24_3", size = "24_3" },
+						   { desc = "SAMPLE_24_3", size =    243 },
 						   { desc = "SAMPLE_16",   size =     16 },
 					   }
 					   local window = Window("text_list", menuItem.text)

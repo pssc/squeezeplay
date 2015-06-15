@@ -36,7 +36,26 @@
 #undef LOG_ERROR
 #undef IS_LOG_PRIORITY
 
+/* debug switches */
 static int is_debug = 1;
+#define TEST_LATENCY 0
+#define DEBUG_PAGEFAULTS 0
+
+#define SAMPLE_RATE_MAX     192000
+#define SAMPLE_RATE_DEFAULT 44100
+#define PRIO_PLAYBACK       45
+#define PRIO_EFFECTS        35
+#define PCM_WAIT_TIMEOUT    400
+#define RECOVERY_TIME	    5
+#define SAMPLE_RATE_THRESHOLD	    96000
+#define EXTRA_PERIOD_COUNTS 3
+#define DEFAULT_BUFFER_TIME 20000
+
+#define FLAG_STREAM_PLAYBACK 0x01
+#define FLAG_STREAM_EFFECTS  0x02
+#define FLAG_STREAM_NOISE    0x04
+#define FLAG_STREAM_LOOPBACK 0x08
+#define FLAG_NOMMAP          0x10
 
 static __inline void log_printf(int level, const char *format, ...) {
 	char buf[255];
@@ -89,22 +108,10 @@ static __inline void log_printf(int level, const char *format, ...) {
 #define IS_LOG_PRIORITY(LEVEL) ((LEVEL==LOG_PRIORITY_DEBUG)?is_debug:1)
 
 
-/* debug switches */
-#define TEST_LATENCY 0
-#define DEBUG_PAGEFAULTS 0
-
-
 u8_t *decode_fifo_buf;
 u8_t *effect_fifo_buf;
 struct decode_audio *decode_audio;
 
-#define FLAG_STREAM_PLAYBACK 0x01
-#define FLAG_STREAM_EFFECTS  0x02
-#define FLAG_STREAM_NOISE    0x04
-#define FLAG_STREAM_LOOPBACK 0x08
-#define FLAG_NOMMAP          0x10
-
-#define PCM_WAIT_TIMEOUT     500
 
 /* format list to try in order when opening device - each requires explicit support in playback callback */
 static snd_pcm_format_t fmts[] = { SND_PCM_FORMAT_S32_LE, SND_PCM_FORMAT_S24_LE, SND_PCM_FORMAT_S24_3LE, SND_PCM_FORMAT_S16_LE, SND_PCM_FORMAT_UNKNOWN };
@@ -290,17 +297,17 @@ static void playback_callback(struct decode_alsa *state,
 
 	/* Should we start the audio now based on having enough decoded data?
 	   - override output_thresh for 176/192k and wait for 1 sec of data before starting */
-	if (decode_audio->state & DECODE_STATE_AUTOSTART
-			&& decode_frames > (output_frames * (3 + state->period_count))
-			&& decode_frames > (state->pcm_sample_rate <= 96000 ? (decode_audio->output_threshold * state->pcm_sample_rate / 10) :
-								state->pcm_sample_rate)
-		)
-	{
+	if (decode_audio->state & DECODE_STATE_AUTOSTART &&
+	decode_frames > (output_frames * (EXTRA_PERIOD_COUNTS + state->period_count)) &&
+	decode_frames > (state->pcm_sample_rate <= SAMPLE_RATE_THRESHOLD ?
+		(decode_audio->output_threshold * state->pcm_sample_rate / 10) :
+		state->pcm_sample_rate)) {
 		u32_t now = jive_jiffies();
 
-		if (decode_audio->start_at_jiffies > now && now > decode_audio->start_at_jiffies - 5000)
+		if (decode_audio->start_at_jiffies > now && now > decode_audio->start_at_jiffies - 5000) {
 			/* This does not consider any delay in the ALSA output chain - usually 1 period which is 10ms by default */
 			decode_audio->add_silence_ms = decode_audio->start_at_jiffies - now;
+		}
 
 		decode_audio->state &= ~DECODE_STATE_AUTOSTART;
 		decode_audio->state |= DECODE_STATE_RUNNING;
@@ -752,7 +759,7 @@ static int _pcm_open(struct decode_alsa *state,
 	}
 	state->period_count = val;
 
-	val = !plug ? state->buffer_time : 20000; // safe value when plug layer used, else snd_pcm_close can crash
+	val = !plug ? state->buffer_time : DEFAULT_BUFFER_TIME; // safe value when plug layer used, else snd_pcm_close can crash
 	dir = 1;
 	if ((err = snd_pcm_hw_params_set_buffer_time_near(*pcmp, hw_params, &val, &dir)) < 0) {
 		LOG_ERROR("Unable to set  buffer time %s", snd_strerror(err));
@@ -818,9 +825,9 @@ static int pcm_open(struct decode_alsa *state, bool_t loopback, int mode)
 		sample_rate = decode_audio->set_sample_rate;
 		decode_audio_unlock();
 
-		if (sample_rate == 0 || sample_rate > 192000) {
+		if (sample_rate == 0 || sample_rate > SAMPLE_RATE_MAX) {
 			LOG_ERROR("invalid sample rate\n");
-			sample_rate = 44100;
+			sample_rate = SAMPLE_RATE_DEFAULT;
 		}
 
 		if ( !(state->flags & FLAG_NOMMAP) ) {
@@ -1047,7 +1054,14 @@ static void *audio_thread_execute(void *data) {
 
 		/* this is needed to ensure the sound works on resume */
 		if (( err = snd_pcm_status(state->pcm, status)) < 0) {
-			LOG_ERROR("snd_pcm_status err=%d", err);
+			LOG_ERROR("snd_pcm_status error(%d): %s", err, snd_strerror(err));
+			sleep(RECOVERY_TIME); // time for recovery
+			if (err==-ENODEV) { // No such device
+				LOG_WARN("Device %s no longer available - waited it to return", state->playback_device);
+				do_open = 1;
+				first = 1;
+				continue;
+			}
 		}
 
 		TIMER_CHECK("STATE");
@@ -1057,7 +1071,7 @@ static void *audio_thread_execute(void *data) {
 				first = 0;
 
 				if ((err = snd_pcm_start(state->pcm)) < 0) {
-					LOG_ERROR("snd_pcm_start error: %s", snd_strerror(err));
+					LOG_ERROR("snd_pcm_start error(%d): %s", err, snd_strerror(err));
 				}
 
 				if (state->capture_pcm) {
@@ -1078,16 +1092,16 @@ static void *audio_thread_execute(void *data) {
 		
 				if (avail < state->period_size) {
 					if ((err = snd_pcm_wait(state->pcm, state->pcm_wait_timeout)) < 0) {
-						LOG_WARN("xrun (snd_pcm_wait) err=%s",snd_strerror(err));
+						LOG_WARN("xrun (snd_pcm_wait) err(%d)=%s %s",err,snd_strerror(err),state->playback_device);
 						if ((err = snd_pcm_recover(state->pcm, err, 1)) < 0) {
-							LOG_ERROR("PCM wait recover failed: %s", snd_strerror(err));
+							LOG_ERROR("PCM wait recover failed(%d): %s", err,snd_strerror(err));
 						}
 						first = 1;
 					}
 				}
 
 				if (err == 0) {
-					LOG_INFO("snd_pcm_wait timeout(%d)",state->pcm_wait_timeout);
+					LOG_INFO("snd_pcm_wait timeout(%d) %s",state->pcm_wait_timeout,state->playback_device);
 				}
 
 			}
@@ -1235,7 +1249,6 @@ static void *audio_thread_execute(void *data) {
 static int decode_realtime_process(struct decode_alsa *state)
 {
 	struct sched_param sched_param;
-	int err;
 
 	/* Set realtime scheduler policy. Use 45 as the PREEMPT_PR patches
 	 * use 50 as the default prioity of the kernel tasklets and irq 
@@ -1244,9 +1257,9 @@ static int decode_realtime_process(struct decode_alsa *state)
 	 * For the best performance on a tuned RT kernel, make non-audio
 	 * threads have a priority < 45.
 	 */
-	sched_param.sched_priority = (state->flags & FLAG_STREAM_PLAYBACK) ? 45 : 35;
+	sched_param.sched_priority = (state->flags & FLAG_STREAM_PLAYBACK) ? PRIO_PLAYBACK : PRIO_EFFECTS;
 
-	if ((err = sched_setscheduler(0, SCHED_FIFO, &sched_param)) == -1) {
+	if (sched_setscheduler(0, SCHED_FIFO, &sched_param) < 0) {
 		if (errno == EPERM) {
 			LOG_INFO("Can't set audio thread priority");
 			return -1;
@@ -1319,7 +1332,7 @@ int main(int argv, char **argc)
 	int err, i;
 
 #ifdef HAVE_SYSLOG
-	openlog("squeezeplay_alsa", LOG_ODELAY | LOG_CONS | LOG_PID, LOG_USER);
+	openlog("squeezeplay_alsa", LOG_NDELAY | LOG_CONS | LOG_PID, LOG_USER);
 #endif
         LOG_DEBUG("Parse Args")
 	/* parse args */
@@ -1362,7 +1375,7 @@ int main(int argv, char **argc)
                                 fmts[0] = SND_PCM_FORMAT_S24_LE;
                                 fmts[1] = SND_PCM_FORMAT_UNKNOWN;
                         }
-                        else if (strcmp(argc[i], "24_3") == 0) {
+                        else if (strcmp(argc[i], "243") == 0) {
                                 fmts[0] = SND_PCM_FORMAT_S24_3LE;
                                 fmts[1] = SND_PCM_FORMAT_UNKNOWN;
                         }
@@ -1370,6 +1383,7 @@ int main(int argv, char **argc)
                                 fmts[0] = SND_PCM_FORMAT_S16_LE;
                                 fmts[1] = SND_PCM_FORMAT_UNKNOWN;
                         }
+			// Fall though is auto on invalid arg...
                 }
 	}
 
@@ -1411,7 +1425,7 @@ int main(int argv, char **argc)
 	/* test audio device */
 	if (pcm_test(&state) < 0) {
 		LOG_ERROR("exit, pcm_test failed");
-		exit(0);
+		exit(-2);
 	}
 
 	/* set real-time properties */

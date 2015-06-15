@@ -81,7 +81,7 @@ function registerApplet(meta)
                            function(object, isSelected)
                                   self:getSettings()["active"] = isSelected
                                   self:storeSettings()
-                                  self:_restart()
+				  appletManager:callService("restart")
                            end,
                            self:getSettings()["active"]
                         ),
@@ -212,7 +212,4 @@ function registerApplet(meta)
 	end
 
 end
-
-
-
 
