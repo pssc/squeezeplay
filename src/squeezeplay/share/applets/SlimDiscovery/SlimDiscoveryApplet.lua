@@ -306,7 +306,7 @@ function _discover(self)
             if  tsocket and tsocket.t_tcp.proxy:isProxied(true) then
 		if DNS:isip(i) then
 			local x, err = DNS:tohostname(i)
-			i = x and x or i
+			i = x or i
 		end
 		-- ip is used as a uuid
                 -- jive.slim.SlimServer(jnt, ip, name, version)
