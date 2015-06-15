@@ -88,12 +88,11 @@ static int ui_watchdog;
 
 static struct jive_keymap keymap[] = {
 	//{ SDLK_RIGHT,           JIVE_KEY_GO },
-	{ SDLK_UP,           JIVE_KEY_UP },
-	{ SDLK_DOWN,           JIVE_KEY_DOWN },
+	{ SDLK_UP,              JIVE_KEY_UP },
+	{ SDLK_DOWN,            JIVE_KEY_DOWN },
 	{ SDLK_RIGHT,           JIVE_KEY_RIGHT },
 	{ SDLK_RETURN,		JIVE_KEY_GO },
 	{ SDLK_OK,		JIVE_KEY_GO },
-	//{ SDLK_LEFT,            JIVE_KEY_BACK },
 	{ SDLK_LEFT,            JIVE_KEY_LEFT },
 	{ SDLK_HOME,		JIVE_KEY_HOME },
 	{ SDLK_AudioPlay,	JIVE_KEY_PLAY },
@@ -169,6 +168,18 @@ static int filter_events(const SDL_Event *event);
 int jiveL_update_screen(lua_State *L);
 
 
+int jive_frame_rate(void) {
+    static int fr = 0;
+    if (fr == 0) {
+        char *env = getenv("JIVE_FR");
+        if (env) {
+                fr = atoi(env);
+        }
+        fr = (fr == 0) ? JIVE_FRAME_RATE_DEFAULT : fr;
+    }
+    return fr;
+}
+
 int jive_traceback (lua_State *L) {
 	lua_getfield(L, LUA_GLOBALSINDEX, "debug");
 	if (!lua_istable(L, -1)) {
@@ -216,13 +227,13 @@ static int jiveL_initSDL(lua_State *L) {
 #   define JIVE_SDL_FEATURES (SDL_INIT_VIDEO)
 #endif
 	LOG_INFO(log_ui_draw, "initSDL");
+	if (!atexit(SDL_Quit)) {
+		LOG_ERROR(log_ui,"SDL_Quit atexit fail");
+	}
 	/* initialise SDL */
 	if (SDL_Init(JIVE_SDL_FEATURES) < 0) {
-		LOG_ERROR(log_ui_draw, "SDL_Init(V|T): %s\n", SDL_GetError());
-		SDL_Quit();
+		LOG_ERROR(log_ui, "SDL_Init(V|T): %s\n", SDL_GetError());
 		exit(-1);
-	} else {
-		atexit(SDL_Quit);
 	}
 
 	/* report video info */
@@ -319,8 +330,6 @@ static int jiveL_initSDL(lua_State *L) {
 	srf = jive_surface_set_video_mode(screen_w, screen_h, screen_bpp, fullscreen);
 	if (!srf) {
 		LOG_ERROR(log_ui_draw, "Splash Video Mode Fail.");
-
-		SDL_Quit();
 		exit(-1);
 	} else {
 		jive_surface_get_size(srf, &screen_w, &screen_h);
@@ -350,8 +359,6 @@ static int jiveL_initSDL(lua_State *L) {
 	lua_getfield(L, 1, "screen");
 	if (lua_isnil(L, -1)) {
 		LOG_ERROR(log_ui_draw, "no screen table");
-
-		SDL_Quit();
 		exit(-1);
 	}
 
@@ -377,7 +384,7 @@ static int jiveL_initSDL(lua_State *L) {
 	lua_pop(L, 2);
 
 	ui_watchdog = watchdog_get();
-	watchdog_keepalive(ui_watchdog, 6); /* 60 seconds to start */
+	watchdog_keepalive(ui_watchdog, 6); /* 60 seconds to start with custom watchdog -- watchdog condigured with standard linux watchdog ~30 */
 
 #endif /* JIVE_NO_DISPLAY */
 	LOG_INFO(log_ui_draw, "initSDL End");
@@ -424,9 +431,13 @@ void jive_send_char_press_event(Uint16 unicode) {
 	jive_queue_event(&event);
 }
 
+void jive_send_quit(void) {
+	SDL_Event event;
+        event.type = SDL_QUIT;
+	SDL_PushEvent(&event);
+}
 
-static int jiveL_quit(lua_State *L) {
-
+int jiveL_quit(lua_State *L) {
 	/* de-reference all windows */
 	jiveL_getframework(L);
 	lua_pushnil(L);
@@ -435,9 +446,6 @@ static int jiveL_quit(lua_State *L) {
 
 	/* force lua GC */
 	lua_gc(L, LUA_GCCOLLECT, 0);
-
-	/* quit SDL */
-	SDL_Quit();
 
 	return 0;
 }
@@ -490,6 +498,7 @@ static int jiveL_process_events(lua_State *L) {
 
 	if (r & JIVE_EVENT_QUIT) {
 		lua_pushboolean(L, 0);
+		 LOG_WARN(log_ui,"JIVE_EVENT_QUIT");
 		return 1;
 	}
 
@@ -768,7 +777,7 @@ void jive_redraw(SDL_Rect *r) {
 		memcpy(&jive_dirty_region, r, sizeof(jive_dirty_region));
 	}
 
-	//printf("DIRTY: %d,%d %dx%d\n", jive_dirty_region.x, jive_dirty_region.y, jive_dirty_region.w, jive_dirty_region.h);
+	//LOG_DEBUG(log_ui_draw,"DIRTY: x,y %d,%d wxh %dx%d", jive_dirty_region.x, jive_dirty_region.y, jive_dirty_region.w, jive_dirty_region.h);
 }
 
 
@@ -1108,9 +1117,9 @@ static int process_event(lua_State *L, SDL_Event *event) {
 
 	switch (event->type) {
 	case SDL_QUIT:
+		LOG_WARN(log_ui, "SDL_QUIT_EVENT");
 		jiveL_quit(L);
-		exit(0);
-		break;
+		return JIVE_EVENT_QUIT;
 
 	case SDL_MOUSEBUTTONDOWN:
 		/* map the mouse scroll wheel to up/down */
@@ -1294,8 +1303,7 @@ static int process_event(lua_State *L, SDL_Event *event) {
 				LOG_DEBUG(log_ui_input, "Unknown SDLK(%x/%x)",event->key.keysym.sym,event->key.keysym.scancode);
 		        }
 		} else if (event->type == SDL_KEYDOWN) {
-			bool repeatable = (entry->keysym == SDLK_PAGEUP || entry->keysym == SDLK_PAGEDOWN ||
-                                 entry->keysym == SDLK_UP || entry->keysym == SDLK_DOWN ) ? true : false;
+			bool repeatable = (entry->keysym == SDLK_PAGEUP || entry->keysym == SDLK_PAGEDOWN || entry->keysym == SDLK_UP || entry->keysym == SDLK_DOWN ) ? true : false;
 				//|| entry->keysym == SDLK_LEFT || entry->keysym == SDLK_RIGHT) ? true : false;
 			//FIXME on JIVE KEY Mapping? & unicode? define in Inputmap?
 			/* handle pgup/pgdn and cursors up/down as repeatable with long hold supported 
@@ -1303,7 +1311,7 @@ static int process_event(lua_State *L, SDL_Event *event) {
 			   on menu items wthout a go button.*/
 
 			if ((key_mask & entry->keycode) && !repeatable ) {
-				// ignore key repeats
+				LOG_DEBUG(log_ui_input,"ignore key repeats ",entry->keycode);
 				return 0;
 			}
 			if (key_mask == 0) {
