@@ -18,7 +18,7 @@ DESTDIR=${BUILD_TOP}
 export PREFIX=${DESTDIR}
 
 export CFLAGS=-I${PREFIX}/include -I${PREFIX}/include/SDL -I${PREFIX}/include/freetype2 -O2 -fPIC -g
-export LDFLAGS=-L${PREFIX}/lib
+export LDFLAGS=-L${PREFIX}/usr/lib
 
 export TOOLPATH = $(shell dirname `which gcc`)
 
@@ -31,6 +31,10 @@ USE_MMX=--disable-mmx
 # Override to yes to build closed source squeezeplay libraries 
 SPPRIVATE=no
 
+LIBMAD = $(shell pkg-config --exists mad || echo libmad )
+LIBFLAC = $(shell pkg-config --exists flac || echo flac )
+LIBTREMOR = tremor
+
 ifeq ($(SPPRIVATE),yes)
 	ENABLE_SPPRIVATE=--with-spprivate
 	SPPRIVATE_TARGETS=axtls squeezeplay_private
@@ -41,7 +45,7 @@ endif
 # Top level targets
 #
 .PHONY: all
-all: sdl-all lua-all app
+all: sdl-all lua-all app squeezeplay-tgz
 
 
 
@@ -179,8 +183,9 @@ tolua++: lua
 #
 # squeezeplay
 #
-.PHONY: app flac libmad tremor squeezeplay squeezeplay_desktop squeezeplay_contrib squeezeplay_private freefont freefont-debian axtls rtmp jivelite squeezeplay_wicd_frontend 800x480Skin
-app: flac libmad tremor ${SPPRIVATE_TARGETS} squeezeplay squeezeplay_desktop squeezeplay_contrib freefont rtmp squeezeplay-tgz 
+.PHONY: app flac libmad tremor squeezeplay squeezeplay_desktop squeezeplay_contrib squeezeplay_private freefont axtls rtmp jivelite squeezeplay_wicd_frontend 800x480Skin
+app: ${LIBFLAC} ${LIBMAD} ${LIBTREMOR} ${SPPRIVATE_TARGETS} squeezeplay squeezeplay_desktop squeezeplay_contrib freefont rtmp
+
 
 generated/jivelite/Makefile: generated/.m
 	cd generated/ && ( cd jivelite || git clone https://github.com/pssc/jivelite.git -b master jivelite )
@@ -258,7 +263,7 @@ rtmp: squeezeplay
 
 # squeezeplay
 squeezeplay/Makefile:
-	cd squeezeplay; SDL_CONFIG=${SDL_CONFIG} LDFLAGS="-logg ${LDFLAGS}" ./configure ${ENABLE_SPPRIVATE} ${ENABLE_PROFILING} --host=${HOST} --target=${TARGET} --prefix=${PREFIX} --enable-tests
+	cd squeezeplay; SDL_CONFIG=${SDL_CONFIG} LDFLAGS="${LDFLAGS}" ./configure ${ENABLE_SPPRIVATE} ${ENABLE_PROFILING} --host=${HOST} --target=${TARGET} --prefix=${PREFIX} --enable-tests
 
 squeezeplay: squeezeplay/Makefile
 	cd squeezeplay; make && make install
@@ -303,24 +308,28 @@ freefont:
 # 
 squeezeplay-tgz: squeezeplay/Makefile
 	-rm ../build/linux/lib/libmad.*
-	cd squeezeplay; make squeezeplay-tgz
+	cd squeezeplay; ${MAKE} squeezeplay-tgz
 
 #
 # Allow user to call the -deb build and it runs both the 'all' and then packages it
 #
 
-.PHONY: squeezeplay-deb
-squeezeplay-deb: all squeezeplay-deb-make
+.PHONY: squeezeplay-deb squeezeplay-deb-dep
+squeezeplay-deb: squeezeplay-deb-dep all squeezeplay-deb-make
 
 squeezeplay-deb-make: squeezeplay/Makefile
-	cd squeezeplay; make squeezeplay-deb
+	cd squeezeplay; ${MAKE} squeezeplay-deb
+
+# FIXME document all build deps in here
+squeezeplay-deb-dep:
+	dpkg-query --status libmad0-dev >/dev/null 2>&1 || sudo apt-get install libmad0-dev
+	dpkg-query --status libflac-dev >/dev/null 2>&1 || sudo apt-get install libflac-dev
 
 .PHONY: clean_generated
 clean_generated:
 	@echo "----------------------------------------------------------"
 	@echo "Cleaning: generated dir"
 	-rm -rf generated
-
 
 #
 # clean
