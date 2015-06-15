@@ -8,14 +8,15 @@ local os            = require("os")
 
 local Decode        = require("squeezeplay.decode")
 local AppletMeta    = require("jive.AppletMeta")
+local LinuxMeta     = require("applets.Linux.LinuxMeta")
 local LocalPlayer   = require("jive.slim.LocalPlayer")
 local Framework     = require("jive.ui.Framework")
 local System        = require("jive.System")
 local Player        = require("jive.slim.Player")
-local SlimServer        = require("jive.slim.SlimServer")
+local SlimServer    = require("jive.slim.SlimServer")
 local Decode        = require("squeezeplay.decode")
-local debug           = require("jive.utils.debug")
-local ArtworkCache = require("jive.slim.ArtworkCache")
+local debug         = require("jive.utils.debug")
+local ArtworkCache  = require("jive.slim.ArtworkCache")
 
 local appletManager = appletManager
 local jiveMain      = jiveMain
@@ -26,8 +27,8 @@ local tonumber      = tonumber
 
 
 module(...)
--- inherit from linux?
-oo.class(_M, AppletMeta)
+-- inherit from linux
+oo.class(_M, LinuxMeta)
 
 local CPU_INFO="/proc/cpuinfo"
 
@@ -44,6 +45,8 @@ function defaultSettings(meta)
                 alsaPlaybackBufferTime = 113378,
                 alsaPlaybackPeriodCount = 5,
 		display_power = true,
+		autoaudio = true,
+		rt = false,
 		backlight = true,
 		blanking = true,
 	}
@@ -221,15 +224,37 @@ function registerApplet(meta)
         meta:registerService("poweroff")
         meta:registerService("reboot")
 
+	local command = "tvservice -a 2>&1"
+        local f,err = io.popen(command, "r")
+	if not f then
+	      log:warn(command,"-- could not be run ",err,".")
+	end
+	-- "    PCM supported: Max channels: 2, Max samplerate:  32kHz, Max samplesize 16 bits."
+	-- "     PCM supported: Max channels: 8, Max samplerate: 192kHz, Max samplesize 24 bits."
+	local i = 0
+	for v in f:lines() do
+		local c,r,b = string.match(v, "%s+PCM supported: Max channels: (%d+), Max samplerate:  (%d+)kHz, Max samplesize (%d+) bits.")
+		--if settings.autoaudio and settings.alsaPlaybackDevice == "default" and b then
+		log:debug(v)
+		if settings.autoaudio and b then
+			log:info("Auto Sample Size ",b)
+			--settings.alsaSampleSize = b
+			--ALSA layer only accepts 16bit atm.
+		end
+	end
+        f:close()
 	-- open audio device
 	Decode:open(settings)
 end
 
---[[
 function configureApplet(meta)
         local applet = appletManager:getAppletInstance("SqueezePI")
-
-        applet:_configureInit()
+	-- RT script on post OnScreenInit
+	local settings = meta:getSettings()
+	log:debug("configure ",debug.view(settings)," ",applet," ",meta)
+	if settings.rt then
+		log:debug("RT")
+		meta:rt("squeezeplay-rt-pi.sh")
+	end
 end
---]]
 

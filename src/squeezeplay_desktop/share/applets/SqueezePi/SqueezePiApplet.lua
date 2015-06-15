@@ -117,7 +117,6 @@ function settingsAudioSelect(self)
         -- "    PCM supported: Max channels: 2, Max samplerate:  32kHz, Max samplesize 16 bits."
         local i = 0
         for v in f:lines() do
-                -- c,r,b = string.match(i, "    PCM supported: Max channels: (%d), Max samplerate:  (%d)kHz, Max samplesize (%d) bits.") 
 		menu:addItem({id='tvservice'..i,text=v,style = 'item_text'})
                 i = i + 1
         end
