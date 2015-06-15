@@ -412,7 +412,7 @@ Returns I<w, h> the current screen size.
 --]]
 function getScreenSize(self)
 	local bounds = screen.bounds
-	logDraw:debug("getScreenSize: ",bounds[3], "x", bounds[4] ," Surface ", screen.surface)
+	logDraw:debug("getScreenSize: ",bounds[3], "x", bounds[4])
 	return bounds[3], bounds[4]
 end
 
