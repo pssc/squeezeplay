@@ -24,6 +24,7 @@ function __init(self, style)
 
 	obj.val = { 0, 0 }
 
+	log:info("FRAME_RATE ",FRAME_RATE)
 	obj:addAnimation(function() obj:reDraw() end, FRAME_RATE)
 
 	return obj
@@ -51,6 +52,7 @@ function _layout(self)
 	if (w <= 0) and (h <= 0) then
 		return
 	end
+	log:debug("_layout")
 
 	self.capHeight = {}
 	self.capSpace = {}
@@ -113,7 +115,7 @@ function _layout(self)
 		self.clipSubbands[2]
 	)
 
-	log:warn("** 1: " .. numBars[1] .. " 2: " .. numBars[2])
+	log:info("** 1: " .. numBars[1] .. " 2: " .. numBars[2])
 
 	local barHeight = {}
 
@@ -174,6 +176,7 @@ function _drawBins(self, surface, bins, ch, x, y, barsInBin, barWidth, barSpace,
 	local bch = bins[ch]
 	local cch = self.cap[ch]
 	local barSize = barWidth + barSpace
+	log:debug("_drawBins")
 
 	for i = 1, #bch do
 		bch[i] = bch[i] * barHeightMulti
