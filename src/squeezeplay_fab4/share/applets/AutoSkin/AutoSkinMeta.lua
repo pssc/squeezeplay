@@ -20,6 +20,7 @@ local oo            = require("loop.simple")
 
 local AppletMeta    = require("jive.AppletMeta")
 
+local jiveMain      = jiveMain
 local appletManager = appletManager
 
 
@@ -37,11 +38,13 @@ function defaultSettings(meta)
 	return { transitionDuration = 200 }
 end
 
+
 function upgradeSettings(meta,settings)
 	if not settings.transitionDuration then
 		settings.transitionDuration = meta:defaultSettings()["transitionDuration"]
 	end
 end
+
 
 function registerApplet(meta)
 	meta:registerService("getActiveSkinType")
@@ -51,6 +54,16 @@ end
 function configureApplet(meta)
 	-- resident applet
 	appletManager:loadApplet("AutoSkin")
+
+	-- Initial skin type could be neither of these... 
+	-- Precache
+	if (appletManager:hasService("getSelectedSkinNameForType")) then
+		log:info("Preloading skins for autoskin...")
+		jiveMain:loadSkin(appletManager:callService("getSelectedSkinNameForType", "touch"))
+		jiveMain:loadSkin(appletManager:callService("getSelectedSkinNameForType", "remote"))
+	else
+		log:warn("getSelectedSkinNameForType missing")
+	end
 end
 
 

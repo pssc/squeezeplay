@@ -336,23 +336,29 @@ function JiveMain:__init()
 	--Last input type tracker (used by, for instance, Menu, to determine wheter selected style should be displayed)
 	Framework:addListener(EVENT_ALL_INPUT,
 		function(event)
-			local type = event:getType()
-			if (type & EVENT_IR_ALL ) > 0 then
+			local etype = event:getType()
+			local idm = appletManager:callService("getInputDetectorMapping")
+			if (etype & EVENT_IR_ALL ) > 0 then
 				if (Framework:isValidIRCode(event)) then
 					Framework.mostRecentInputType = "ir"
 				end
 			end
-			if (type & EVENT_KEY_ALL ) > 0 then
-				Framework.mostRecentInputType = "key"
+			if (etype & EVENT_KEY_ALL ) > 0 then
+				if idm == 'REMOTE' then
+					Framework.mostRecentInputType = "ir"
+				else
+					Framework.mostRecentInputType = "key"
+				end
 			end
-			if (type & EVENT_SCROLL ) > 0 then
+			-- FIXME idm for remote mouse events?
+			if (etype & EVENT_SCROLL ) > 0 then
 				Framework.mostRecentInputType = "scroll"
 			end
-			if (type & EVENT_MOUSE_ALL) > 0 then
+			if (etype & EVENT_MOUSE_ALL) > 0 then
 				Framework.mostRecentInputType = "mouse"
 			end
-			--not sure what to do about char, since it is a bit of a hybrid input type. So far usages don't care.
-			
+			--FIXME not sure what to do about char/mouse, since it is a bit of a hybrid input type. So far usages don't care.
+			log:debug("EVENT_ALL_INPUT ",event:tostring(),":",Framework.mostRecentInputType,":",idm)
 			return EVENT_UNUSED
 		end,
 		true
@@ -416,7 +422,7 @@ function JiveMain:__init()
 		heapTimer:start()
 	end
 
-	-- show our window!
+	-- show our window! from HomeMenu
 	jiveMain.window:show()
 
 	-- detect mode change
@@ -572,7 +578,7 @@ end
 
 local function _loadSkin(self, skinId, reload, useDefaultSize)
 	if not self.skins[skinId] then
-		log:warn("_load skin: ", skinId, "Failed no skin")
+		log:warn("_load skin: ", skinId, " Failed no skin")
 		return false
 	end
 
@@ -609,7 +615,10 @@ function JiveMain:setSelectedSkin(skinId)
                 self.selectedSkin = skinId
 		jnt:notify("skinSelected")
                 if oldSkinId and self.skins[oldSkinId] and self.skins[oldSkinId][1] ~= self.skins[skinId][1] then
-                        jiveMain:freeSkin(oldSkinId)
+			if oldSkinId ~= appletManager:callService("getSelectedSkinNameForType", "touch") and 
+			   oldSkinId ~= appletManager:callService("getSelectedSkinNameForType", "remote") then
+				jiveMain:freeSkin(oldSkinId)
+			end
                 end
 
 	end
@@ -632,10 +641,15 @@ function JiveMain:getSkinParam(key,warn)
 end
 
 
--- reloadSkin
--- 
 function JiveMain:reloadSkin(reload)
-	_loadSkin(self, self.selectedSkin, true);
+        log:info("reload(", skinId, ")")
+	_loadSkin(self, self.selectedSkin, true)
+end
+
+
+function JiveMain:loadSkin(skinId)
+        log:info("loadSkin(", skinId, ")")
+	_loadSkin(self, skinId, false, false)
 end
 
 
