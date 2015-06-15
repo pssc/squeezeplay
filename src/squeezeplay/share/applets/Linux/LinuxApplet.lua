@@ -179,8 +179,9 @@ function betaHardware(self, euthanize)
 	end)
 end
 
--- really inlunx specfic?
--- genertic wrapper?
+
+-- really linux specfic?
+-- generic wrapper?
 -- clean shutdown?
 function playSplashSound(self)
 	local settings = self:getSettings()
