@@ -3524,7 +3524,9 @@ function skin(self, s , reload, useDefaultSize)
                 sh = TEXT_SH_COLOR,
         }
 
-	Framework:setVideoMode(screenWidth, screenHeight, 0, false)
+	if useDefaultSize then
+		Framework:setVideoMode(screenWidth, screenHeight, 0, false)
+	end
 end
 
 
