@@ -39,7 +39,7 @@ end
 
 function init(self, ...)
 
-	-- skins, could be configurable via settings
+	-- skin types
 	local touchSkin = "touch"
 	local remoteSkin = "remote"
 
@@ -94,7 +94,6 @@ function init(self, ...)
 	Framework:addListener(EVENT_MOUSE_ALL,
 		function(event)
 			local mapping = appletManager:callService("getInputDetectorMapping")
-			if mapping =='IGNORE' then return EVENT_UNUSED end
 			local skin = mapping =='REMOTE' and remoteSkin or touchSkin
 
 			if self.eatEvents then
@@ -116,7 +115,6 @@ function init(self, ...)
 	Framework:addListener(EVENT_ALL_INPUT,
 		function(event)
 			local mapping = appletManager:callService("getInputDetectorMapping")
-			if mapping =='IGNORE' then return EVENT_UNUSED end
 			local skin = mapping =='REMOTE' and remoteSkin or touchSkin 
 
 			if event:getType() == EVENT_CHAR_PRESS then
