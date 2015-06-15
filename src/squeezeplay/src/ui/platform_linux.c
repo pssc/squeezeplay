@@ -18,12 +18,22 @@
 #include <sys/socket.h>
 #include <sys/utsname.h>
 #include <sys/types.h>
+
 #include <sys/ipc.h>
 #include <sys/sem.h>
+
+#include <utime.h>
+
 #include <netinet/in.h>
 #include <linux/if.h>
 #include <execinfo.h>
 
+
+static LOG_CATEGORY *log_sp;
+static lua_State *Lsig = NULL;
+static lua_Hook Hf = NULL;
+static int Hmask = 0;
+static int Hcount = 0;
 
 char *platform_get_home_dir() {
     char *dir;
@@ -135,6 +145,9 @@ char *platform_get_arch() {
 }
 
 
+#ifdef SQUEEZEOS
+/* This is not in the standard lunux watchdog...
+ */
 static int wdog_sem_id = -1;
 
 /*
@@ -200,14 +213,37 @@ int watchdog_get() {
 int watchdog_keepalive(int watchdog_id, int count) {
 	return watchdog_sem_keepalive(watchdog_id, count);
 }
+#else
+/* For standard lunux/BSD watchdog
+ * Use a file mtime monitor ~ 30 - 60 Seconds
+ * we dont have any ability to control next update time with this.
+ */
 
+static char *wd_file= "/tmp/jive";
 
-static LOG_CATEGORY *log_sp;
-static lua_State *Lsig = NULL;
-static lua_Hook Hf = NULL;
-static int Hmask = 0;
-static int Hcount = 0;
+int watchdog_get(void) {
+	char *env = getenv("JIVE_WATCHDOG_FILE");
+	int fd = -1;
+	wd_file = env ? env : wd_file;
+	fd = open(wd_file , O_RDWR | O_CREAT, 0664);
+        if (fd >= 0) {
+                return fd;
+        } else {
+                LOG_ERROR(log_sp,"watchdog get file %s %s",strerror(errno),wd_file);
+                return -1;
+        }
+}
 
+int watchdog_keepalive(int watchdog_id, int count) {
+	if (utime(wd_file,NULL) < 0 && watchdog_id >= 0) {
+		LOG_ERROR(log_sp,"watchdog update mtime %s %s",strerror(errno),wd_file);
+		close(watchdog_id);
+		watchdog_id = -1;
+		return -1;
+	}
+	return 0;
+}
+#endif
 
 static void print_trace(void)
 {
@@ -270,13 +306,20 @@ static void quit_hook(lua_State *L, lua_Debug *ar) {
 	lua_getfield(L, -1, "traceback");
 	lua_call(L, 0, 1);
 
-	log_sp = LOG_CATEGORY_GET("squeezeplay");
-
 	LOG_WARN(log_sp, "%s", lua_tostring(L, -1));
+
+	jive_send_quit();
 }
 
 
 static void quit_handler(int signum) {
+	struct sigaction sa;
+
+        sa.sa_handler = SIG_DFL;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = 0;
+        sigaction(signum, &sa, NULL);
+
 	LOG_ERROR(log_sp, "SIGQUIT squeezeplay %s", JIVE_VERSION);
 	print_trace();
 
@@ -286,8 +329,6 @@ static void quit_handler(int signum) {
 
 	/* set handler hook */
 	lua_sethook(Lsig, quit_hook, LUA_MASKCALL | LUA_MASKRET | LUA_MASKLINE, 0);
-
-	SDL_Quit();
 }
 
 
@@ -302,12 +343,31 @@ static void segv_handler(int signum) {
 	LOG_ERROR(log_sp, "SIGSEGV squeezeplay %s", JIVE_VERSION);
 	print_trace();
 
-	SDL_Quit();
+	SDL_Quit(); /* atexit not called */
 
 	/* dump core */
 	raise(signum);
 }
 
+static void term_handler(int  signum) {
+	struct sigaction sa;
+
+        sa.sa_handler = SIG_DFL;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = 0;
+        sigaction(signum, &sa, NULL);
+
+	LOG_ERROR(log_sp, "SIGTERM squeezeplay %s", JIVE_VERSION);
+
+	// Try and exit gracefully...
+	jive_send_quit();
+}
+
+static void platform_exit(void) {
+	// Note we have been here
+	LOG_WARN(log_sp, "platform_exit squeezeplay %s", JIVE_VERSION);
+	// FIXME Watchdog
+}
 
 void platform_init(lua_State *L) {
 	struct sigaction sa;
@@ -324,6 +384,11 @@ void platform_init(lua_State *L) {
 
 	sa.sa_handler = segv_handler;
 	sigaction(SIGSEGV, &sa, NULL);
+
+	sa.sa_handler = term_handler;
+	sigaction(SIGTERM, &sa, NULL);
+
+	atexit(platform_exit);
 }
 
 #endif
