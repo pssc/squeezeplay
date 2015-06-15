@@ -21,7 +21,7 @@ local ipairs, pairs, tostring ,select, tonumber, type, assert = ipairs, pairs, t
 
 local table           = require("table")
 local string          = require("string")
-local debug           = require("debug")
+local debug          = require("jive.utils.debug")
 
 local oo              = require("loop.simple")
 local io              = require("io")
@@ -51,7 +51,7 @@ local appletManager = appletManager
 
 -- contants
 local mappings = { "UNMAPPED","LOCAL","REMOTE","IGNORE" }
-local readsize = 1 -- FIXME for unkown machine/kernel types we should be 1 otherwise reads could block...
+local readsize = 2 -- Could lead to blocking... > 1
 
 -- runtime
 local mapping = nil
@@ -104,7 +104,7 @@ function menu(self, menuItem)
                                                         tostring(obj:getSelected())
                                                )
                                                settings.default_mapping = selectedIndex + 1
-					       readfds = self:readfdsetup(srttings.devicelist)
+					       readfds,_ = self:readfdsetup(srttings.devicelist)
                                 end,
                         	settings.default_mapping - 1 ), -- Index into choice
 		}
@@ -126,7 +126,7 @@ function menu(self, menuItem)
                                                         tostring(obj:getSelected())
                                                )
                                                j.mapping = selectedIndex 
-					       readfds = self:readfdsetup(settings.devicelist)
+					       readfds,_ = self:readfdsetup(settings.devicelist)
                                 end,
                         	j.mapping and j.mapping or 1 ), -- Index into choice
 		})
@@ -146,7 +146,7 @@ function getInputDetectorMapping(self)
 			log:warn(self,":getInputDetectorMapping task resumed")
 		end	
 	else
-		mapping = 4 -- IGNORE by default
+		-- ignored devices are not monitored and should return the last code...
 		self:monitordevices()
 	end
 	
@@ -161,10 +161,18 @@ end
 
 function startInputDetector(self)
 	local settings = self:getSettings()
-	for k,v in pairs(settings) do log:debug(self,":startInputDetector settings [",k,"]=",v) end
-	for k,v in pairs(settings.devicelist) do log:debug(self,":startInputDetector devlist [",k,"]=",v) end
-	mapping = 4 -- IGNORE
-	readfds = self:readfdsetup(settings.devicelist)
+	local ec
+	if log:isDebug() then
+		for k,v in pairs(settings) do log:debug(self,":startInputDetector settings [",k,"]=",v) end
+		for k,v in pairs(settings.devicelist) do log:debug(self,":startInputDetector devlist [",k,"]=",debug.view(v)) end
+	end
+	mapping = 4 -- IGNORE --FIXME config?
+	readfds,ec = self:readfdsetup(settings.devicelist)
+	if ec then
+		log:warn("Errors while setting up device monitoring rematching devices & retrying")
+		settings.devicelist = self:getDeviceList(settings.devicelist)
+		readfds,ec = self:readfdsetup(settings.devicelist)
+	end
 end
 
 function map(f, t)
@@ -260,23 +268,25 @@ end
 
 function readfdsetup(self,t)
 	local readfds = {}
+	local ec = nil
 	for n,r in pairs(t) do 
 		local device = "/dev/input/"..t[n].event..t[n].ei
-		log:debug(self,":readfdsetup ",n," ", r.name," ", r.event," ", r.handler, " ", r.ei, " ", device)
+		log:debug(self,":readfdsetup ",n," ",mappings[r.mapping]," ",device," ",debug.view(r))
 		if not (r.mapping and r.mapping == 4) then -- IGNORE
 			local dev, err = io.open(device,"rb")
 			if err then
+				ec=1
 				log:warn(device, " open ", err)
 			else
 				readfds[#readfds+1] = { getfd = function() return dev.fileno and dev:fileno() or lfs.fileno(dev) end, dev = dev, detail = t[n] , file = device }
 			end
 		else
-			log:debug(self,":readfdsetup (ignored) ",n," ",r.name," ",r.mapping)
+			log:debug(self,":readfdsetup (ignored) ",n," ",r.name," ",device)
 		end
 	end
 
-	log:debug(":readfdsetup ",#readfds)
-	return readfds
+	log:debug(":readfdsetup ",#readfds, " =",ec)
+	return readfds, ec
 end
 
 function monitordevices(self)
@@ -286,27 +296,28 @@ function monitordevices(self)
 		if err and err ~= "timeout" then
 			log:error(self,":monitordevices select error", err)
 			settings.devicelist = self:getDeviceList(settings.devicelist)
-			readfds = self:readfdsetup(settings.devicelist)
+			readfds,_ = self:readfdsetup(settings.devicelist)
 		elseif err ~= "timeout" then
 			for n,fd in ipairs(r) do
+				log:debug("monitordevices fd consume data ",fd.detail.name," ",fd.file)
 				--fd.dev:seek("end") -- char dev seems not to be seekable
 				-- consume data on fd
-				local consume = {fd}
 				local data = 'x'
-				local lr, w, err = socket.select(consume,nil,0)
+				local lr, err = {fd} , nil
 				while(#lr > 0 and data and not err) do
 					data = fd.dev:read(readsize) -- blocking
-					lr,w,err = socket.select(consume,nil,0)
+					lr,_,err = socket.select(lr,nil,0)
 				end
+				log:debug("monitordevices consumed data")
 				if not data or err and err ~= "timeout" then
-					log:error("select data read errror ",fd.file,",",err)
+					log:error("select data read errror ",fd.detail.name," ",fd.file,",",err)
 					settings.devicelist = self:getDeviceList(settings.devicelist)
-					readfds = self:readfdsetup(settings.devicelist)
+					readfds,_ = self:readfdsetup(settings.devicelist)
 				else
 					mapping = fd.detail.mapping and fd.detail.mapping or settings.default_mapping
 					device = fd.detail
 
-					log:debug(self,":monitordevices ",fd.file,"=",mapping)
+					log:debug(self,":monitordevices mapping=",mapping)
 				end
 			end
 		end
