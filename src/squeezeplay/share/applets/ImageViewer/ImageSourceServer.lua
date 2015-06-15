@@ -212,8 +212,9 @@ function requestImage(self, imageData)
 		end
 		
 	else
-		--use SN image proxy for resizing
+		--use SN image proxy for resizing -- local images?
 		urlString = 'https://' .. jnt:getSNHostname() .. '/public/imageproxy?w=' .. screenWidth .. '&h=' .. screenHeight .. '&f=' .. ''  .. '&u=' .. string.urlEncode(urlString)
+		log:warn("SN imageproxy ",urlString)
 	end
 
 	self.currentImageFile = urlString
