@@ -136,6 +136,9 @@ end
 -- t_getConnected
 -- returns the connected state, network thread side (i.e. safe, no mutex)
 function t_getConnected(self)
+	if self.t_tcp.proxy:isProxied() then
+		return self.t_tcp.connected and self.t_tcp.proxy:isConnected()
+	end
 	return self.t_tcp.connected
 end
 

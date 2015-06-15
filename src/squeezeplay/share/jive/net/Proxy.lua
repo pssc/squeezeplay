@@ -278,7 +278,6 @@ function setProxyServer(self,server,idx)
 end
 
 function getState(self)
-        
 	return self.state
 end
 
@@ -286,6 +285,10 @@ end
 
 function isProxying(self)
 	return self.proxied
+end
+
+function isConnected(self)
+	return self.state == 0
 end
 
 function reset(self)

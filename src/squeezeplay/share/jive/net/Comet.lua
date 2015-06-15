@@ -358,8 +358,8 @@ _sendPendingRequests = function(self, data)
 	-- Only continue if we have some data to send
 	if data[1] then
 		if log:isDebug() then
-			log:debug("Sending pending request(s):")
-			debug.dump(data, 5)
+			log:debug("Sending pending request(s): ",self.uri)
+			log:debug(debug.view(data, 5))
 		end
 
 		local req = CometRequest(
@@ -367,7 +367,7 @@ _sendPendingRequests = function(self, data)
 			 self.uri,
 			 data
 		)
-		-- always use the long lived connection's (chttp) ip address, otherwise the ip address of rhttp can change from chhtp's. 
+		-- always use the long lived connection's (chttp) ip address, otherwise the ip address of rhttp can change from chttp's. 
 		if DNS:isip(self.chttp.t_tcp.address) then
 			-- proxy connections
 			if self.chttp.t_tcp.proxy.proxied then
@@ -970,7 +970,8 @@ _response = function(self, chunk)
 				log:debug(self, ": _response, got data for an event we aren't subscribed to, ignoring -> ", subscription)
 			end
 		else
-			log:warn(self, ": _response, unknown error: ", event.error)
+			log:warn(self, ": _response, disconnecting unknown error: ", event.error)
+			_disconnect(self)
 			return _handleAdvice(self)
 		end
 		
