@@ -714,8 +714,6 @@ local function _eventHandler(self, event)
 
 			if false and not self:isTouchMouseEvent(event) then
 				--disabling regular desktop mouse behavior - favoring drag style for now
-				--disabling regular desktop mouse behavior - favoring drag style for now
-				--disabling regular desktop mouse behavior - favoring drag style for now
 --				if evtype == EVENT_MOUSE_DRAG then
 --					self:setSelectedIndex(self.topItem + itemShift)
 --					_scrollList(self)
@@ -1341,7 +1339,7 @@ if I<coerce> is true, index < 1 will be treat as 1 and index > listSize will be 
 
 =cut
 --]]
-function setSelectedIndex(self, index, coerce)
+function setSelectedIndex(self, index, coerce, noReLayout)
 	_assert(type(index) == "number", "setSelectedIndex index is not a number: ", index)
 
 	if coerce then
@@ -1761,9 +1759,7 @@ function _updateWidgets(self)
 		self.widgets[i] = nil
 	end
 
-
 	local nextSelected = _selectedItem(self)
-
 	-- clear selection
 	if lastSelected and lastSelected ~= nextSelected then
 		lastSelected:setStyleModifier(nil)
@@ -1788,6 +1784,7 @@ function _updateWidgets(self)
 				end
 			end
 		end
+		log:debug("nextSelected style (",Framework.mostRecentInputType,") ",nextSelected:getStyleModifier())
 
 		if Framework.mostRecentInputType == "mouse" then
 			if self.usePressedStyle and lastHighlightedIndex ~= nextSelectedIndex then
@@ -1809,7 +1806,7 @@ function _updateWidgets(self)
 
 	self:_updateScrollbar()
 
---	log:warn("_update menu:\n", self:dump())
+	--log:warn("_update menu:\n", self:dump())
 
 
 end

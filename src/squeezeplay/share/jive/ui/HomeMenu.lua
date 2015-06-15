@@ -83,6 +83,7 @@ function __init(self, name, style, titleStyle)
 						local homeMenu = obj.nodeTable["home"].menu
 						if homeMenu:getSelectedIndex() and homeMenu:getSelectedIndex() > 1 then
 							Framework:playSound("JUMP")
+							log:debug("homeRootHandler setSlectected....")
 							homeMenu:setSelectedIndex(1)
 							return EVENT_CONSUME
 						end
@@ -121,7 +122,6 @@ function __init(self, name, style, titleStyle)
 					end
 					return EVENT_UNUSED
 				end)
-
 	return obj
 end
 
@@ -225,6 +225,7 @@ function itemUpOne(self, item, node)
 				self:setRank(itemAbove, rank)
 				self:setRank(v, rank - 1)
 				menu:setSelectedIndex(rank - 1)
+				log:debug("itemUpOne ",v," ",rank-1)
 				menu:setComparator(SimpleMenu.itemComparatorRank)
 				break
 			end
@@ -256,6 +257,7 @@ function itemDownOne(self, item, node)
 				self:setRank(v, rank + 1)
 				menu:setComparator(SimpleMenu.itemComparatorRank)
 				menu:setSelectedIndex(rank + 1)
+				log:debug("itemDownOne ",v," ",rank+1)
 				break
 			end
 		end
@@ -285,6 +287,7 @@ function itemToBottom(self, item, node)
 				-- note: order matters here, you don't want to rankMenuItems until the menu has been resorted
 				self:setRank(v, bottomIndex + 1)
 				menu:setSelectedIndex(bottomIndex)
+				log:debug("bottomIndex ",v," ",rank+1," ",node)
 				menu:setComparator(SimpleMenu.itemComparatorRank)
 				self:rankMenuItems('home')
 				break
@@ -322,6 +325,7 @@ function itemToTop(self, item, node)
 		rank = rank + 1
 	end
 	menu:setSelectedIndex(1)
+	log:debug("itemToTop ",item," ",node)
 
 	-- sort menu before ranking it
 	menu:setComparator(SimpleMenu.itemComparatorRank)
@@ -369,6 +373,7 @@ function closeToHome(self, hideAlwaysOnTop, transition)
 
 	--move to root item :bug #14066
 	if self.nodeTable then
+		log:debug("close to home")
 		self.nodeTable["home"].menu:setSelectedIndex(1)
 	end
 
@@ -490,11 +495,9 @@ function addItemToNode(self, item, node)
 	assert(node)
 
 	if self.nodeTable[node] then
-		self.nodeTable[node].items[item.id] = item
-		local menuIdx = self.nodeTable[node].menu:addItem(item)
 		-- items in the home menu get special handling and a new table created for them
 		if node == 'home' then
-			--this breaks localization code, punt for now. items moved to the home menu will not display custom text
+			-- this breaks localization code, punt for now. items moved to the home menu will not display custom text
 			--[[
 			local labelText = item.homeMenuText
 			if not labelText then
@@ -520,15 +523,16 @@ function addItemToNode(self, item, node)
 				return EVENT_CONSUME
 			end
 			self.customMenuTable[myItem.id] = myItem
-			self.nodeTable[node].menu:addItem(myItem)
 			self.nodeTable[node].items[myItem.id] = myItem
+			self.nodeTable[node].menu:addItem(myItem)
 			return myItem
 
 		else
+			self.nodeTable[node].items[item.id] = item
+			self.nodeTable[node].menu:addItem(item)
 			return item
 		end
 	end
-
 end
 
 -- add an item to a menu. the menu is ordered by weight, then item name
@@ -636,8 +640,6 @@ function removeItemFromNode(self, item, node)
 		self.nodeTable[node].menu:removeItem(item)
 		self:_checkRemoveNode(node)
 	end
-
-
 end
 
 -- remove an item from a menu
@@ -653,13 +655,13 @@ function removeItem(self, item)
 
 	-- if this item is co-located in home, get rid of it there too
 	self:removeItemFromNode(item, 'home')
-
 end
 
 
 function openNodeById(self, id, resetSelection)
 	if self.nodeTable[id] then
 		if resetSelection then
+			log:debug("openNodeById(",id,",",resetSelection,")")
 			self.nodeTable[id].menu:setSelectedIndex(1)
 		end
 		self.nodeTable[id].item.callback()
@@ -736,13 +738,6 @@ function unlockItem(self, item)
 		self.nodeTable[item.node].menu:unlock()
 	end
 end
-
-
--- iterator over items in menu
-function iterator(self)
-	return self.menu:iterator()
-end
-
 
 --[[
 
