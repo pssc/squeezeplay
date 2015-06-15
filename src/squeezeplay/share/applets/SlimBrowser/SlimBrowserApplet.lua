@@ -478,16 +478,17 @@ local function _artworkItem(step, item, group, menuAccel)
 	
 	local iconId = item["icon-id"] or item["icon"]
 
+	-- Consistantly request png for caching
 	if iconId then
-		if menuAccel and not _server:artworkThumbCached(iconId, iconSize) then
+		if menuAccel and not _server:artworkThumbCached(iconId, iconSize,'png') then
 			-- Don't load artwork while accelerated
 			_server:cancelArtwork(icon)
 		else
 			-- Fetch an image from SlimServer
-			_server:fetchArtwork(iconId, icon, iconSize)
+			_server:fetchArtwork(iconId, icon, iconSize,'png')
 		end
 	elseif item["trackType"] == 'radio' and item["params"] and item["params"]["track_id"] then
-		if menuAccel and not _server:artworkThumbCached(item["params"]["track_id"], iconSize) then
+		if menuAccel and not _server:artworkThumbCached(item["params"]["track_id"], iconSize,'png') then
 			-- Don't load artwork while accelerated
 			_server:cancelArtwork(icon)
                	else
@@ -1006,7 +1007,7 @@ local function _bigArtworkPopup(chunk, err)
 
 	log:debug("Artwork width/height will be ", shortDimension)
 	if artworkId then
-		_server:fetchArtwork(artworkId, icon, shortDimension)
+		_server:fetchArtwork(artworkId, icon, shortDimension,'png')
 	end
 	popup:addWidget(icon)
 	popup:show()
@@ -1350,7 +1351,7 @@ local function _browseSink(step, chunk, err)
 					if iconId then
 						-- Fetch an image from SlimServer
 						titleIcon = Icon("icon")
-						_server:fetchArtwork(iconId, titleIcon, jiveMain:getSkinParam("THUMB_SIZE"))
+						_server:fetchArtwork(iconId, titleIcon, jiveMain:getSkinParam("THUMB_SIZE"),'png')
 					-- only allow the existing icon to stay if titleStyle isn't being changed
 					elseif not data.window.titleStyle and titleWidget:getWidget('icon') then
 						titleIcon = titleWidget:getWidget('icon')
@@ -2416,15 +2417,17 @@ local function _browseMenuRenderer(menu, step, widgets, toRenderIndexes, toRende
 	-- preload artwork in the direction of scrolling
 	-- FIXME wrap around cases
 	local startIndex
-	if dir > 0 then
+	if dir >= 0 then
 		startIndex = toRenderIndexes[toRenderSize]
 	else
 		startIndex = toRenderIndexes[1] - toRenderSize
 	end
 
+	--log:debug(dir," dbIndex ",startIndex, " ",startIndex + toRenderSize)
 	for dbIndex = startIndex, startIndex + toRenderSize do
 		local item = db:item(dbIndex)
 		if item then
+			--log:debug(dbIndex, " = ",string.gsub(item.text,"\n.*",""))
 			_artworkItem(step, item, nil, false)
 		end
 	end
@@ -3680,6 +3683,12 @@ function notify_playerPlaylistChange(self, player)
 
 	-- does the playlist need loading?
 	_requestStatus()
+
+	-- Precache artwork
+	for i,v in ipairs(playerStatus.item_loop) do
+                --log:debug("Load item artwork ",i, " ",string.gsub(v.text,"\n.*"," "))
+		_artworkItem(nil,v,nil,nil)
+	end
 end
 
 
@@ -3705,7 +3714,6 @@ function notify_playerTrackChange(self, player, nowplaying)
 		step.menu:setSelectedIndex(1)
 	end
 	step.menu:reLayout()
-
 end
 
 
@@ -3736,7 +3744,7 @@ function notify_playerDigitalVolumeControl(self, player, digitalVolumeControl)
 		return
 	end
 
-	log:info('notify_playerDigitalVolumeControl()', digitalVolumeControl)
+	log:debug('notify_playerDigitalVolumeControl: ', digitalVolumeControl)
 
 	if digitalVolumeControl == 0 then
 		log:warn('set volume to 100, cache previous volume as: ', self.cachedVolume)
