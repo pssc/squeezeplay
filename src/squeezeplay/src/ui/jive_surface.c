@@ -843,6 +843,7 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 	const SDL_VideoInfo *video_info;
 	JiveSurface *j;
 	Uint32 flags;
+	static Uint32 rflags;
 
 #ifdef SCREEN_ROTATION_ENABLED
 	{
@@ -868,33 +869,23 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 		flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE;
 	} else {
 		if (!fullscreen) LOG_WARN(log_ui_draw, "SDL Flags forced as windowing not available");
-		flags = SDL_FULLSCREEN | SDL_RESIZABLE;
+		flags = SDL_FULLSCREEN | SDL_HWSURFACE | SDL_RESIZABLE;
 		flags |= (SDL_getenv("JIVE_NOCURSOR")) ? SDL_DOUBLEBUF : 0 ; //FIXME sp controled option?
 	}
 
 	LOG_INFO(log_ui_draw, "SDL Get Video surface");
 	sdl = SDL_GetVideoSurface();
 	if (sdl) {
-		Uint32 mask;
 		// Fill bpp in for VideoModeOK as 0 doesnt seem to be current so get current
-		/* check if we can reuse the existing suface? */
-		if (video_info->wm_available) {
-			mask = (SDL_FULLSCREEN | SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE);
-		}
-		else {
-			mask = (SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE);
-		}
-
 		if ((sdl->w != w) || (sdl->h != h)) {
-			LOG_INFO(log_ui_draw, "SDL Video surface Cannot be reused Resultion %dx%d/%dx%d",sdl->w,sdl->h,w,h);
+			LOG_INFO(log_ui_draw, "SDL Video surface cannot be reused Resultion %dx%d/%dx%d",sdl->w,sdl->h,w,h);
 			bpp = ( bpp == 0 ) ? sdl->format->BitsPerPixel : bpp;
 			sdl = NULL;
                 } else if ((bpp > 0 ) && (sdl->format->BitsPerPixel != bpp)) {
-			LOG_INFO(log_ui_draw, "SDL Video surface Cannot be reused depth %d/%d",(sdl->format->BitsPerPixel),bpp);
+			LOG_INFO(log_ui_draw, "SDL Video surface cannot be reused depth %d/%d",(sdl->format->BitsPerPixel),bpp);
 			sdl = NULL;
-
-		} else if ((sdl->flags & mask) != (flags & mask)) {
-			LOG_INFO(log_ui_draw, "SDL Video surface Cannot be reused flags %x,%x",(sdl->flags & mask),(flags & mask));
+		} else if (flags != rflags) {
+			LOG_INFO(log_ui_draw, "SDL Video surface cannot be reused flags last %x, requested %x",rflags , flags);
 			bpp = ( bpp == 0 ) ? sdl->format->BitsPerPixel : bpp;
 			sdl = NULL;
 		} else if (bpp == 0 ) {
@@ -905,10 +896,10 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 	if (!sdl) {
 		int rbpp;
 
-		LOG_INFO(log_ui_draw, "Checking mode %dx%d %dbpp (flags %x)",w, h, bpp,flags);
+		LOG_INFO(log_ui_draw, "Checking mode %dx%d %dbpp (flags %x)",w, h, bpp, flags);
 		rbpp = SDL_VideoModeOK(w, h, (bpp > 0) ? bpp : 16 , flags);
 		if (rbpp == 0) {
-			LOG_ERROR(log_ui_draw,"Mode not available. %dx%d %dbpp, %x flags ",w, h, bpp,flags);
+			LOG_ERROR(log_ui_draw,"Mode not available. %dx%d %dbpp, %x flags ",w, h, bpp, flags);
 		}
                 LOG_INFO(log_ui_draw, "Creating new surface %dx%d %dbpp (recommended %d) (flags %x)",w, h, bpp, rbpp, flags);
 		sdl = SDL_SetVideoMode(w, h, bpp, flags);
@@ -916,14 +907,14 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 			LOG_ERROR(log_ui_draw, "SDL_SetVideoMode(%d,%d,%d): %s", w, h, bpp, SDL_GetError());
 			return NULL;
 		} else {
-			LOG_INFO(log_ui_draw, "Created new surface %dx%d",sdl->w,sdl->h);
+			LOG_INFO(log_ui_draw, "Created new surface %dx%d", sdl->w, sdl->h);
 		}
 
 		if ( (sdl->flags & SDL_HWSURFACE) && (sdl->flags & SDL_DOUBLEBUF)) {
 			LOG_INFO(log_ui_draw, "Using a hardware double buffer");
 		}
 
-		LOG_INFO(log_ui_draw, "Video mode: %d bits/pixel %d bytes/pixel [R<<%d G<<%d B<<%d]", sdl->format->BitsPerPixel, sdl->format->BytesPerPixel, sdl->format->Rshift, sdl->format->Gshift, sdl->format->Bshift);
+		LOG_INFO(log_ui_draw, "Video mode: %d bits/pixel %d bytes/pixel flags %x [R<<%d G<<%d B<<%d]", sdl->format->BitsPerPixel, sdl->format->BytesPerPixel, sdl->flags ,sdl->format->Rshift, sdl->format->Gshift, sdl->format->Bshift);
 
 #ifdef SCREEN_ROTATION_ENABLED
 		/* orientaion hack */
@@ -933,6 +924,7 @@ JiveSurface *jive_surface_set_video_mode(Uint16 w, Uint16 h, Uint16 bpp, bool fu
 		SDL_SetAlpha(sdl, SDL_SRCALPHA, SDL_ALPHA_OPAQUE);
 #endif
 	}
+	rflags = flags;
 	j = jive_surface_new_SDLSurface(sdl);
 	LOG_INFO(log_ui_draw, "Jive Surface %x SDL %x",j,sdl);
 	return j;
