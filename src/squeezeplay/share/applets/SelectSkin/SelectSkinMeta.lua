@@ -90,9 +90,17 @@ end
 
 
 function _artworkspec(meta, server)
+	-- FIXME skins should do this?... or theme loading...
 	local size = jiveMain:getSkinParam('THUMB_SIZE_MENU',true) or THUMB_SIZE_MENU
+	--FIXME bogus.. cover ART...
 	local spec = size .. 'x' .. size .. '_m'
-	server:request(nil, nil, { 'artworkspec', 'add', spec, 'squeezeplayskin' }) --FIXME
+	local ver = server:isMoreThan("7.7")
+	-- Version my be unkown we will reconnect after we have this...
+	if ver then
+		server:request(nil, nil, { 'artworkspec', 'add', spec, 'squeezeplayskin' }) --FXIME in theme loading?
+	elseif ver == false then
+		log:warn("Unable to send artwork spec for ",server, " Version ",server:getVersion())
+	end
 end
 
 --[[

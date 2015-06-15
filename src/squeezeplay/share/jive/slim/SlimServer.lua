@@ -170,6 +170,19 @@ local function _getSink(self, name)
 	end
 end
 
+-- for proxied / remote servers so we can get the version information
+-- we force a reconnect for version spefic features to be enabled...
+function _versionSink(self, chunk, err)
+	if chunk and chunk.data and chunk.data['_version'] then
+		log:debug(self.name," Version ",self.state.version,"==",chunk.data._version)
+		self.comet:disconnect()
+		self.state.version = chunk.data._version
+		self.comet:connect()
+	else
+		log:error(self," Version fetch error ",err," ",debug.view(chunk))
+		self:reconnect()
+	end
+end
 
 -- _serverstatusSink
 -- processes the result of the serverstatus call
@@ -183,6 +196,12 @@ function _serverstatusSink(self, event, err)
 		log:error(self, ": chunk with no data ??!")
 		log:error(event)
 		return
+	end
+
+	-- Proxied / Remote Servers no version on first connect.
+	if not self:isSqueezeNetwork() and data.version ~= self.state.version then
+		-- Query server and reconnect to be clear of any current processing
+		self.comet:request(_getSink(self,'_versionSink') ,nil,{'version','?'},100)
 	end
 
 	-- remember players from server, avoid possibly inaccurate player information that can happen in race conditions when SlimProto socket disconnection is not
@@ -229,9 +248,8 @@ function _serverstatusSink(self, event, err)
 			self.jnt:notify('serverRescanDone', self)
 		end
 	end
-	
+
 	-- update players
-	
 	-- copy all players we know about
 	local selfPlayers = {}
 	local player
@@ -308,7 +326,6 @@ function _serverstatusSink(self, event, err)
 		player:free(self)
 		self.players[k] = nil
 	end
-	
 end
 
 
@@ -472,12 +489,20 @@ function __init(self, jnt, id, name, version)
 		-- queue of artwork to fetch
 		artworkFetchQueue = {},
 		artworkFetchCount = 0,
+		artworkFetchLimit = 12, -- Was 4
+					-- lower bandwidth connections 2 lan > 9
+					-- 8 slow image proxy connections kicked off at start...
+					-- From Apps in SN
+					-- FIXME set on device cap or do we care?
 
 		-- loaded images
 		imageCache = {},
 	})
 
 	obj.state.version = version
+	if not obj:isSqueezeNetwork() and not obj.state.version then
+		--obj.cometv = Comet(jnt, name)
+	end
 
 	-- subscribe to server status, max 50 players every 60 seconds.
 	-- FIXME: what if the server has more than 50 players?
@@ -491,8 +516,9 @@ function __init(self, jnt, id, name, version)
 	local inSetup = jnt.inSetupHack and 1 or 0
 
 	local machine = System:getMachine()
-	-- this is not relevant to desktop SP
+	-- this is not relevant to desktop SP --FIXME SqueezePi
 	if machine ~= 'squeezeplay' then
+		log:debug("Subscribe to firmware updates for ",machine)
 		obj.comet:subscribe('/slim/firmwarestatus',
 			_getSink(obj, '_upgradeSink'),
 			nil,
@@ -655,7 +681,9 @@ end
 
 function wakeOnLan(self)
 	if not self.mac or self:isSqueezeNetwork() then
-		log:warn('wakeOnLan(): SKIPPING WOL, self.mac: ', self.mac, ', self:isSqueezeNetwork(): ', self:isSqueezeNetwork())
+		if not self:isSqueezeNetwork() then
+			log:warn('wakeOnLan(): SKIPPING WOL ',self.name,', mac: ', self.mac, ', self:isSqueezeNetwork(): ', self:isSqueezeNetwork())
+		end
 		return
 	end
 
@@ -689,8 +717,6 @@ function connect(self)
 	end
 
 	self.netstate = 'connecting'
-
-	-- artwork pool connects on demand
 	self.comet:connect()
 end
 
@@ -741,22 +767,23 @@ function notify_cometConnected(self, comet)
 		return
 	end
 
-	log:info("connected ", self.name)
-
-	self.netstate = 'connected'
-	self.jnt:notify('serverConnected', self)
-
 	self.authFailureCount = 0
 
 	-- auto discovery SqueezeCenter's mac address
- 	self.jnt:arp(self.ip, function(chunk, err)
-		if err then
-			log:debug("arp: " .. err)
-		else
-			log:info('self.mac being set to---->', self.mac)
-			self.mac = chunk
-		end
-	end)
+	if not self:isSqueezeNetwork() then
+		self.jnt:arp(self.ip, function(chunk, err)
+			if err then
+				log:debug("arp: " .. err)
+			else
+				log:info(self.name,' mac being set to--->', chunk)
+				self.mac = chunk
+			end
+		end)
+	end
+
+	self.netstate = 'connected'
+	log:info("connected ", self.name, " ", self.state.version)
+	self.jnt:notify('serverConnected',self)
 end
 
 -- comet is disconnected from SC
@@ -951,9 +978,9 @@ end
 
 function processArtworkQueue(self)
 	while true do
-		while self.artworkFetchCount < 4 and #self.artworkFetchQueue > 0 do
-			-- remove tail entry
-			local entry = table.remove(self.artworkFetchQueue)
+		while self.artworkFetchCount < self.artworkFetchLimit and #self.artworkFetchQueue > 0 do
+			-- Use as a FIFO to prenent starvation with lost of requests
+			local entry = table.remove(self.artworkFetchQueue,1)
 
 			--log:debug("ARTWORK ID=", entry.key)
 			local req = RequestHttp(
@@ -1067,8 +1094,8 @@ end
 
 The SlimServer object maintains an artwork cache. This function either loads from the cache or
 gets from the network the thumb for I<iconId>. A L<jive.ui.Surface> is used to perform
-I<icon>:setValue(). This function computes the URI to request the artwork from the server from I<iconId>. I<imgFormat> is an optional
-argument to control the image format.
+I<icon>:setValue().  This function computes the URI to request the artwork from the server
+from I<iconId>. I<imgFormat> is an optional argument to control the image format.
 
 =cut
 --]]
@@ -1137,19 +1164,23 @@ function fetchArtwork(self, iconId, icon, size, imgFormat)
 		 	url = url .. "." .. imgFormat
 		end
 	else
-		-- pssc FIXME use active server internal sp resizer...
-		-- Use the SN image resizer on all remote URLs until SP can resize images with better quality
+		-- FIXME Use the SN image resizer on all remote URLs until SP can resize images with better quality
+		-- jivelite relys on improved resizing
 		if string.find(iconId, "^http") then
 			-- Bug 13937, if URL references a private IP address, don't use imageproxy
 			-- Tests for a numeric IP first to avoid extra string.find calls
-			if string.find(iconId, "^http://%d") and (
-				string.find(iconId, "^http://192%.168") or
-				string.find(iconId, "^http://172%.16%.") or
-				string.find(iconId, "^http://10%.")
+			if string.find(iconId, "^https?://%d") and (
+				string.find(iconId, "^https?://192%.168") or
+				string.find(urlString, "^https?://172%.1[6-9]%.") or
+				string.find(urlString, "^https?://172%.2[0-9]%.") or
+				string.find(urlString, "^https?://172%.3[0-1]%.") or
+				string.find(iconId, "^https?://10%.")
 			) then
 				url = iconId
 			else
-				url = 'http://' .. jnt:getSNHostname() .. '/public/imageproxy?w=' .. sizeW .. '&h=' .. sizeH .. '&f=' .. (imgFormat or '') .. '&u=' .. string.urlEncode(iconId)
+				-- FIXME pssc use Server here...
+				url = 'https://' .. jnt:getSNHostname() .. '/public/imageproxy?w=' .. sizeW .. '&h=' .. sizeH .. '&f=' .. (imgFormat or '') .. '&u=' .. string.urlEncode(iconId)
+				logcache:warn("SN imageproxy ",url)
 			end
 		else
 			url = string.gsub(iconId, "(.+)(%.%a+)", "%1" .. resizeFrag .. "%2")
@@ -1239,8 +1270,9 @@ end
 
 -- return true if the server is compatible with this controller, false
 -- if an upgrade is needed, or nil if the server version is not currently
--- known.
-function isCompatible(self)
+-- known. version is the minimumVersion
+function isCompatible(self,version)
+	version = version or minimumVersion
 	if self:isSqueezeNetwork() then
 		return true
 	end
@@ -1249,9 +1281,10 @@ function isCompatible(self)
 		return nil
 	end
 	
-        log:debug("Server version",self.state.version,">", minimumVersion)
-	return self:isMoreRecent(self.state.version, minimumVersion)
+        log:debug("Server version",self.state.version,">", version)
+	return self:isMoreRecent(self.state.version, version)
 end
+isMoreThan = isCompatible
 
 function isMoreRecent(self, new, old)
 	local newVer = string.split("%.", new)
