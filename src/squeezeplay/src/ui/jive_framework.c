@@ -197,6 +197,10 @@ int jive_traceback (lua_State *L) {
 	return 1;
 }
 
+void jive_quit(void) {
+	SDL_Quit();
+	LOG_WARN(log_ui,"JIVE Quit atexit");
+}
 
 static int jiveL_initSDL(lua_State *L) {
 	const SDL_VideoInfo *video_info;
@@ -227,8 +231,8 @@ static int jiveL_initSDL(lua_State *L) {
 #   define JIVE_SDL_FEATURES (SDL_INIT_VIDEO)
 #endif
 	LOG_INFO(log_ui_draw, "initSDL");
-	if (!atexit(SDL_Quit)) {
-		LOG_ERROR(log_ui,"SDL_Quit atexit fail");
+	if (atexit(jive_quit) != 0) {
+		LOG_ERROR(log_ui,"jive_quit atexit fail");
 	}
 	/* initialise SDL */
 	if (SDL_Init(JIVE_SDL_FEATURES) < 0) {
