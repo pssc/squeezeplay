@@ -1,0 +1,11 @@
+SETTING_ACTIVE
+	EN	Active
+
+SETTING_SENSITIVITY
+	EN	Proximity delta sensitivity
+
+SETTING_BUS
+	EN	i2c Bus
+
+APPLET_NAME
+	EN	VCNL4010
