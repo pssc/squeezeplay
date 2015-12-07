@@ -83,8 +83,7 @@ function init(self, ...)
 	self.defaultSettings = self:getDefaultSettings()
 
 	-- listener to restart screensaver timer
-	-- FIXME Nav KEYS?
-	Framework:addListener(ACTION | EVENT_SCROLL | EVENT_MOUSE_ALL | EVENT_MOTION | EVENT_IR_ALL,
+	Framework:addListener(ACTION | EVENT_SCROLL | EVENT_MOUSE_ALL | EVENT_MOTION | EVENT_IR_ALL | EVENT_KEY_ALL,
 		function(event)
 			if (event:getType() & EVENT_IR_ALL) > 0 then
 				if (not Framework:isValidIRCode(event)) then
@@ -92,7 +91,7 @@ function init(self, ...)
 				end
 			end
 			
-			log:debug("restart timer event=",event:tostring()," to ",self.timeout)
+			log:debug("restart timer event=",event:tostring()," to ", self.timeout)
 			self.timer:restart(self.timeout)
 			self.extension = 0
 			return EVENT_UNUSED
