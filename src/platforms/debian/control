@@ -1,13 +1,25 @@
 Source: squeezeplay
 Section: sound
 Priority: optional
-Maintainer: Logitech/Slim Devices <debian@slimdevices.com>
-Build-Depends: debhelper (>= 4.0.0)
+Maintainer: Not a Vaild email <pssc@github.com>
+Homepage: https://github.com/pssc/squeezeplay
+Build-Depends: debhelper (>= 4.0.0), libmad0-dev, libflac-dev, libasound-dev, libjpeg-dev, libpng12-dev, libpthread-stubs0-dev, libogg-dev
 Standards-Version: 3.6.2
 
 Package: squeezeplay
-Architecture: all
-Depends: 
+Architecture: any
+Depends: libmad0, libflac8, libasound2, libjpeg8, libpng12-0, libogg0, squeezeplay-common, fonts-freefont-ttf, libfreetype6
+Recommends: alsa-utils, wicd
+Suggests: libpacparser1, wicd-curses, autossh, liblog4cplus-1.0-4, libboost-thread1.49.0, libboost-system1.49.0, libboost-program-options1.49.0, libcec2 (>= 2.2.0)
 Description: Logitech SqueezePlay
- SqueezePlay is a client for the SqueezeCenter music streaming server.
+ SqueezePlay is a Grapical client for the Logitech/SqueezeCenter music streaming server.
  .
+
+Package: squeezeplay-common
+Architecture: all
+Depends: squeezeplay
+Description: Logitech SqueezePlay Lua Code and supporting scripts and config
+ SqueezePlay is a Grapical client for the Logitech/SqueezeCenter music streaming server.
+ Lua based code.
+ .
+
