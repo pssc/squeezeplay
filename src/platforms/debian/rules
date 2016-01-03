@@ -6,23 +6,27 @@
 export DH_VERBOSE=1
 
 package=squeezeplay
-base=$(CURDIR)/debian/$(package)
-source=$(CURDIR)/../../build/linux/
-squeezeplay=$(base)/opt/$(package)
+tmp=$(CURDIR)/debian/tmp
+build=$(CURDIR)/../../build/linux/
+squeezeplay=$(CURDIR)/debian/$(package)
+squeezeplay_common=$(CURDIR)/debian/$(package)-common
 
 clean:
 	dh_testdir
 	dh_testroot
-	rm -rf ${base}
 	rm -f $(CURDIR)/debian/files
+	rm -rf $(squeezeplay)
+	rm -rf $(squeezeplay_common)
+	rm -f $(CURDIR)/opt/squeezeplay
+	-rmdir $(CURDIR)/opt
 
 install:
 	dh_testdir
 	dh_testroot
 	dh_installdirs
-
-	# Copy all of the files into the base dir
-	cp -r $(source)/* $(squeezeplay)/
+	# Link to build dir so we can copy files
+	mkdir -p $(CURDIR)/opt
+	ln -s $(build) $(CURDIR)/opt/squeezeplay
 	
 binary-indep: install
 	dh_testdir
@@ -30,8 +34,13 @@ binary-indep: install
 	dh_installchangelogs 
 	dh_installdocs
 	dh_install
+	rm -rf $(CURDIR)/debian/squeezeplay-common/opt/squeezeplay/share/jive/fonts
+	ln -s /usr/share/fonts/truetype/freefont $(CURDIR)/debian/squeezeplay-common/opt/squeezeplay/share/jive/fonts
+	ln -s /etc/default $(CURDIR)/debian/squeezeplay-common/opt/squeezeplay/etc/default
 	dh_installlogrotate
+	-dh_systemd_enable
 	dh_installinit
+	-dh_systemd_start
 	dh_installman
 	dh_compress
 	dh_fixperms
