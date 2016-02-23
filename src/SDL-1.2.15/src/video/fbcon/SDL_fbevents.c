@@ -68,8 +68,8 @@
          keymap[i] = SDLK_##y; \
     break
 
-/*#define DEBUG_KEYBOARD*/
-/*#define DEBUG_MOUSE*/
+#define DEBUG_KEYBOARD
+#define DEBUG_MOUSE
 
 /* The translation tables from a console scancode to a SDL keysym */
 #define NUM_VGAKEYMAPS	(1<<KG_CAPSSHIFT)
@@ -760,13 +760,22 @@ static void handle_tslib(_THIS)
 {
 	struct ts_sample sample;
 	int button;
-
-	while (ts_read(ts_dev, &sample, 1) > 0) {
+	int res = -1;
+	while (mouse_fd && (res = ts_read(ts_dev, &sample, 1)) > 0) {
 		button = (sample.pressure > 0) ? 1 : 0;
 		button <<= 2;	/* must report it as button 3 */
 		FB_vgamousecallback(button, 0, sample.x, sample.y);
 	}
-	return;
+
+	if (res < 0) {
+#ifdef DEBUG_MOUSE
+		fprintf(stderr, "tslib reopen\n");
+#endif
+		if (mouse_fd >= 0) {
+			FB_CloseMouse(this);
+		}
+		FB_OpenMouse(this);
+	}
 }
 #endif /* SDL_INPUT_TSLIB */
 
@@ -1109,6 +1118,11 @@ void FB_PumpEvents(_THIS)
 			if ( max_fd < mouse_fd ) {
 				max_fd = mouse_fd;
 			}
+		} else {
+#ifdef DEBUG_MOUSE
+			fprintf(stderr, "Events reopen mouse\n");
+#endif
+			FB_OpenMouse(this);
 		}
 		if ( select(max_fd+1, &fdset, NULL, NULL, &zero) > 0 ) {
 			if ( keyboard_fd >= 0 ) {
