@@ -26,6 +26,7 @@
 #include "SDL_fb3dfx.h"
 #include "3dfx_mmio.h"
 
+#ifdef SDL_VIDEO_DRIVER_FBCON_FBACCEL_3DFX
 
 /* Wait for vertical retrace */
 static void WaitVBL(_THIS)
@@ -213,3 +214,4 @@ void FB_3DfxAccel(_THIS, __u32 card)
 	this->info.blit_hw_CC = 1;
 	this->SetHWColorKey = SetHWColorKey;
 }
+#endif

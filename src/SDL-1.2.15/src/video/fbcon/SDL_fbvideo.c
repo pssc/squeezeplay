@@ -1,6 +1,7 @@
 /*
     SDL - Simple DirectMedia Layer
     Copyright (C) 1997-2012 Sam Lantinga
+    Copyright (C) 2015 Phillip Camp
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -44,12 +45,29 @@
 #include "SDL_fbvideo.h"
 #include "SDL_fbmouse_c.h"
 #include "SDL_fbevents_c.h"
+#ifndef SDL_VIDEO_DRIVER_FBCON_ACCEL_DISPMANX
+#define SDL_VIDEO_DRIVER_FBCON_ACCEL_FB3DFX
+#define SDL_VIDEO_DRIVER_FBCON_ACCEL_MAXTROX
+#define SDL_VIDEO_DRIVER_FBCON_ACCEL_RIVIA
+#ifdef SDL_VIDEO_DRIVER_FBCON_ACCEL_FB3DFX
 #include "SDL_fb3dfx.h"
+#endif
+#ifdef SDL_VIDEO_DRIVER_FBCON_ACCEL_MAXTROX
 #include "SDL_fbmatrox.h"
+#endif
+#ifdef SDL_VIDEO_DRIVER_FBCON_ACCEL_RIVIA
 #include "SDL_fbriva.h"
+#endif
+#endif
+#ifdef SDL_VIDEO_DRIVER_FBCON_ACCEL_DISPMANX
+#define FB_ACCEL_DISPMANX 0xb0
+#include "SDL_fbdispmanx.h"
+#endif
 
-/*#define FBCON_DEBUG*/
+#define FBCON_DEBUG
 #define FBACCEL_DEBUG
+
+#define FB_MODES_DB	"/etc/fb.modes"
 
 #if defined(i386) && defined(FB_TYPE_VGA_PLANES)
 #define VGA16_FBCON_SUPPORT
@@ -303,7 +321,6 @@ VideoBootStrap FBCON_bootstrap = {
 	FB_Available, FB_CreateDevice
 };
 
-#define FB_MODES_DB	"/etc/fb.modes"
 
 static int read_fbmodes_line(FILE*f, char* line, int length)
 {
@@ -561,6 +578,10 @@ static int FB_VideoInit(_THIS, SDL_PixelFormat *vformat)
 	print_finfo(&finfo);
 #endif
 
+#ifdef FBACCEL_DEBUG
+	fprintf(stderr,"FBACCEL_DEBUG\n");
+#endif
+
 	switch (finfo.type) {
 		case FB_TYPE_PACKED_PIXELS:
 			/* Supported, no worries.. */
@@ -597,10 +618,16 @@ static int FB_VideoInit(_THIS, SDL_PixelFormat *vformat)
 	}
 
 	/* Check if the user wants to disable hardware acceleration */
-	{ const char *fb_accel;
+	{	const char *fb_accel;
+		int new;
+
 		fb_accel = SDL_getenv("SDL_FBACCEL");
 		if ( fb_accel ) {
-			finfo.accel = SDL_atoi(fb_accel);
+			new = SDL_atoi(fb_accel);
+#ifdef FBACCEL_DEBUG
+			fprintf(stderr,"Override hardware accelerator %x->%s(%x).\n",finfo.accel,fb_accel,new);
+#endif
+			finfo.accel = new;
 		}
 	}
 
@@ -776,9 +803,10 @@ static int FB_VideoInit(_THIS, SDL_PixelFormat *vformat)
 	this->info.wm_available = 0;
 	this->info.hw_available = !shadow_fb;
 	this->info.video_mem = shadow_fb ? 0 : finfo.smem_len/1024;
-	/* Fill in our hardware acceleration capabilities */
+	/* Fill in our hardware acceleration capabilities, SDL_FBACCEL env overrides...*/
 	if ( mapped_io ) {
 		switch (finfo.accel) {
+		    #ifdef SDL_VIDEO_DRIVER_FBCON_ACCEL_MATROX
 		    case FB_ACCEL_MATROX_MGA2064W:
 		    case FB_ACCEL_MATROX_MGA1064SG:
 		    case FB_ACCEL_MATROX_MGA2164W:
@@ -787,26 +815,52 @@ static int FB_VideoInit(_THIS, SDL_PixelFormat *vformat)
 		    /*case FB_ACCEL_MATROX_MGAG200: G200 acceleration broken! */
 		    case FB_ACCEL_MATROX_MGAG400:
 #ifdef FBACCEL_DEBUG
-			printf("Matrox hardware accelerator!\n");
+			fprintf(stderr,"Matrox hardware accelerator!\n");
 #endif
 			FB_MatroxAccel(this, finfo.accel);
 			break;
+		    #endif
+		    #ifdef SDL_VIDEO_DRIVER_FBCON_ACCEL_3DFX
 		    case FB_ACCEL_3DFX_BANSHEE:
 #ifdef FBACCEL_DEBUG
-			printf("3DFX hardware accelerator!\n");
+			fprintf(stderr,"3DFX hardware accelerator!\n");
 #endif
 			FB_3DfxAccel(this, finfo.accel);
 			break;
+		    #endif
+		    #ifdef SDL_VIDEO_DRIVER_FBCON_ACCEL_RIVA
 		    case FB_ACCEL_NV3:
 		    case FB_ACCEL_NV4:
 #ifdef FBACCEL_DEBUG
-			printf("NVidia hardware accelerator!\n");
+			fprintf(stderr,"NVidia hardware accelerator!\n");
 #endif
 			FB_RivaAccel(this, finfo.accel);
 			break;
+		    #endif
+		    case FB_ACCEL_NONE:
+			break;
 		    default:
 #ifdef FBACCEL_DEBUG
-			printf("Unknown hardware accelerator %x.\n",finfo.accel);
+			fprintf(stderr,"Unknown hardware accelerator %x.\n",finfo.accel);
+#endif
+			break;
+		}
+	} else {
+		// Non mmap_io Acceleration available
+		switch (finfo.accel) {
+		    #ifdef SDL_VIDEO_DRIVER_FBCON_ACCEL_DISPMANX
+		    case FB_ACCEL_DISPMANX:
+#ifdef FBACCEL_DEBUG
+			fprintf(stderr,"Dispmanx hardware accelerator!\n");
+#endif
+			FB_DispmanxAccel(this, finfo.accel);
+			break;
+		    #endif
+		    case FB_ACCEL_NONE:
+			break;
+		    default:
+#ifdef FBACCEL_DEBUG
+			fprintf(stderr,"Unknown non-mmap_io hardware accelerator 0x%x %x.\n",finfo.accel,FB_ACCEL_DISPMANX);
 #endif
 			break;
 		}
@@ -817,7 +871,7 @@ static int FB_VideoInit(_THIS, SDL_PixelFormat *vformat)
 		if (shadow_mem == NULL) {
 			SDL_SetError("No memory for shadow");
 			return (-1);
-		} 
+		}
 	}
 
 	/* Enable mouse and keyboard support */
@@ -1460,6 +1514,7 @@ static int FB_LockHWSurface(_THIS, SDL_Surface *surface)
 	}
 	return(0);
 }
+
 static void FB_UnlockHWSurface(_THIS, SDL_Surface *surface)
 {
 	if ( surface == this->screen ) {
@@ -1516,7 +1571,7 @@ static int FB_FlipHWSurface(_THIS, SDL_Surface *surface)
 	flip_page ^= 1;
 
 #ifdef FBCON_DEBUG
-	fprintf(stderr, " surface->pixels changing to %x current:\n",flip_address[flip_page]);
+	fprintf(stderr, " surface->pixels changing to %x current:\n",(int *)flip_address[flip_page]);
 #endif
 	surface->pixels = flip_address[flip_page];
 	return(0);

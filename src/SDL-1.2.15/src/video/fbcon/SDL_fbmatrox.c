@@ -26,7 +26,7 @@
 #include "SDL_fbmatrox.h"
 #include "matrox_mmio.h"
 
-
+#ifdef SDL_VIDEO_DRIVER_FBCON_ACCEL_MAXTROX
 /* Wait for vertical retrace - taken from the XFree86 Matrox driver */
 static void WaitVBL(_THIS)
 {
@@ -278,3 +278,5 @@ void FB_MatroxAccel(_THIS, __u32 card)
 	}
 #endif
 }
+
+#endif

@@ -28,6 +28,7 @@
 #include "riva_regs.h"
 
 
+#ifdef SDL_VIDEO_DRIVER_FBCON_FBACCEL_RIVA
 static int FifoEmptyCount = 0;
 static int FifoFreeCount = 0;
 
@@ -220,3 +221,4 @@ void FB_RivaAccel(_THIS, __u32 card)
 	this->SetHWAlpha = SetHWAlpha;
 #endif
 }
+#endif
