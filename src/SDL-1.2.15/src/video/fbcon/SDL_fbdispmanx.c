@@ -117,7 +117,6 @@ static SDL_Surface *DISPMANX_SetVideoMode(_THIS, SDL_Surface *current, int width
 	// Allow thse to change on a mode setting.
 	dispvars->ignore_ratio = (int) SDL_getenv("SDL_DISPMANX_IGNORE_RATIO");
 	dispvars->fbcp = SDL_getenv("SDL_DISPMANX_FBCP");
-	
 
 	if ((width == 0) | (height == 0)) goto go_video_console;
 
@@ -134,7 +133,7 @@ static SDL_Surface *DISPMANX_SetVideoMode(_THIS, SDL_Surface *current, int width
 
 		no = SDL_getenv("SDL_DISPMANX_DISPLAY_ALT");
 		display_no = no ?  atoi(no) : 0; 
-		if (no) {
+		if (no && ! dispvars->display_alt ) {
 			dispvars->display_alt = vc_dispmanx_display_open(display_no);
 			vc_dispmanx_display_get_info( dispvars->display_alt, &(dispvars->amode_alt));
 #ifdef DEBUG_DISPMANX
@@ -142,7 +141,7 @@ static SDL_Surface *DISPMANX_SetVideoMode(_THIS, SDL_Surface *current, int width
 #endif
 		}
 
-		if (dispvars->fbcp) {
+		if (dispvars->fbcp && ! dispvars->fbfd) {
 			dispvars->fbfd = open(dispvars->fbcp, O_RDWR);
 			if (dispvars->fbfd) {
 				struct fb_var_screeninfo vinfo;
@@ -266,6 +265,7 @@ static SDL_Surface *DISPMANX_SetVideoMode(_THIS, SDL_Surface *current, int width
 
 	dispvars->update = vc_dispmanx_update_start( 0 );
 
+	/* setup display */
 	dispvars->element = vc_dispmanx_element_add( dispvars->update,
 		dispvars->display, 0 /*layer*/, &(dispvars->dst_rect),
 		dispvars->resources[flip_page], &(dispvars->src_rect),
@@ -280,7 +280,7 @@ static SDL_Surface *DISPMANX_SetVideoMode(_THIS, SDL_Surface *current, int width
 	}	
 
 	vc_dispmanx_update_submit_sync( dispvars->update );
-        this->UpdateRects = DISPMANX_DirectUpdate;
+	this->UpdateRects = DISPMANX_DirectUpdate;
 
 	go_video_console:
 	if ( FB_EnterGraphicsMode(this) < 0 )
@@ -316,6 +316,8 @@ static void DISPMANX_BlankBackground(void)
 		dispvars->b_resource, &src_rect, DISPMANX_PROTECTION_NONE, NULL, NULL, (DISPMANX_TRANSFORM_T)0 );
 	}
 	vc_dispmanx_update_submit_sync( dispvars->b_update );
+	// FIXME - Invesigate we may be leeking these
+	// Free backgound at each mode change before calling this?
 }
 
 static int DISPMANX_WaitVBL(_THIS)
@@ -330,46 +332,62 @@ static int DISPMANX_WaitVBL(_THIS)
 
 static int DISPMANX_WaitIdle(_THIS)
 {
-// FIXME called on VT switch need to hide displamx elements?
+	// called on VT switch need to hide displamx elements
 #ifdef DEBUG_DISPMANX
 	fprintf (stderr,"Dispmanx: WaitIDLE\n");
 #endif
+	dispvars->update = vc_dispmanx_update_start( 0 );
+	vc_dispmanx_element_remove(dispvars->update, dispvars->element);
+	vc_dispmanx_update_submit_sync( dispvars->update );
+
+	DISPMANX_FreeBackground();
+	vc_dispmanx_display_close( dispvars->display );
+	dispvars->display = 0;
+
 	return 0;
 }
 
 // copy the while surface here really?
 static void DISPMANX_DirectUpdate(_THIS, int numrects, SDL_Rect *rects)
 {
+	if ( switched_away ) {
+		return; /* no hardware access */
+	}
+
 	vc_dispmanx_resource_write_data( dispvars->resources[flip_page],
 		dispvars->pix_format, dispvars->pitch, dispvars->pixmem,
 		&(dispvars->bmp_rect) );
 
-	if ( switched_away ) {
-        	return; /* no hardware access */
-    	}
+	dispvars->update = vc_dispmanx_update_start( 0 );
+	if (!dispvars->display) {
+#ifdef DEBUG_DISPMANX
+		fprintf (stderr,"Dispmanx: restore form WaitIdle\n");
+#endif
+		char *no = SDL_getenv("SDL_DISPMANX_DISPLAY");
+		int display_no = no ?  atoi(no) : 0;
+
+		dispvars->display = vc_dispmanx_display_open(display_no);//FIXME Display no
+		dispvars->element = vc_dispmanx_element_add( dispvars->update,
+	        dispvars->display, 0 /*layer*/, &(dispvars->dst_rect),
+	        dispvars->resources[flip_page], &(dispvars->src_rect),
+	        DISPMANX_PROTECTION_NONE, dispvars->alpha, 0 /*clamp*/,
+	        /*VC_IMAGE_ROT0*/ 0 );
+	}
 
 #ifdef DEBUG_DISPMANX
 	//printf ("Dispmanx: DirectUpdate %d %d,%d %dx%d\n", numrects, rects[0].x, rects[0].y, rects[0].w, rects[0].h);
 #endif
-	dispvars->update = vc_dispmanx_update_start( 0 );
-	if ( ! switched_away ) {
-		vc_dispmanx_element_change_source(dispvars->update, dispvars->element, dispvars->resources[flip_page]);
-        }
+	vc_dispmanx_element_change_source(dispvars->update, dispvars->element, dispvars->resources[flip_page]);
 
 	if (dispvars->display_alt) {
 		vc_dispmanx_element_change_source(dispvars->update, dispvars->element_alt, dispvars->resources[flip_page]);
 	}
-	//vc_dispmanx_update_submit_sync( dispvars->update );
 	vc_dispmanx_update_submit( dispvars->update, NULL, dispvars ); // NULL is call back
-	//dispvars->fbcp = SDL_getenv("SDL_DISPMANX_FBCP");
 
+	//dispvars->fbcp = SDL_getenv("SDL_DISPMANX_FBCP");
 	if (dispvars->fbcp && dispvars->fbfd) {
-		//vc_dispmanx_update_submit( dispvars->update, fbcp, dispvars ); 
-		//vc_dispmanx_update_submit( dispvars->update, NULL, dispvars ); // NULL is call back
 		vc_dispmanx_snapshot(dispvars->display, dispvars->fbcp_resource, 0);
 		vc_dispmanx_resource_read_data(dispvars->fbcp_resource, &(dispvars->fbcp_rect), dispvars->fbp, dispvars->fbcp_pitch);
-	} else  {
-		//vc_dispmanx_update_submit( dispvars->update, NULL, dispvars ); // NULL is call back
 	}
 	flip_page = !flip_page;
 
@@ -380,6 +398,9 @@ static int DISPMANX_SetColors(_THIS, int firstcolor, int ncolors, SDL_Color *col
 {
 	int i;
 	static unsigned short pal[256];
+#ifdef DEBUG_DISPMANX
+	fprintf (stderr,"Dispmanx: Colors\n");
+#endif
 
 	//Set up the colormap
 	for (i = 0; i < ncolors; i++) {
