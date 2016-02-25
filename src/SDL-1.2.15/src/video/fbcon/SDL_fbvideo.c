@@ -1571,7 +1571,7 @@ static int FB_FlipHWSurface(_THIS, SDL_Surface *surface)
 	flip_page ^= 1;
 
 #ifdef FBCON_DEBUG
-	fprintf(stderr, " surface->pixels changing to %x current:\n",(int *)flip_address[flip_page]);
+	fprintf(stderr, " surface->pixels changing to %x current:\n",(unsigned int)flip_address[flip_page]);
 #endif
 	surface->pixels = flip_address[flip_page];
 	return(0);
