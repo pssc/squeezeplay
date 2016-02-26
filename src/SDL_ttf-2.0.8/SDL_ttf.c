@@ -47,8 +47,8 @@
 #include <freetype/freetype.h>
 #include <freetype/ftoutln.h>
 #include <freetype/ttnameid.h>
-*/
 #include <freetype/internal/ftobjs.h>
+*/
 
 #ifndef FT_OPEN_STREAM
 #define FT_OPEN_STREAM ft_open_stream
@@ -278,7 +278,7 @@ TTF_Font* TTF_OpenFontIndexRW( SDL_RWops *src, int freesrc, int ptsize, long ind
 	}
 	memset(stream, 0, sizeof(*stream));
 
-	stream->memory = library->memory;
+	stream->memory = NULL;
 	stream->read = RWread;
 	stream->descriptor.pointer = src;
 	stream->pos = (unsigned long)position;
