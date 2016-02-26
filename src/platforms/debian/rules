@@ -19,6 +19,7 @@ clean:
 	rm -rf $(squeezeplay_common)
 	rm -f $(CURDIR)/opt/squeezeplay
 	-rmdir $(CURDIR)/opt
+	-rm $(CURDIR)/lib
 
 install:
 	dh_testdir
@@ -27,6 +28,7 @@ install:
 	# Link to build dir so we can copy files
 	mkdir -p $(CURDIR)/opt
 	ln -s $(build) $(CURDIR)/opt/squeezeplay
+	ln -s $(build)/lib $(CURDIR)/lib
 	
 binary-indep: install
 	dh_testdir
