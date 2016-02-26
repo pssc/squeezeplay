@@ -24,7 +24,7 @@ local Timer                  = require("jive.ui.Timer")
 local SimpleMenu             = require("jive.ui.SimpleMenu")
 local Window                 = require("jive.ui.Window")
 
-local squeezeos              = require("squeezeos_bsp")
+local hasSqueezeos, squeezeos = pcall(function() return require("squeezeos_bsp") end)
 
 local debug                  = require("jive.utils.debug")
 local log                    = require("jive.utils.log").logger("applet.Squeezebox")
