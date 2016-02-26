@@ -1,7 +1,4 @@
 local oo            = require("loop.simple")
-local os            = require("os")
-local io            = require("io")
-local string        = require("string")
 
 local table         = require("jive.utils.table")
 
@@ -11,7 +8,7 @@ local debug         = require("jive.utils.debug")
 
 local appletManager = appletManager
 
-local jiveMain, jnt, string, tonumber, tostring = jiveMain, jnt, string, tonumber, tostring
+local jiveMain, jnt, tonumber, tostring = jiveMain, jnt, tonumber, tostring
 
 module(...)
 oo.class(_M, AppletMeta)
@@ -51,7 +48,7 @@ function registerApplet(meta)
 		local settings = meta:getSettings()
 
 		--FIXME menu to activate
-		 jiveMain:addItem(meta:menuItem('VCNL4010', 'advancedSettings', "APPLET_NAME",  function(applet, ...) applet:presentMeta(...) end))
+		jiveMain:addItem(meta:menuItem('VCNL4010', 'advancedSettings', "APPLET_NAME",  function(applet, ...) applet:presentMeta(...) end))
 		if not settings["active"] then
 			return
 		end
@@ -64,10 +61,10 @@ function registerApplet(meta)
 
 		if p_r > 0 then --FIXME spilt productid and rev and check...
 			log:warn("Ref ",ref, " VCNL4010_PRODUCTIDREV = ",p_r)
-			--Resident applet
-			local a = appletManager:loadApplet("VCNL4010")
-			if a then 
-				a:setDevice(bus,ref)
+			--Resident applet in confgiure?
+			local app = appletManager:loadApplet("VCNL4010")
+			if app then
+				app:setDevice(bus,ref)
 			end
 		end
 	end
