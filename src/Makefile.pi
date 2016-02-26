@@ -8,16 +8,16 @@
 #
 
 ARCH ?= $(shell arch)
+ABI ?= $(shell gcc --print-multiarc)
 
 SRC_DIR = $(realpath ${PWD})
 BASE_DIR = $(dir ${SRC_DIR})
 
 export BUILD_TOP=$(BASE_DIR)/build/linux
-
 DESTDIR=${BUILD_TOP}
 export PREFIX=${DESTDIR}
 
-export CFLAGS=-I${PREFIX}/include -I${PREFIX}/include/SDL -I${PREFIX}/include/freetype2 -O2 -fPIC -g
+export CFLAGS=-I${PREFIX}/include -I${PREFIX}/include/SDL -fPIC -g -O3 -mfpu=vfp -mfloat-abi=hard -march=armv6j
 export LDFLAGS=-L${PREFIX}/usr/lib
 
 export TOOLPATH = $(shell dirname `which gcc`)
@@ -33,7 +33,11 @@ SPPRIVATE=no
 
 LIBMAD = $(shell pkg-config --exists mad || echo libmad )
 LIBFLAC = $(shell pkg-config --exists flac || echo flac )
+LIBFREETYPE= $(shell pkg-config --exists freetype2 || echo freetype )
+FREETYPE= $(shell freetype-config --prefix || echo ${PREFIX} )
 LIBTREMOR = tremor
+
+export PKG_CONFIG_PATH=${PREFIX}/../build/linux/lib/pkgconfig:/usr/lib/pkgconfig:/usr/lib/$(ABI)/pkgconfig
 
 ifeq ($(SPPRIVATE),yes)
 	ENABLE_SPPRIVATE=--with-spprivate
@@ -47,19 +51,17 @@ endif
 .PHONY: all
 all: sdl-all lua-all app squeezeplay-tgz
 
+generated/.m:
+	mkdir -p generated
+	cd generated && touch .m
 
 
 #####
 # SDL
 #####
 
-.PHONY: sdl-all freetype tslib sdl sdl-image sdl-tff sdl-gfx c-ares
-sdl-all: freetype tslib sdl sdl-ttf sdl-image sdl-gfx
-
-generated/.m:
-	mkdir -p generated
-	cd generated && touch .m
-
+.PHONY: freetype tslib sdl sdl-image sdl-tff sdl-gfx c-ares sdl-all
+sdl-all: ${LIBFREETYPE} tslib sdl sdl-ttf sdl-image sdl-gfx
 
 # freetype
 freetype-2.1.10/config.mk:
@@ -82,7 +84,7 @@ tslib: generated/tslib/Makefile
 
 # sdl --disable-video-directfb --enable-alsa --enable-audio --disable-assembly --disable-video-x11 
 SDL-1.2.15/Makefile:
-	cd SDL-1.2.15; ./configure --enable-video --enable-events --disable-joystick --disable-cdrom --enable-threads --enable-timers --enable-file --enable-loadso --disable-oss --disable-esd --disable-arts --enable-clock_gettime --host=${HOST} --target=${TARGET} --prefix=${PREFIX} --disable-shared --enable-screensaver --disable-video-directfb --disable-video-opengl --disable-pulseaudio --disable-alsa --disable-audio
+	cd SDL-1.2.15 && ./configure --enable-video --enable-events --disable-joystick --disable-cdrom --enable-threads --enable-timers --enable-file --enable-loadso --disable-oss --disable-esd --disable-arts --enable-clock_gettime --host=${HOST} --target=${TARGET} --prefix=${PREFIX} --disable-shared --enable-screensaver --disable-video-directfb --disable-video-opengl --disable-pulseaudio --disable-alsa --disable-audio --disable-video-dga --enable-video-fbcon-dispmanx
 
 sdl: SDL-1.2.15/Makefile
 	cd SDL-1.2.15; make && make install
@@ -96,7 +98,7 @@ sdl-image: SDL_image-1.2.5/Makefile
 
 # sdl_ttf
 SDL_ttf-2.0.8/Makefile:
-	cd SDL_ttf-2.0.8; SDL_CONFIG=${PREFIX}/bin/sdl-config ./configure  ${ENABLE_PROFILING} --host=${HOST} --target=${TARGET} --prefix=${PREFIX} --with-freetype-prefix=${PREFIX} --without-opengl
+	cd SDL_ttf-2.0.8; SDL_CONFIG=${PREFIX}/bin/sdl-config ./configure  ${ENABLE_PROFILING} --host=${HOST} --target=${TARGET} --prefix=${PREFIX} --with-freetype-prefix=${FREETYPE} --without-opengl
 
 sdl-ttf: SDL_ttf-2.0.8/Makefile
 	cd SDL_ttf-2.0.8; make && make install
@@ -113,9 +115,9 @@ sdl-gfx: SDL_gfx-2.0.15/Makefile
 # lua
 #####
 
-.PHONY: lua-all lua luasocket slnunicode luajson loop luaexpat luafilesystem luaprofiler luazipfilter luamd5
+.PHONY: lua-all lua luasocket slnunicode luajson loop luaexpat luafilesystem luaprofiler luazipfilter luamd5 luabitop generated/luafilesystem
 
-lua-all: lua tolua++ luasocket slnunicode luajson loop luaexpat luafilesystem luaprofiler luazipfilter luamd5
+lua-all: lua tolua++ luasocket slnunicode luajson loop luaexpat luafilesystem luaprofiler luazipfilter luamd5 luabitop
 
 # lua (requires readline ncurses)
 lua:
@@ -166,11 +168,29 @@ lsyslog: lsyslog-4/Makefile
 luaexpat:
 	cd luaexpat-1.0.2; make PREFIX=${PREFIX} PLATFORM=linux && make install PREFIX=${PREFIX} PLATFORM=linux
 
-luafilesystem:
-	cd luafilesystem-1.2 && make install PREFIX=${PREFIX} PLATFORM=linux
+#luafilesystem:
+#	cd luafilesystem-1.2 && make install PREFIX=${PREFIX} PLATFORM=linux
 
-luaprofiler:
+luaprofiler: generated/luafilesystem
 	cd luaprofiler-2.0 && make -f Makefile.linux install
+
+generated/luafilesystem/Makefile: generated/.m
+	cd generated/ && ( cd luafilesystem || git clone https://github.com/pssc/luafilesystem.git -b master luafilesystem )
+
+luafilesystem: generated/luafilesystem/Makefile
+	cd generated/luafilesystem && make install PREFIX=${PREFIX} PLATFORM=linux
+
+
+LUABITOP_DIR=LuaBitOp-1.0.2
+generated/${LUABITOP_DIR}.tar.gz.downloaded: generated/.m
+	cd generated && wget http://bitop.luajit.org/download/${LUABITOP_DIR}.tar.gz
+	[ -s generated/${LUABITOP_DIR}.tar.gz ] && touch generated/${LUABITOP_DIR}.tar.gz.downloaded
+
+generated/${LUABITOP_DIR}/Makefile: generated/${LUABITOP_DIR}.tar.gz.downloaded
+	cd generated && tar xvf ./${LUABITOP_DIR}.tar.gz
+
+luabitop: generated/${LUABITOP_DIR}/Makefile
+	cd generated/${LUABITOP_DIR}/ && ${MAKE} && install bit.so ${PREFIX}/lib/lua/5.1
 
 # just compile the library for to tolua++
 .PHONY: tolua++
@@ -191,16 +211,22 @@ generated/jivelite/Makefile: generated/.m
 	cd generated/ && ( cd jivelite || git clone https://github.com/pssc/jivelite.git -b master jivelite )
 
 jivelite:  generated/jivelite/Makefile
+	cp -au generated/jivelite/share/jive/applets/HDSkin ${PREFIX}/share/jive/applets/
+	cp -au generated/jivelite/share/jive/applets/HDGridSkin ${PREFIX}/share/jive/applets/
+	cp -au generated/jivelite/share/jive/applets/WQVGAgridSkin ${PREFIX}/share/jive/applets/
 
 generated/squeezeplay_wicd_frontend/README: generated/.m
 	cd generated/ && ( cd squeezeplay_wicd_frontend || git clone https://github.com/pssc/squeezeplay-wicd-frontend.git -b master squeezeplay_wicd_frontend )
 
-squeezeplay_wicd_frontend: generated/squeezeplay_wicd_frontend/README
-
 generated/800x480Skin/800x480SkinMeta.lua: generated/.m
 	cd generated/ && ( cd 800x480Skin || git clone https://github.com/pssc/Squeezeplay-800x480Skin.git -b master 800x480Skin )
 
+generated/AMixer/README: generated/.m
+	cd generated/ && ( cd AMixer || git clone https://github.com/pssc/AMixer.git -b master AMixer )
+
 800x480Skin: generated/800x480Skin/800x480SkinMeta.lua
+	cp -au generated/800x480Skin ${PREFIX}/share/jive/applets/
+	rm -rf  ${PREFIX}/share/jive/applets/800x480Skin/.git
 
 # portaudio
 portaudio_v19_20111121/Makefile:
@@ -283,10 +309,20 @@ squeezeplay_jive: squeezeplay_jive/Makefile
 squeezeplay_desktop/Makefile:
 	cd squeezeplay_desktop; SDL_CONFIG=${SDL_CONFIG} ./configure --host=${HOST} --target=${TARGET} --prefix=${PREFIX}
 
-squeezeplay_desktop: squeezeplay_desktop/Makefile
+squeezeplay_desktop: squeezeplay_desktop/Makefile 800x480Skin jivelite squeezeplay_wicd_frontend
 	cd squeezeplay_desktop; make install
 	cp squeezeplay_desktop/squeezeplay.sh ${PREFIX}/bin/
+	cp squeezeplay_desktop/squeezeplay-touch.sh ${PREFIX}/bin/
 	chmod +x ${PREFIX}/bin/squeezeplay.sh
+	chmod +x ${PREFIX}/bin/squeezeplay-touch.sh
+	touch squeezeplay_desktop/etc/ts.conf
+	cp -au squeezeplay_desktop/etc ${PREFIX}/
+	cp -au squeezeplay_desktop/lib ${PREFIX}/
+	# fixme archtest
+	cp -au ../assets/SqueezePI/*.png ${PREFIX}/share/jive/jive/
+	mkdir -p ${PREFIX}/share/doc/
+	cp -ua squeezeplay/LICENSE ${PREFIX}/share/doc/
+	cp -ua squeezeplay_fab4/share/applets/AutoSkin ${PREFIX}/share/jive/applets/
 
 squeezeplay_contrib: squeezeplay/Makefile
 	cd squeezeplay_contrib; make PREFIX=${PREFIX}
@@ -297,11 +333,22 @@ squeezeplay_private/Makefile:
 squeezeplay_private: squeezeplay_private/Makefile
 	cd squeezeplay_private; make PREFIX=${PREFIX} install
 
+squeezeplay_wicd_frontend: generated/squeezeplay_wicd_frontend/README
+	cd generated/squeezeplay_wicd_frontend/wicdbridge && ${MAKE} PREFIX=${PREFIX}
+#CFLAGS="-I${PREFIX}/include/lua5.1 ${CFLAGS}"
+	cp -au generated/squeezeplay_wicd_frontend/SetupNetworking ${PREFIX}/share/jive/applets/
+
+amixer: generated/AMixer/README
+	mkdir -p ${PREFIX}/share/jive/applets/AMixer
+	install generated/AMixer/LICENSE ${PREFIX}/share/jive/applets/AMixer/.
+	install generated/AMixer/*.lua ${PREFIX}/share/jive/applets/AMixer/.
+
 # freefont
 freefont:
+	rm -rf ${PREFIX}/share/jive/fonts
 	mkdir -p ${PREFIX}/share/jive/fonts
-	cp freefont-20090104/FreeSans.ttf ${PREFIX}/share/jive/fonts
-	cp freefont-20090104/FreeSansBold.ttf ${PREFIX}/share/jive/fonts
+	cp -u freefont-20090104/FreeSans.ttf ${PREFIX}/share/jive/fonts
+	cp -u freefont-20090104/FreeSansBold.ttf ${PREFIX}/share/jive/fonts
 
 # 
 # This builds the .tarball. It's called by 'all' so no need to run it manually
@@ -322,8 +369,11 @@ squeezeplay-deb-make: squeezeplay/Makefile
 
 # FIXME document all build deps in here
 squeezeplay-deb-dep:
+	# FIXME use ../platforms/debian/control builddeb...
 	dpkg-query --status libmad0-dev >/dev/null 2>&1 || sudo apt-get install libmad0-dev
 	dpkg-query --status libflac-dev >/dev/null 2>&1 || sudo apt-get install libflac-dev
+	dpkg-query --status libfreetype6-dev >/dev/null 2>&1 || sudo apt-get install libfreetype6-dev
+	dpkg-query --status libi2c-dev >/dev/null 2>&1 || sudo apt-get install libi2c-dev
 
 .PHONY: clean_generated
 clean_generated:
