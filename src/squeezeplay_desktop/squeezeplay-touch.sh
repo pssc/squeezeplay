@@ -12,6 +12,9 @@ LIB_DIR=$SP_INSTALL_DIR/lib
 OLD_LD_LIBRARY_PATH=$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$LIB_DIR:$LD_LIBRARY_PATH
 
+[ -r "${SP_INSTALL_DIR}/etc/default/squeezeplay" ] && . ${SP_INSTALL_DIR}/etc/default/squeezeplay
+[ -r "${SP_INSTALL_DIR}/etc/default/squeezeplay-common" ] && . ${SP_INSTALL_DIR}/etc/default/squeezeplay-common
+
 # TSLIB
 #export TSLIB_FBDEVICE=${TSLIB_FBDEVICE:-"/dev/fb0"} ?
 export TSLIB_TSDEVICE=${TSLIB_TSDEVICE:-"/dev/input/touchscreen"}
@@ -22,6 +25,10 @@ export TSLIB_PLUGINDIR=${TSLIB_PLUGINDIR:-"${SP_INSTALL_DIR}/lib/ts"}
 if [ -r "/dev/input/touchscreen-big" -a ! -r "${TSLIB_CALIBFILE}" ];then
 	export TSLIB_TSDEVICE="/dev/input/touchscreen-big"
 	export TSLIB_CALIBFILE="/etc/pointercal-touchscreen-big"
+elif [ -r "/dev/input/touchscreen-rpi-lcd" -a ! -r "${TSLIB_CALIBFILE}" ];then
+	export TSLIB_TSDEVICE="/dev/input/touchscreen-rpi-lcd"
+	export TSLIB_CALIBFILE="${SP_INSTALL_DIR}/etc/pointercal-touchscreen-rpi-lcd"
+	[  ! -r "$TSLIB_CALIBFILE" -a -r "$SP_INSTALL_DIR$TSLIB_CALIBFILE" ] export TSLIB_CALIBFILE="$SP_INSTALL_DIR$TSLIB_CALIBFILE"
 elif [ -r "/dev/input/touchscreen-medium" -a ! -r "${TSLIB_CALIBFILE}" ];then
 	export TSLIB_TSDEVICE="/dev/input/touchscreen-medium"
 	export TSLIB_CALIBFILE="/etc/pointercal-touchscreen-medium"
@@ -32,12 +39,18 @@ elif [ -r "$TSLIB_TSDEVICE" ];then
 	fi
 fi
 
+RPI_LCD=$(grep -q "FT5406 memory based driver" /proc/bus/input/devices && echo /dev/input/event0)
+if [ ! -r ${TSLIB_TSDEVICE} -a -n ${RPI_LCD} ];then
+        export TSLIB_TSDEVICE=${RPI_LCD}
+	export TSLIB_CALIBFILE="${SP_INSTALL_DIR}/etc/pointercal-touchscreen-rpi-lcd"
+fi
+
 # SDL
 export SDL_VIDEODRIVER=fbcon
 export SDL_FBDEV=${SDL_FBDEV:-"/dev/fb0"}
 if [ -r ${TSLIB_TSDEVICE} -a -r ${TSLIB_CALIBFILE} ];then
         export SDL_MOUSEDRV=TSLIB
-	# Jive we dont wan't a cursor wth touchscreen.... this doesn't work in most db hw anyway
+	# Jive we dont wan't a cursor wth touchscreen.... this doesn't work in most double buffer HW anyway
 	export JIVE_NOCURSOR=${JIVE_NOCURSOR:-1}
 fi    
 

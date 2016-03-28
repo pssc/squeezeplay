@@ -1,0 +1,22 @@
+[Unit]
+Description=Squeezeplay Graphical Squeezebox Music Player
+After=network.target
+ConditionPathExists=!/opt/squeezeplay/etc/squeezeplay_not_to_be_run
+
+[Service]
+#EnvironmentFile=-/etc/default/squeezeplay-dev
+Environment=HOME=/root
+ExecStart=/usr/bin/nohup /opt/squeezeplay/bin/squeezeplay-touch.sh
+#ExecStart=/usr/bin/nohup /opt/squeezeplay/bin/squeezeplay.sh
+KillMode=process
+#Restart=on-failure
+#Restart=disable
+StandardOutput=syslog+console
+#StandardOutput=null
+StandardError=syslog+console
+StandardInput=null
+#TTYPath=/dev/console
+
+[Install]
+WantedBy=multi-user.target
+Alias=squeezeplay.service
