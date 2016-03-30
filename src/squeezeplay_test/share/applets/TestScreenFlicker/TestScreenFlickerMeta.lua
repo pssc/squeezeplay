@@ -28,8 +28,7 @@ end
 
 
 function registerApplet(meta)
-	meta.menu = meta:menuItem('testScreenFlicker', 'advancedSettings', 'Test Screen Flicker', function(applet, ...) applet:openWindow(...) end, _)
-	jiveMain:addItem(meta.menu)
+	jiveMain:addItem(meta:menuItem('testScreenFlicker', 'advancedSettings', 'Test Screen Flicker', function(applet, ...) applet:openWindow(...) end))
 end
 
 
