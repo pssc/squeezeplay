@@ -23,6 +23,7 @@ end
 
 
 function registerApplet(meta)
+	if not appletManager:callService('test') then return end
 	jiveMain:addItem(meta:menuItem('skinTest', 'home', "Skin Examples", function(applet, ...) applet:menu(...) end, 1))
 end
 

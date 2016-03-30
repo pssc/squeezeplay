@@ -23,6 +23,7 @@ end
 
 
 function registerApplet(meta)
+	if not appletManager:callService('test') then return end
 	jiveMain:addItem(meta:menuItem('wireFrame', 'home', "Window Prototyper", function(applet, ...) applet:showMenu(...) end, 1))
 end
 
