@@ -1,8 +1,8 @@
 /*
     SDL - Simple DirectMedia Layer
     Copyright (C) 1997-2012 Sam Lantinga
-    Copyright (C) 2015-2016 Phillip Camp
     Copyright (C) 2014-2015 Manuel Alfayate Corchete
+    Copyright (C) 2015-2016 Phillip Camp
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -24,7 +24,12 @@
 	Dispmanx driver by Manuel Alfayate Corchete
 	redwindwanderer@gmail.com
 
-    Dispmanx FB accel intergration Phillip Camp
+    Phillip Camp Addional code:-
+    FB VT Switching Support
+    Dispmanx FB accel intergration
+    Dispmanx FB duplication added via SDL_DISPMANX_FBCP
+    Dispmanx multi display support added via SDL_DISPMANX_DISPLAY and SDL_DISPMANX_DISPLAY_ALt
+    Dispmanx scaling ratio control via SDL_DISPMANX_IGNORE_RATIO
 */
 #include "SDL_config.h"
 
