@@ -43,6 +43,7 @@ function __init(self, applet, paramOverride)
 	obj = oo.rawnew(self, ImageSource(applet))
 
 	obj.imgFiles = {}
+	obj.imageLimit = applet:getSettings()['imageLimit']
 	obj.scanning = false
 	
 	-- caller can force a path
@@ -123,7 +124,7 @@ function scanFolder(self, folder)
 					end
 
 					-- 1000 images should be enough...
-					if #self.imgFiles > 1000 then
+					if self.imageLimit and #self.imgFiles > self.imageLimit then
 						break
 					end
 				end
@@ -132,8 +133,8 @@ function scanFolder(self, folder)
 				dirsscanned[nextfolder] = true
 			end
 
-			if #self.imgFiles > 1000 then
-				log:warn("we're not going to show more than 1000 pictures - stop here")
+			if self.imageLimit and #self.imgFiles > self.imageLimit then
+				log:warn("we're not going to show more than ",self.imageLimit," pictures - stop here")
 				break
 			end
 

@@ -24,36 +24,36 @@ local oo			= require("loop.simple")
 local math			= require("math")
 local lfs			= require("lfs")
 local table			= require("jive.utils.table")
-local string		= require("jive.utils.string")
+local string			= require("jive.utils.string")
 
-local Applet		= require("jive.Applet")
-local appletManager	= require("jive.AppletManager")
-local Framework		= require("jive.ui.Framework")
+local Applet			= require("jive.Applet")
+local appletManager		= require("jive.AppletManager")
+local Framework			= require("jive.ui.Framework")
 local Font			= require("jive.ui.Font")
 local Icon			= require("jive.ui.Icon")
-local Textarea      = require("jive.ui.Textarea")
+local Textarea			= require("jive.ui.Textarea")
 local Label			= require("jive.ui.Label")
 local Group			= require("jive.ui.Group")
-local RadioButton	= require("jive.ui.RadioButton")
-local RadioGroup	= require("jive.ui.RadioGroup")
-local Surface		= require("jive.ui.Surface")
-local Window		= require("jive.ui.Window")
-local SimpleMenu	= require("jive.ui.SimpleMenu")
-local Popup 		= require("jive.ui.Popup")
-local ContextMenuWindow= require("jive.ui.ContextMenuWindow")
+local RadioButton		= require("jive.ui.RadioButton")
+local RadioGroup		= require("jive.ui.RadioGroup")
+local Surface			= require("jive.ui.Surface")
+local Window			= require("jive.ui.Window")
+local SimpleMenu		= require("jive.ui.SimpleMenu")
+local Popup 			= require("jive.ui.Popup")
+local ContextMenuWindow		= require("jive.ui.ContextMenuWindow")
 local Timer			= require("jive.ui.Timer")
-local Task          = require("jive.ui.Task")
-local System        = require("jive.System")
+local Task          		= require("jive.ui.Task")
+local System        		= require("jive.System")
 
 --local debug			= require("jive.utils.debug")
 
 local ImageSource		= require("applets.ImageViewer.ImageSource")
-local ImageSourceLocalStorage = require("applets.ImageViewer.ImageSourceLocalStorage")
-local ImageSourceCard	= require("applets.ImageViewer.ImageSourceCard")
-local ImageSourceUSB	= require("applets.ImageViewer.ImageSourceUSB")
-local ImageSourceHttp	= require("applets.ImageViewer.ImageSourceHttp")
+local ImageSourceLocalStorage 	= require("applets.ImageViewer.ImageSourceLocalStorage")
+local ImageSourceCard		= require("applets.ImageViewer.ImageSourceCard")
+local ImageSourceUSB		= require("applets.ImageViewer.ImageSourceUSB")
+local ImageSourceHttp		= require("applets.ImageViewer.ImageSourceHttp")
 -- local ImageSourceFlickr	= require("applets.ImageViewer.ImageSourceFlickr")
-local ImageSourceServer	= require("applets.ImageViewer.ImageSourceServer")
+local ImageSourceServer		= require("applets.ImageViewer.ImageSourceServer")
 
 local FRAME_RATE       = jive.ui.FRAME_RATE
 local LAYER_FRAME      = jive.ui.LAYER_FRAME
@@ -390,6 +390,7 @@ function _setWallpaper(self, window)
 
 	local screenWidth, screenHeight = Framework:getScreenSize()
 	local prefix
+	--FIXME use res? rather than Machine??? this breaks lower these images on unfiltered selection?
 	if screenWidth == 320 and screenHeight == 240 then
 		prefix = 'bb_'
 	elseif screenWidth == 240 and screenHeight == 320 then
@@ -402,7 +403,7 @@ function _setWallpaper(self, window)
 	
 	prefix = prefix .. tostring(self:string("IMAGE_VIEWER_SAVED_SLIDE"))
 	
-	local path  = System.getUserDir().. "/wallpapers/"
+	local path  = System.getUserDir().. "/wallpapers/" -- FIXME yuk setWP with data?
 	local file  = prefix .. " " .. tostring(os.date('%Y%m%d%H%M%S')) .. ".bmp"
 
 	log:info("Taking screenshot: " .. path .. file)

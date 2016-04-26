@@ -10,7 +10,7 @@ Finds images from SD card
 
 =head1 FUNCTIONS
 
-Applet related methods are described in L<jive.Applet>. 
+Applet related methods are described in L<jive.Applet>.
 
 =cut
 --]]
@@ -36,7 +36,7 @@ end
 function _getFolder(self, pattern)
 	local mounts = io.open("/proc/mounts", "r")
 	local path
-	
+
 	if mounts == nil then
 		log:error("/proc/mounts could not be opened")
 		return
@@ -52,7 +52,7 @@ function _getFolder(self, pattern)
 		end
 	end
 	mounts:close()
-	
+
 	return path
 end
 
@@ -61,7 +61,7 @@ end
 function settings(self, window)
 	local imgpath = self:getFolder() or "/media"
 	self.applet:getSettings()["card.path"] = imgpath
-	
+
 	return oo.superclass(ImageSourceCard).settings(self, window)
 end
 

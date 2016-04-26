@@ -71,6 +71,7 @@ end
 function defaultSettings(self)
 	local defaultSetting = {}
 	defaultSetting["delay"] = 10000
+	defaultSetting["imageLimit"] = 1000
 	defaultSetting["rotation"] = System:hasDeviceRotation()
 	defaultSetting["fullscreen"] = false
 	defaultSetting["transition"] = "fade"
@@ -90,6 +91,12 @@ function defaultSettings(self)
 	end
 
 	return defaultSetting
+end
+
+
+function upgradeSettings(self, settings)
+	if settings['imageLimit'] == nil then settings['imageLimit'] = 1000 end
+	return settings
 end
 
 --[[
