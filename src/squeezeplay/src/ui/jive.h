@@ -337,6 +337,11 @@ char *platform_get_mac_address();
 char *platform_get_home_dir();
 char *platform_get_arch();
 
+int platform_smbus(const char *adapter);
+int platform_smbus_device(int adapter,int addr);
+int platform_smbus_read_byte_data(int file, uint8_t reg);
+int platform_smbus_write_byte_data(int file, uint8_t reg, uint8_t value);
+
 
 /* global counter used to invalidate widget */
 extern Uint32 jive_origin;
@@ -386,6 +391,9 @@ void jive_surface_release(JiveSurface *srf);
 JiveSurface *jive_surface_rotozoomSurface(JiveSurface *srf, double angle, double zoom, int smooth);
 JiveSurface *jive_surface_zoomSurface(JiveSurface *srf, double zoomx, double zoomy, int smooth);
 JiveSurface *jive_surface_shrinkSurface(JiveSurface *srf, int factorx, int factory);
+ 
+/* Custom resize surface function */
+JiveSurface *jive_surface_resize(JiveSurface *srf, int w, int h, bool keep_aspect);
 void jive_surface_pixelColor(JiveSurface *srf, Sint16 x, Sint16 y, Uint32 col);
 void jive_surface_hlineColor(JiveSurface *srf, Sint16 x1, Sint16 x2, Sint16 y, Uint32 color);
 void jive_surface_vlineColor(JiveSurface *srf, Sint16 x, Sint16 y1, Sint16 y2, Uint32 color);
@@ -458,6 +466,7 @@ int jive_style_array_int(lua_State *L, int index, const char *array, int n, cons
 JiveFont *jive_style_array_font(lua_State *L, int index, const char *array, int n, const char *key);
 Uint32 jive_style_array_color(lua_State *L, int index, const char *array, int n, const char *key, Uint32 def, bool *is_set);
 
+void copyResampled (SDL_Surface *dst, SDL_Surface *src, int dstX, int dstY, int srcX, int srcY,   int dstW, int dstH, int srcW, int srcH);
 
 /* lua functions */
 int jiveL_get_background(lua_State *L);
@@ -558,7 +567,6 @@ int jiveL_style_rawvalue(lua_State *L);
 int jiveL_style_color(lua_State *L);
 int jiveL_style_array_color(lua_State *L);
 int jiveL_style_font(lua_State *L);
-
 
 #define JIVEL_STACK_CHECK_BEGIN(L) { int _sc = lua_gettop((L));
 #define JIVEL_STACK_CHECK_ASSERT(L) assert(_sc == lua_gettop((L)));
