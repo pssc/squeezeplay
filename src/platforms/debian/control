@@ -9,8 +9,8 @@ Standards-Version: 3.6.2
 Package: squeezeplay
 Architecture: any
 Depends: libmad0, libflac8, libasound2, libjpeg8, libpng12-0, libogg0, squeezeplay-common, fonts-freefont-ttf, libfreetype6
-Recommends: alsa-utils, wicd
-Suggests: libpacparser1, wicd-curses, autossh, liblog4cplus-1.0-4, libboost-thread1.49.0, libboost-system1.49.0, libboost-program-options1.49.0, libcec2 (>= 2.2.0)
+Recommends: alsa-utils, wicd-curses, wicd
+Suggests: libpacparser1,  autossh, liblog4cplus-1.0-4, libboost-thread1.49.0, libboost-system1.49.0, libboost-program-options1.49.0, libcec2 (>= 2.2.0)
 Description: Logitech SqueezePlay
  SqueezePlay is a Grapical client for the Logitech/SqueezeCenter music streaming server.
  .
