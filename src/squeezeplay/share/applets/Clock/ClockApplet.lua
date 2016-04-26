@@ -130,7 +130,7 @@ function Clock:__init(skin, windowStyle)
 	if not windowStyle then
 		windowStyle = 'Clock'
 	end
-	obj.window = Window(windowStyle)
+	obj.window = Window(windowStyle,nil,nil,windowStyle)
 	obj.window:setSkin(skin)
 	obj.window:reSkin()
 	obj.window:setShowFrameworkWidgets(false)
@@ -853,7 +853,7 @@ function _tick(self)
 	self.oldTime = theTime
 
 	if not self.snapshot then
-		self.snapshot = SnapshotWindow()
+		self.snapshot = SnapshotWindow("tickold")
 		local manager = appletManager:getAppletInstance("ScreenSavers")
 		manager:screensaverWindow(self.snapshot, _, _, _, 'Clock')
 	else
@@ -1466,7 +1466,7 @@ function Digital:getDigitalClockSkin(skinName)
 		}
 
 		s.icon_digitalDots = {
-			img = _loadImage(self, "Clocks/Digital/clock_dots_digital.png"),
+			img = _loadImage(self, "Clocks/Digital/clock_dots_digital.png"):resize(_vw(11),-1,true),
 			align = 'center',
 			w = _vw(40),
 			border = { 14, 0, 12, 0 },
