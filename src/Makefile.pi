@@ -3,13 +3,12 @@
 # Copyright 2007 Logitech
 ################################################################################
 
-#
-# Absolute path to top of SQUEEZEPLAY directories
-#
-
 ARCH ?= $(shell arch)
 ABI ?= $(shell gcc --print-multiarc)
 
+#
+# Absolute path to top of SQUEEZEPLAY directories
+#
 SRC_DIR = $(realpath ${PWD})
 BASE_DIR = $(dir ${SRC_DIR})
 
@@ -23,8 +22,8 @@ export LDFLAGS=-L${PREFIX}/usr/lib
 export TOOLPATH = $(shell dirname `which gcc`)
 
 export SDL_CONFIG = ${BUILD_TOP}/bin/sdl-config
+export PATH:=$(PATH):${SRC_DIR}/tolua++-1.0.92/bin
 
-# lua.so needed for wicd intergration
 #ENABLE_PROFILING=--enable-profiling --disable-shared
 USE_MMX=--disable-mmx
 
