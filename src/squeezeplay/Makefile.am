@@ -64,7 +64,7 @@ BUNDLE_CONTENTS = $(BUNDLE_NAME)/Contents
 PLIST_FILE = $(BUNDLE_CONTENTS)/Info.plist
 
 VERSION_TEXT = $(shell cat ../squeezeplay.version)r$(shell git rev-list --abbrev-commit --max-count=1 HEAD)
-DEB_VERSION_TEXT = $(shell cat ../squeezeplay.version)~$(shell git rev-list --abbrev-commit --max-count=1 HEAD)
+DEB_VERSION_TEXT = $(shell cat ../squeezeplay.version)+$(shell git rev-list HEAD --count)~$(shell git rev-list --abbrev-commit --max-count=1 HEAD)
 TGZ_VERSION_TEXT = $(shell cat ../squeezeplay.version)-$(shell git rev-list --abbrev-commit --max-count=1 HEAD)
 ICNS_NAME = icon.icns
 DMG_TEMP_DIR = temp-SqueezePlay_image
@@ -139,7 +139,7 @@ squeezeplay-tgz:
 
 squeezeplay-deb:
 	sed -e 's/_VERSION_/$(DEB_VERSION_TEXT)/g' ../platforms/debian/changelog.in > ../platforms/debian/changelog
-	cd ../platforms; fakeroot dpkg-buildpackage -b; ls -lah ../squeezeplay*.deb
+	cd ../platforms; fakeroot dpkg-buildpackage -b -us; ls -lah ../squeezeplay*.deb
 
 # Convenience library:
 noinst_LTLIBRARIES = libui.la libaudio.la libdecode.la libnet.la
@@ -174,6 +174,7 @@ libui_la_SOURCES = \
 	src/ui/jive_style.c \
 	src/ui/jive_surface.c \
 	src/ui/system.c \
+	src/ui/resize.c \
 	src/ui/jive_textarea.c \
 	src/ui/jive_textinput.c \
 	src/ui/jive_utils.c \

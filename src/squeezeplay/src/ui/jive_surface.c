@@ -1444,6 +1444,49 @@ JiveSurface *jive_surface_shrinkSurface(JiveSurface *srf, int factorx, int facto
 	return srf2;
 }
 
+JiveSurface *jive_surface_resize(JiveSurface *srf, int w, int h, bool keep_aspect) {
+	SDL_Surface *srf1_sdl;
+	JiveSurface *srf2;
+	int sw, sh, dw, dh;
+	int ox = 0, oy = 0;
+
+	LOG_DEBUG(log_ui, "Resize w: %d h: %d %x", w, h, keep_aspect);
+	srf1_sdl = _resolve_SDL_surface(srf);
+	if (!srf1_sdl) {
+		LOG_ERROR(log_ui, "Underlying sdl surface already freed, possibly with release()");
+		return NULL;
+	}
+	sw = srf1_sdl->w;
+	sh = srf1_sdl->h;
+
+	if (keep_aspect || w == -1  || h == -1 ) {
+		float w_aspect = (float)(w == -1 ? sw: w)/(float)sw;
+		float h_aspect = (float)(h == -1 ? sh: h)/(float)sh;
+
+		LOG_DEBUG(log_ui, "w_aspect %d <= %d h_aspect",w_aspect,h_aspect );
+		// aspect only if w and h != -1 FIXME?
+		if ((w_aspect <= h_aspect && h != -1 && w != -1) || ( h == -1 && w != -1) ) {
+			LOG_DEBUG(log_ui, "w_aspect");
+			dw = w;
+			dh = sh * w_aspect;
+			oy = h == -1 ? 0 : (h - dh)/2;
+		} else {
+			LOG_DEBUG(log_ui, "h_aspect");
+			dh = h;
+			dw = sw * h_aspect;
+			ox = w == -1 ? 0 : (w - dw)/2;
+		}
+	} else {
+		dh = h;
+		dw = w;
+	}
+
+	LOG_INFO(log_ui, "Resize ox: %d oy: %d dw: %d dh: %d sw: %d sh: %d", ox, oy, dw, dh, sw, sh);
+	srf2 = jive_surface_newRGBA(dw, dh);
+	copyResampled(_resolve_SDL_surface(srf2), srf1_sdl, ox, oy, 0, 0, dw, dh, sw, sh);
+
+	return srf2;
+}
 
 void jive_surface_pixelColor(JiveSurface *srf, Sint16 x, Sint16 y, Uint32 color) {
 	if (!srf->sdl) {

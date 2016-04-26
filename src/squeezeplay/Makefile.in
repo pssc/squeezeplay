@@ -14,6 +14,8 @@
 
 @SET_MAKE@
 
+# Makefile.am -- Process this file with automake to produce Makefile.in
+
 #tw touch for poky test
 
 #Note: This include file is duplicated in squeezeplay/, squeezeplay_jive/, and squeezeplay_desktop/, so
@@ -84,8 +86,8 @@ libui_la_DEPENDENCIES =
 am_libui_la_OBJECTS = jive_event.lo jive_font.lo jive_framework.lo \
 	jive_group.lo jive_icon.lo jive_label.lo jive_menu.lo \
 	platform_osx.lo platform_linux.lo jive_slider.lo jive_style.lo \
-	jive_surface.lo system.lo jive_textarea.lo jive_textinput.lo \
-	jive_utils.lo jive_widget.lo jive_window.lo \
+	jive_surface.lo system.lo resize.lo jive_textarea.lo \
+	jive_textinput.lo jive_utils.lo jive_widget.lo jive_window.lo \
 	lua_jiveui.lo
 libui_la_OBJECTS = $(am_libui_la_OBJECTS)
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(testdir)"
@@ -184,6 +186,7 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
+PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 RANLIB = @RANLIB@
@@ -275,7 +278,7 @@ APP_NAME = SqueezePlay Beta
 BUNDLE_CONTENTS = $(BUNDLE_NAME)/Contents
 PLIST_FILE = $(BUNDLE_CONTENTS)/Info.plist
 VERSION_TEXT = $(shell cat ../squeezeplay.version)r$(shell git rev-list --abbrev-commit --max-count=1 HEAD)
-DEB_VERSION_TEXT = $(shell cat ../squeezeplay.version)~$(shell git rev-list --abbrev-commit --max-count=1 HEAD)
+DEB_VERSION_TEXT = $(shell cat ../squeezeplay.version)+$(shell git rev-list HEAD --count)~$(shell git rev-list --abbrev-commit --max-count=1 HEAD)
 TGZ_VERSION_TEXT = $(shell cat ../squeezeplay.version)-$(shell git rev-list --abbrev-commit --max-count=1 HEAD)
 ICNS_NAME = icon.icns
 DMG_TEMP_DIR = temp-SqueezePlay_image
@@ -304,6 +307,7 @@ libui_la_SOURCES = \
 	src/ui/jive_style.c \
 	src/ui/jive_surface.c \
 	src/ui/system.c \
+	src/ui/resize.c \
 	src/ui/jive_textarea.c \
 	src/ui/jive_textinput.c \
 	src/ui/jive_utils.c \
@@ -548,6 +552,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mqueue.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/platform_linux.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/platform_osx.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/resize.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/streambuf.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/system.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/visualizer_spectrum.Plo@am__quote@
@@ -819,6 +824,13 @@ system.lo: src/ui/system.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o system.lo `test -f 'src/ui/system.c' || echo '$(srcdir)/'`src/ui/system.c
 
+resize.lo: src/ui/resize.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT resize.lo -MD -MP -MF "$(DEPDIR)/resize.Tpo" -c -o resize.lo `test -f 'src/ui/resize.c' || echo '$(srcdir)/'`src/ui/resize.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/resize.Tpo" "$(DEPDIR)/resize.Plo"; else rm -f "$(DEPDIR)/resize.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/ui/resize.c' object='resize.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o resize.lo `test -f 'src/ui/resize.c' || echo '$(srcdir)/'`src/ui/resize.c
+
 jive_textarea.lo: src/ui/jive_textarea.c
 @am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT jive_textarea.lo -MD -MP -MF "$(DEPDIR)/jive_textarea.Tpo" -c -o jive_textarea.lo `test -f 'src/ui/jive_textarea.c' || echo '$(srcdir)/'`src/ui/jive_textarea.c; \
 @am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/jive_textarea.Tpo" "$(DEPDIR)/jive_textarea.Plo"; else rm -f "$(DEPDIR)/jive_textarea.Tpo"; exit 1; fi
@@ -1019,7 +1031,8 @@ distdir: $(DISTFILES)
 	    || exit 1; \
 	  fi; \
 	done
-	-find $(distdir) -type d ! -perm -777 -exec chmod a+rwx {} \; -o \
+	-find "$(distdir)" -type d ! -perm -755 \
+		-exec chmod u+rwx,go+rx {} \; -o \
 	  ! -type d ! -perm -444 -links 1 -exec chmod a+r {} \; -o \
 	  ! -type d ! -perm -400 -exec chmod a+r {} \; -o \
 	  ! -type d ! -perm -444 -exec $(SHELL) $(install_sh) -c -m a+r {} {} \; \
@@ -1065,7 +1078,7 @@ distcheck: dist
 	*.zip*) \
 	  unzip $(distdir).zip ;;\
 	esac
-	chmod -R a-w $(distdir); chmod a+w $(distdir)
+	chmod -R a-w $(distdir); chmod u+w $(distdir)
 	mkdir $(distdir)/_build
 	mkdir $(distdir)/_inst
 	chmod a-w $(distdir)
@@ -1301,7 +1314,6 @@ SqueezePlay_dmg: SqueezePlay_bundle
 	-rm $(DMG_TMP_IMAGE_FILENAME)
 	mkdir -p $(DMG_TEMP_DIR)
 	-hdiutil detach "/Volumes/$(DMG_IMAGE_DIR_MOUNTPOINT)"
-	-umount -f /Volumes/$(DMG_IMAGE_DIR)*
 	-rm -rf "/Volumes/$(DMG_IMAGE_DIR_MOUNTPOINT)"
 	hdiutil create -fs HFS+ -layout SPUD -volname "$(DMG_IMAGE_DIR_MOUNTPOINT)" -size 100m "$(DMG_TEMP_DIR)"
 	hdiutil mount "$(DMG_TMP_IMAGE_FILENAME)"
@@ -1318,7 +1330,7 @@ squeezeplay-tgz:
 
 squeezeplay-deb:
 	sed -e 's/_VERSION_/$(DEB_VERSION_TEXT)/g' ../platforms/debian/changelog.in > ../platforms/debian/changelog
-	cd ../platforms; fakeroot dpkg-buildpackage -b; ls -lah ../squeezeplay*.deb
+	cd ../platforms; fakeroot dpkg-buildpackage -b -us; ls -lah ../squeezeplay*.deb
 
 src/version.h: FORCE
 	@echo '/* This file is automatically generated */' > src/version.h
