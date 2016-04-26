@@ -183,7 +183,11 @@ int main(int argc, char *args[]) {
 	r.w = 320;
 
 
+#ifdef SQUEEZEOS
 	font = TTF_OpenFont("/usr/share/jive/fonts/FreeSans.ttf", 60);
+#else
+	font = TTF_OpenFont("/opt/squeezeplay/share/jive/fonts/FreeSans.ttf",60 );
+#endif
 	if (!font) {
 		printf("Can't open font %s\n", TTF_GetError());
 		exit(-1);
