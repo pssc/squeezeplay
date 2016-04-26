@@ -1,0 +1,11 @@
+SETTING_TEST
+	EN	Testing
+
+SETTING_EXPERIMENTAL
+	EN	Experimental (unsupported)
+
+APPLET_NAME
+	EN	Test Features
+
+HELP_MENU_META
+	EN	Control of both Test and Experimental, code and features.
