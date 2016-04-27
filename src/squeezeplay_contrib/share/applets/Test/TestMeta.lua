@@ -34,9 +34,8 @@ end
 
 
 function registerApplet(meta)
-	
-	jiveMain:addItem(meta:menuItem('appletTest', 'home', "TEST", function(applet, ...) applet:menu(...) end, 900))
-
+	if not appletManager:callService('test') then return end
+	jiveMain:addItem(meta:menuItem('appletTest', 'home', "TEST", function(applet, ...) applet:menu(...) end, 1))
 end
 
 
