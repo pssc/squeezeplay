@@ -104,7 +104,7 @@ function configureApplet(meta)
 							--Bug 16593: always start on, even if soft power state was off when shutdown
 							-- this is to avoid a situation where a Radio powers up to a black screen (fallback whenOff SS when clock is not set)
 							jiveMain:setSoftPowerState("on")
-						end)
+						end,'PowerOn')
 	
 	-- Connect player
 	local server = nil
@@ -189,7 +189,7 @@ function configureApplet(meta)
 								log:info("Activating Line In")
 								appletManager:callService("activateLineIn", true, settings.capturePlayMode)
 							end
-						end)
+						end,'LineIn')
 
 end
 
