@@ -21,6 +21,15 @@ local EVENT_CONSUME   = jive.ui.EVENT_CONSUME
 module(...)
 oo.class(_M, Window)
 
+function captureScreen()
+	local img = Surface:newRGB(Framework:getScreenSize())
+	if not img then log:error("allocation for image failed ", Framework:getScreenSize()) end
+	--take snapshot of screen
+	Framework:draw(img)
+
+	return img
+end
+
 
 function __init(self, windowId)
 	local obj = oo.rawnew(self, Window("" , "", _, windowId))
@@ -34,20 +43,16 @@ function __init(self, windowId)
 	obj:setButtonAction("lbutton", nil)
 	obj:setButtonAction("rbutton", nil)
 
-	obj._bg = _capture(obj)
+	obj._sc = captureScreen()
 
 	return obj
 end
 
+--[[
 function _cancelContextMenuAction()
 	Window:hideContextMenus()
 	return EVENT_CONSUME
 end
-
-function draw(self, surface, layer)
-	self._bg:blit(surface, 0, 0)
-end
-
 
 function _getTopWindowContextMenu(self)
 	local topWindow = Window:getTopNonTransientWindow()
@@ -56,26 +61,24 @@ function _getTopWindowContextMenu(self)
 		return topWindow
 	end
 end
+--]]
 
+function getSurface(self)
+	return self._sc
+end
+
+function draw(self, surface)
+	self._sc:blit(surface, 0, 0)
+end
 
 function refresh(self)
-	self._bg = self:_capture()
+	self._sc = captureScreen()
 end
 
-
-function _capture(self)
-	local sw, sh = Framework:getScreenSize()
-	local img = Surface:newRGB(sw, sh)
-
-	--take snapshot of screen
-	Framework:draw(img)
-
-	return img
-end
 
 
 function __tostring(self)
-	return "SnapshotWindow()"
+	return "SnapshotWindow("..tostring(self.windowId or "")..")"
 end
 
 

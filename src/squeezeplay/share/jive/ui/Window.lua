@@ -104,16 +104,19 @@ local LAYOUT_CENTER           = jive.ui.LAYOUT_CENTER
 local LAYOUT_NONE             = jive.ui.LAYOUT_NONE
 
 local appletManager           = require("jive.AppletManager")
+local Framework               = require("jive.ui.Framework")
 
-local HORIZONTAL_PUSH_TRANSITION_DURATION = 500
+local HORIZONTAL_PUSH_TRANSITION_DURATION = 400
+local FADEIN_LONG_TRANSITION_DURATION     = 800
+local FADEIN_TRANSITION_DURATION          = 400
+local FADEIN_FAST_TRANSITION_DURATION     = 200
 
 -- our class
 module(...)
 oo.class(_M, Widget)
 
-
-local Framework = require("jive.ui.Framework")
-
+-- Late load as this is a child class
+--local SnapshotWindow          = require("jive.ui.SnapshotWindow")
 
 function _bump(self)
 	self:playSound("BUMP")
@@ -124,7 +127,6 @@ end
 function upAction(self)
 	self:playSound("WINDOWHIDE")
 	self:getWindow():hide()
-
 	return EVENT_CONSUME
 end
 
@@ -290,10 +292,14 @@ end
 
 function hideOnAllButtonInput(self)
 	if not self.hideOnAllButtonInputHandle then
-		self.hideOnAllButtonInputHandle = self:addListener(ACTION | EVENT_KEY_PRESS | EVENT_KEY_HOLD | EVENT_MOUSE_PRESS | EVENT_MOUSE_HOLD | EVENT_MOUSE_DRAG,
-								function(event)
-									return hideOnAllButtonInputListener(self, event)
-								end)
+		self.hideOnAllButtonInputHandle =
+			self:addListener(ACTION |
+				EVENT_KEY_PRESS | EVENT_KEY_HOLD |
+				EVENT_MOUSE_PRESS | EVENT_MOUSE_HOLD | EVENT_MOUSE_DRAG,
+				function(event)
+					return hideOnAllButtonInputListener(self, event)
+				end
+			)
 
 	end
 
@@ -308,6 +314,7 @@ function removeDefaultActionListeners(self)
 	self.defaultActionListenerHandles = {}
 end
 
+--[[
 function _goNowPlaying(self, obj)
 	local worked = appletManager:callService("goNowPlaying", "browse")
 	log:warn(worked)
@@ -316,6 +323,7 @@ function _goNowPlaying(self, obj)
 		obj:bumpRight()
 	end
 end
+--]]
 
 --[[
 
@@ -389,7 +397,9 @@ function show(self, transition)
 		stack[idx + 1]:hide()
 	end
 
-	Framework:reDraw(nil)
+	--Surely the framework would redarw?
+	--Framework:reDraw()
+	log:warn("Framework:reDraw() ",self)
 end
 
 
@@ -611,7 +621,8 @@ function hide(self, transition)
 			window = window.transparent and window:getLowerWindow() or nil
 		end
 
-		topwindow:reDraw()
+		--FIXME
+		log:warn("was topwindow:reDraw() ",topwindow)
 
 		-- push transitions
 		transition = transition or self._DEFAULT_HIDE_TRANSITION
@@ -679,12 +690,12 @@ end
 
 
 function bumpDown(self)
-	Framework:_startTransition(self:transitionBumpDown(self))
+	Framework:_startTransition(self:transitionBumpDown())
 end
 
 
 function bumpUp(self)
-	Framework:_startTransition(self:transitionBumpUp(self))
+	Framework:_startTransition(self:transitionBumpUp())
 end
 
 --[[
@@ -696,7 +707,7 @@ Makes the window bump left.
 =cut
 --]]
 function bumpLeft(self)
-	Framework:_startTransition(self:transitionBumpLeft(self))
+	Framework:_startTransition(self:transitionBumpLeft())
 end
 
 
@@ -709,7 +720,7 @@ Makes the window bump right.
 =cut
 --]]
 function bumpRight(self)
-	Framework:_startTransition(self:transitionBumpRight(self))
+	Framework:_startTransition(self:transitionBumpRight())
 end
 
 
@@ -768,12 +779,10 @@ Returns the text of the title widget.
 =cut
 --]]
 function getTitle(self)
-	if self.title then
-		if self.title:getWidget('text') then
-			return self.title:getWidget('text'):getValue()
-		end
+	if self.title and  self.title:getWidget('text') then
+		return self.title:getWidget('text'):getValue()
 	end
-	return nil
+	return
 end
 
 --[[
@@ -785,10 +794,7 @@ Returns the window's title widget.
 =cut
 --]]
 function getTitleWidget(self)
-	if self.title then
-		return self.title
-	end
-	return nil
+	return self.title
 end
 
 
@@ -801,12 +807,10 @@ Returns the style of the title widget.
 =cut
 --]]
 function getTitleStyle(self)
-	if self.title then
-		if self.title:getWidget('text') then
-			return self.title:getWidget('text'):getStyle()
-		end
+	if self.title and self.title:getWidget('text') then
+		return self.title:getWidget('text'):getStyle()
 	end
-	return nil
+	return
 end
 
 
@@ -1221,11 +1225,8 @@ end
 
 
 function __tostring(self)
-	if self.title then
-		return "Window(" .. tostring(self.title) .. ")"
-	else
-		return "Window()"
-	end
+	local str = (self.title and self.title ~= "") and self.title or (self.windowId or "")
+	return "Window(" .. tostring(str) .. ")"
 end
 
 
@@ -1274,12 +1275,20 @@ function transitionNone(self)
 	return nil
 end
 
+function transitionEmpty(self)
+	return function (...)
+		Framework:_killTransition()
+		return true
+	end
+end
 
 --with animation in both directions
 function transitionBumpDown(self)
-
+     return self:_transitionBumpV(false)
+end
+--[[
 	local frames = 1
-	local screenWidth = Framework:getScreenSize()
+	--local screenWidth = Framework:getScreenSize()
 	local inReturn = false
 	return function(widget, surface)
 			local y = frames * 3
@@ -1299,25 +1308,36 @@ function transitionBumpDown(self)
 
 			if frames == 0 then
 				Framework:_killTransition()
+				return true
 			end
 		end
 end
+]]--
 
 --with animation in both directions
 function transitionBumpUp(self)
+     return self:_transitionBumpV(true)
+end
 
+--with animation in both directions
+function _transitionBumpV(self, up)
+
+	local max_frames = 2
 	local frames = 1
-	local screenWidth = Framework:getScreenSize()
 	local inReturn = false
+	-- FIXME will nate scale
+	-- should we just use a time based tranition FIXME
+	-- local screenWidth = Framework:getScreenSize()
+
 	return function(widget, surface)
 			local y = frames * 3
 
 			self:draw(surface, LAYER_FRAME | LAYER_LOWER)
-			surface:setOffset(0, -y / 2)
+			surface:setOffset(0,(up and -y or y)/ 2)
 			self:draw(surface, LAYER_CONTENT | LAYER_CONTENT_OFF_STAGE | LAYER_CONTENT_ON_STAGE | LAYER_TITLE)
 			surface:setOffset(0, 0)
 
-			if not inReturn and frames < 2 then
+			if not inReturn and frames < max_frames then
 				frames = frames + 1
 
 			else
@@ -1327,6 +1347,7 @@ function transitionBumpUp(self)
 
 			if frames == 0 then
 				Framework:_killTransition()
+				return true
 			end
 		end
 end
@@ -1340,18 +1361,27 @@ Returns a bump left window transition.
 =cut
 --]]
 function transitionBumpLeft(self)
+	return self:_transitionBumpH(true)
+end
+
+function _transitionBumpH(self, left)
 
 	local frames = 2
 	local screenWidth = Framework:getScreenSize()
+	-- was 3 so max 6 pix about 1/80 of a 480 screen...
+	-- This will scale... should we just use a time based tranition FIXME
+	screenWidth = math.ceil(screenWidth / 80)
+				log:warn(self, " transitionBumpH ",screenWidth, " ",left and "left" or "right")
 
 	return function(widget, surface)
-			local x = frames * 3
+			local x = frames * screenWidth
 
-			if widget._bg then
-				widget._bg:blit(surface, 0, 0)
-			end
+			--if widget._bg then
+			--	widget._bg:blit(surface, 0, 0)
+			--end
 			self:draw(surface, LAYER_LOWER)
-			surface:setOffset(x, 0)
+			surface:setOffset(left and x or -x, 0)
+			--surface:setOffset(x, 0)
 			self:draw(surface, LAYER_CONTENT | LAYER_CONTENT_OFF_STAGE | LAYER_CONTENT_ON_STAGE | LAYER_TITLE)
 			surface:setOffset(0, 0)
 			self:draw(surface, LAYER_FRAME)
@@ -1359,6 +1389,8 @@ function transitionBumpLeft(self)
 			frames = frames - 1
 			if frames == 0 then
 				Framework:_killTransition()
+				log:warn(widget, " transitionBumpH End ",screenWidth, " ",left and "left" or "right")
+				return true
 			end
 		end
 end
@@ -1373,7 +1405,11 @@ Returns a bump right window transition.
 =cut
 --]]
 function transitionBumpRight(self)
+	return self:_transitionBumpH(false)
+end
 
+--[[
+function transitionBumpRight(self)
 	local frames = 2
 	local screenWidth = Framework:getScreenSize()
 
@@ -1395,10 +1431,10 @@ function transitionBumpRight(self)
 			end
 		end
 end
-
+--]]
 
 function transitionPushLeftStaticTitle(oldWindow, newWindow)
-	return _transitionPushLeft(oldWindow, newWindow, true)
+	return _transitionPush(oldWindow, newWindow, true, true)
 end
 
 --[[
@@ -1410,45 +1446,52 @@ Returns a push right window transition.
 =cut
 --]]
 function transitionPushLeft(oldWindow, newWindow)
-	return _transitionPushLeft(oldWindow, newWindow, false)
+	return _transitionPush(oldWindow, newWindow, false, true)
 end
 
 
-function _transitionPushLeft(oldWindow, newWindow, staticTitle)
+function _transitionPush(oldWindow, newWindow, staticTitle, left)
 	_assert(oo.instanceof(oldWindow, Widget))
 	_assert(oo.instanceof(newWindow, Widget))
 
-	local startT
 	local transitionDuration = HORIZONTAL_PUSH_TRANSITION_DURATION
 	local remaining = transitionDuration
 	local screenWidth = Framework:getScreenSize()
-	local scale = (transitionDuration * transitionDuration * transitionDuration) / screenWidth
+	--local scale = (transitionDuration * transitionDuration * transitionDuration) / screenWidth
+	-- floor zeroded...
+	local scale = screenWidth / transitionDuration
 	local animationCount = 0
+	local startT
+
 	return function(widget, surface)
+			local x = screenWidth -  math.ceil(remaining * scale)
 			if animationCount == 0 then
 				--getting start time on first loop avoids initial delay that can occur
+				log:debug(widget, " _transitionPush Start ", screenWidth, "- x (", x, ") rem = ", remaining)
 				startT = Framework:getTicks()
 			end
-			local x = math.ceil(screenWidth - ((remaining * remaining * remaining) / scale))
+			-- local x = math.ceil(screenWidth - ((remaining * remaining * remaining) / scale))
 
 			surface:setOffset(0, 0)
-			if oldWindow._bg then
-				oldWindow._bg:blit(surface, 0, 0)
-			end
+			-- if oldWindow._bg then
+			--	oldWindow._bg:blit(surface, 0, 0)
+			-- end
 			if staticTitle then
 				newWindow:draw(surface, LAYER_LOWER | LAYER_TITLE)
 			else
 				newWindow:draw(surface, LAYER_LOWER)
 			end
 
-			surface:setOffset(-x, 0)
+			surface:setOffset(left and -x or x, 0)
+			--surface:setOffset(-x, 0)
 			if staticTitle then
 				oldWindow:draw(surface, LAYER_CONTENT | LAYER_CONTENT_OFF_STAGE )
 			else
 				oldWindow:draw(surface, LAYER_CONTENT | LAYER_CONTENT_OFF_STAGE | LAYER_TITLE)
 			end
 
-			surface:setOffset(screenWidth - x, 0)
+			surface:setOffset(left and screenWidth - x or x - screenWidth, 0)
+			--surface:setOffset(screenWidth - x, 0)
 			if staticTitle then
 				newWindow:draw(surface, LAYER_CONTENT | LAYER_CONTENT_ON_STAGE)
 			else
@@ -1458,19 +1501,20 @@ function _transitionPushLeft(oldWindow, newWindow, staticTitle)
 			surface:setOffset(0, 0)
 			newWindow:draw(surface, LAYER_FRAME)
 			
-			local elapsed = Framework:getTicks() - startT
-			remaining = transitionDuration - elapsed
-
+			remaining = transitionDuration - (Framework:getTicks() - startT)
 			if remaining <= 0 or x >= screenWidth then
 				Framework:_killTransition()
+				log:debug(widget, " _transitionPush End ", animationCount, " x = ", x, ", rem = ", remaining, " ", left and "left" or "right")
+				return true
 			end
+			--log:warn(widget," _transitionPush ",animationCount," x = ",x,", rem = ",remaining, " ", left and "left" or "right")
 			animationCount = animationCount + 1
 		end
 end
 
 
 function transitionPushRightStaticTitle(oldWindow, newWindow)
-	return _transitionPushRight(oldWindow, newWindow, true)
+	return _transitionPush(oldWindow, newWindow, true, false)
 end
 
 
@@ -1483,10 +1527,10 @@ Returns a push right window transition.
 =cut
 --]]
 function transitionPushRight(oldWindow, newWindow)
-	return _transitionPushRight(oldWindow, newWindow, false)
+	return _transitionPush(oldWindow, newWindow, false, false)
 end
 
-
+--[[
 function _transitionPushRight(oldWindow, newWindow, staticTitle)
 	_assert(oo.instanceof(oldWindow, Widget))
 	_assert(oo.instanceof(newWindow, Widget))
@@ -1540,67 +1584,73 @@ function _transitionPushRight(oldWindow, newWindow, staticTitle)
 			animationCount = animationCount + 1
 		end
 end
-
+--]]
 
 --[[
 
-=head2 jive.ui.Window:transitionFadeIn(newWindow)
+=head2 jive.ui.Window:transitionFadeIn[|Fast|Slow](oldWindow,newWindow)
 
 Returns a fade in window transition.
 
 =cut
 --]]
 function transitionFadeIn(oldWindow, newWindow)
-	return _transitionFadeIn(oldWindow, newWindow, 400)
+	return _transitionFadeIn(oldWindow, newWindow, FADEIN_TRANSITION_DURATION)
 end
 
 function transitionFadeInFast(oldWindow, newWindow)
-	return _transitionFadeIn(oldWindow, newWindow, 100)
+	return _transitionFadeIn(oldWindow, newWindow, FADEIN_FAST_TRANSITION_DURATION)
 end
 
+function transitionFadeInSlow(oldWindow, newWindow)
+	return _transitionFadeIn(oldWindow, newWindow, FADEIN_SLOW_TRANSITION_DURATION)
+end
 
+-- this transition shortens if we take to long rather then being a fixed number of steps or being frame related
 function _transitionFadeIn(oldWindow, newWindow, duration)
 	_assert(oo.instanceof(oldWindow, Widget))
 	_assert(oo.instanceof(newWindow, Widget))
 
-
-	local startT
+	-- Start one setp In
+	--			    FR for D    MS Per Fame
+	local stepms = duration / (duration / (1000 / FRAME_RATE) )
 	local transitionDuration = duration
-	local remaining = transitionDuration
-	local screenWidth = Framework:getScreenSize()
-	local scale = (transitionDuration * transitionDuration * transitionDuration) / screenWidth
-	local animationCount = 0
+	local remaining = duration - stepms
+	local animationCount = 1
+	local startT
+	local oldsrf
+	-- Alpha channel is 8bit
+	local scale = 255 / duration
 
-	local scale = 255 / transitionDuration
+	log:debug("_transitionFadeIn Frames ",math.ceil((duration/stepms)-1),"/",scale)
+	-- assume old window is not updating snapshot
+	if oldWindow.getSurface then
+		oldsrf = oldWindow:getSurface()
+	else
+		local sw, sh = Framework:getScreenSize()
+		local bgImage = Framework:getBackground()
+		oldsrf = Surface:newRGB(sw, sh)
+		bgImage:blit(oldsrf, 0, 0, sw, sh)
+		oldWindow:draw(oldsrf, LAYER_ALL)
+	end
 
-	local bgImage = Framework:getBackground()
-
-	local sw, sh = Framework:getScreenSize()
-	local srf = Surface:newRGB(sw, sh)
-
-	-- assume old window is not updating
-	bgImage:blit(srf, 0, 0, sw, sh)
-	oldWindow:draw(srf, LAYER_ALL)
-
+	-- old layer will get increasingly transparant
 	return function(widget, surface)
-			if animationCount == 0 then
-				--getting start time on first loop avoids initial delay that can occur
-				startT = Framework:getTicks()
+			local alpha = remaining * scale
+			if animationCount == 1 then
+				-- getting start time on first loop avoids initial delay that can occur (two steps in as this is for the next step)
+				-- Should we care... we only bail/Accel after 2nd Frame this way
+				startT = Framework:getTicks() - stepms * 2
 			end
-			local x = remaining * scale
-
-			--support background surfaces, used for instance by ContextMenuWindow
-			if newWindow._bg then
-				newWindow._bg:blit(surface, 0, 0)
-			end
+			remaining = transitionDuration - (Framework:getTicks() - startT)
 			newWindow:draw(surface, LAYER_ALL)
-			srf:blitAlpha(surface, 0, 0, x)
-
-			local elapsed = Framework:getTicks() - startT
-			remaining = transitionDuration - elapsed
+			oldsrf:blitAlpha(surface, 0, 0, alpha)
+			log:debug(" _transitionFadeIn scaled ", alpha)
 
 			if remaining <= 0 then
 				Framework:_killTransition()
+				log:info(widget," _transitionFadeIn Finish ", animationCount, " (",alpha,")")
+				return true
 			end
 			animationCount = animationCount + 1
 		end
@@ -1616,15 +1666,18 @@ Returns a push up window transition for use with popup windows.
 =cut
 --]]
 function transitionPushPopupUp(oldWindow, newWindow)
+	return _transitionPushPopup(false ,oldWindow, newWindow)
+end
+--[[
 	_assert(oo.instanceof(oldWindow, Widget))
 	_assert(oo.instanceof(newWindow, Widget))
 
-	local _, screenHeight = Framework:getScreenSize()
-
+	-- Frames per 6th second and number of frames for transition
 	local frames = math.ceil(FRAME_RATE / 6)
 	local _,_,_,windowHeight = newWindow:getBounds()
 	local scale = (frames * frames * frames) / windowHeight
 
+	-- Tranistion for fixed number of frames
 	return function(widget, surface)
 			local y = ((frames * frames * frames) / scale)
 
@@ -1639,10 +1692,11 @@ function transitionPushPopupUp(oldWindow, newWindow)
 			frames = frames - 1
 			if frames == 0 then
 				Framework:_killTransition()
+				return true
 			end
 		end
 end
-
+--]]
 
 --[[
 
@@ -1653,10 +1707,14 @@ Returns a push down window transition for use with popup windows.
 =cut
 --]]
 function transitionPushPopupDown(oldWindow, newWindow)
+	return _transitionPushPopup(false ,oldWindow, newWindow)
+end
+
+function _transitionPushPopupV(up,oldWindow, newWindow)
 	_assert(oo.instanceof(oldWindow, Widget))
 	_assert(oo.instanceof(newWindow, Widget))
 
-	local _, screenHeight = Framework:getScreenSize()
+	--local _, screenHeight = Framework:getScreenSize()
 
 	local frames = math.ceil(FRAME_RATE / 6)
 	local _,_,_,windowHeight = oldWindow:getBounds()
@@ -1668,7 +1726,9 @@ function transitionPushPopupDown(oldWindow, newWindow)
 			surface:setOffset(0, 0)
 			newWindow:draw(surface, LAYER_ALL)
 
-			surface:setOffset(0, windowHeight - y)
+			--surface:setOffset(0, windowHeight - y)
+			--surface:setOffset(0, y)
+			surface:setOffset(0, up and y or (windowHeight - y))
 			oldWindow:draw(surface, LAYER_CONTENT | LAYER_CONTENT_OFF_STAGE)
 
 			surface:setOffset(0, 0)
@@ -1676,6 +1736,8 @@ function transitionPushPopupDown(oldWindow, newWindow)
 			frames = frames - 1
 			if frames == 0 then
 				Framework:_killTransition()
+				log:warn("_transitionPushPopupV End ", scale, " ", up and "up" or "down")
+				return true
 			end
 		end
 end
