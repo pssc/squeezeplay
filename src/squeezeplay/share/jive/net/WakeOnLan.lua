@@ -17,7 +17,7 @@ oo.class(_M, SocketUdp)
 
 
 function __init(self, jnt)
-	return oo.rawnew(self, SocketUdp(jnt, function() end))
+	return oo.rawnew(self, SocketUdp(jnt,function() end,"WOL"))
 end
 
 

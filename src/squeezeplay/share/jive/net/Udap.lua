@@ -137,7 +137,7 @@ function __init(self, jnt, sink)
 				       end
 				       return 1
 			       end,
-			       "",
+			       "UDAP",
 			       PORT)
 
 	if sink then
