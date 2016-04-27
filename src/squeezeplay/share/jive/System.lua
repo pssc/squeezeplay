@@ -71,6 +71,8 @@ local allCapabilities = {
 	["hasDigitalOut"] = 1,
 	["hasTinySC"] = 1,
 	["IRBlasterCapable"] = 1,
+	["SMBus"] = 1,
+	["Capabilities"] = 1,
 }
 
 local _capabilities = {} -- of form string, 1 so
@@ -175,6 +177,14 @@ end
 
 function hasIRBlasterCapability(self)
 	return _capabilities["IRBlasterCapable"] ~= nil
+end
+
+function hasSMBus(self)
+	return  _capabilities["SMBus"] ~= nil
+end
+
+function hasCapabilities(self)
+	return  _capabilities["Capabilities"] ~= nil
 end
 
 -- rest is C implementation
