@@ -471,29 +471,28 @@ end
 -- updates a group widget with the artwork for item
 local function _artworkItem(step, item, group, menuAccel)
 	local icon = group and group:getWidget("icon")
-	local iconSize
+	if icon and icon:getStyle() == 'icon_no_artwork_playlist' then return end -- THUMB_SIZE or THUMB_SIZE_MENU ?? FIXME
 
-	local THUMB_SIZE = jiveMain:getSkinParam("THUMB_SIZE")
-	iconSize = THUMB_SIZE
+	local iconSize = jiveMain:getSkinParamOrNil("THUMB_SIZE_PLAYLIST") or jiveMain:getSkinParam("THUMB_SIZE")
 	
 	local iconId = item["icon-id"] or item["icon"]
 
 	-- Consistantly request png for caching
 	if iconId then
-		if menuAccel and not _server:artworkThumbCached(iconId, iconSize,'png') then
+		if menuAccel and not _server:artworkThumbCached(iconId, iconSize) then
 			-- Don't load artwork while accelerated
 			_server:cancelArtwork(icon)
 		else
 			-- Fetch an image from SlimServer
-			_server:fetchArtwork(iconId, icon, iconSize,'png')
+			_server:fetchArtwork(iconId, icon, iconSize)
 		end
 	elseif item["trackType"] == 'radio' and item["params"] and item["params"]["track_id"] then
-		if menuAccel and not _server:artworkThumbCached(item["params"]["track_id"], iconSize,'png') then
+		if menuAccel and not _server:artworkThumbCached(item["params"]["track_id"], iconSize) then
 			-- Don't load artwork while accelerated
 			_server:cancelArtwork(icon)
                	else
 			-- workaround: this needs to be png not jpg to allow for transparencies
-			_server:fetchArtwork(item["params"]["track_id"], icon, iconSize, 'png')
+			_server:fetchArtwork(item["params"]["track_id"], icon, iconSize )
 		end
 	else
 		_server:cancelArtwork(icon)
@@ -1007,7 +1006,7 @@ local function _bigArtworkPopup(chunk, err)
 
 	log:debug("Artwork width/height will be ", shortDimension)
 	if artworkId then
-		_server:fetchArtwork(artworkId, icon, shortDimension,'png')
+		_server:fetchArtwork(artworkId, icon, shortDimension)
 	end
 	popup:addWidget(icon)
 	popup:show()
@@ -1351,7 +1350,8 @@ local function _browseSink(step, chunk, err)
 					if iconId then
 						-- Fetch an image from SlimServer
 						titleIcon = Icon("icon")
-						_server:fetchArtwork(iconId, titleIcon, jiveMain:getSkinParam("THUMB_SIZE"),'png')
+						_server:fetchArtwork(iconId, titleIcon, jiveMain:getSkinParam("THUMB_SIZE_MENU") or jiveMain:getSkinParam("THUMB_SIZE"))
+						log:warn("mark")
 					-- only allow the existing icon to stay if titleStyle isn't being changed
 					elseif not data.window.titleStyle and titleWidget:getWidget('icon') then
 						titleIcon = titleWidget:getWidget('icon')
