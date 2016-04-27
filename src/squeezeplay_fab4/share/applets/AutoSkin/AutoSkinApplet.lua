@@ -29,6 +29,9 @@ local appletManager   = appletManager
 
 local debug           = require("jive.utils.debug")
 
+local SnapshotWindow  = require("jive.ui.SnapshotWindow")
+local Window          = require("jive.ui.Window")
+
 module(..., Framework.constants)
 oo.class(_M, Applet)
 
@@ -38,7 +41,6 @@ function getActiveSkinType(self)
 end
 
 function init(self, ...)
-
 	-- skin types
 	local touchSkin = "touch"
 	local remoteSkin = "remote"
@@ -63,7 +65,6 @@ function init(self, ...)
 			end
 		end
 		self.keyBlackList = {}
-
 	end
 
 	self.eatEvents = false
@@ -79,6 +80,7 @@ function init(self, ...)
 				log:warn("eatme me - ir " .. event:getIRCode() .. " is context sensitive")
 				return EVENT_CONSUME
 
+			-- FIXME wake up if in screensaver mode by passing through events?
 			elseif self:changeSkin(remoteSkin) and self.irBlacklist[event:getIRCode()] ~= nil then
 
 				log:warn("eatme me - ir " .. self.irBlacklist[event:getIRCode()] .. " is context sensitive")
@@ -101,7 +103,7 @@ function init(self, ...)
 				return EVENT_CONSUME
 			end
 			-- ignore event when switching from remote to touch: we don't know what we're touching
-			-- wake up if in screensaver mode - this is a non critical action
+			-- wake up if in screensaver mode by passing through events
 			if self:changeSkin(skin) and not appletManager:callService("isScreensaverActive") then
 				log:warn("ignore me - I don't know what I'm touching! ",event:tostring())
 				self.eatEvents = true
@@ -133,11 +135,15 @@ function init(self, ...)
 
 			log:debug(self,":AutoSkin INPUT listener ",event:tostring())
 			-- FIXME key blacklist...? and or gnore initial keypress after switching from touch to remote
-			if self:changeSkin(skin) then 
+			-- Tranistion can take a while so can cause a KEY_HOLD event so deactivate SS and use an Empty Transition to eat events.
+			local sa = appletManager:callService("isScreensaverActive")
+			if self:changeSkin(skin, sa and Window.transitionEmpty) then
+				appletManager:callService("deactivateScreensaver")
 				log:warn("ignore me - I don't know what I'm inputing! ",event:tostring())
 				self.eatEvents = true
 				return EVENT_CONSUME
 			end
+			--deactivateScreensaver
 
 			return EVENT_UNUSED
 		end,
@@ -158,8 +164,8 @@ end
 
 
 
-function changeSkin(self, skinType)
-	log:debug(self,":changeSkin ",skinType,"==",self.mode)
+function changeSkin(self, skinType, trans)
+	log:debug(":changeSkin ",skinType,"==",self.mode)
 
 	if  self.mode == skinType then
 		return false
@@ -172,60 +178,36 @@ function changeSkin(self, skinType)
 		return false
 	end
 
-        log:info(self,":changeSkin ",skinName,":",skinType)
-	local old = _capture("start")
-	local sw, sh = Framework:getScreenSize()
+        log:info(":changeSkin ",skinName,":",skinType)
+        local old = SnapshotWindow("oldchsk")
+	local ow, oh = Framework:getScreenSize()
 	self.mode = skinType
 	jiveMain:setSelectedSkin(skinName) -- FIXME Check we have vaild and changed
-	local fw, fh = Framework:getScreenSize()
-        log:info(self,":changeSkin new")
-	local new = _capture("new")
-        log:info(self,":changeSkin new done")
+	local nw, nh = Framework:getScreenSize()
+        log:info(":changeSkin new")
+	local new = SnapshotWindow("newchsk")
+        log:info(":changeSkin new done")
 
-	if fw == sw and sh == fh then
-		Framework:_startTransition(self:_transitionFadeIn(old, new))
-	else
-		-- Resolution Change
-		log:info(self,":changeSkin Resolution Change ",skinName,":",skinType)
-		old = Surface:newRGB(Framework:getScreenSize()) -- FIXME Blank and fade in ?
+	if ow ~= nw or oh ~= nh then
+		-- Resolution Change blank and fade in
+		log:info(":changeSkin Resolution Change ",skinName,":",skinType)
+		old = SnapshotWindow("BlankChSk",Surface:newRGB(nw, nh)) -- Blank and fade in
 	end
-	Framework:_startTransition(self:_transitionFadeIn(old, new)) -- FIXME event eating during transition so not afe to skip?
+
+	Framework:_startTransition(self:_trans(trans or Window.transitionFadeInFast ,old, new))
 
 	return true
 end
 
 
-function _capture(name)
-	local sw, sh = Framework:getScreenSize()
-	local img = Surface:newRGB(sw, sh)
-
-	Framework:draw(img)
-
-	return img
-end
-
-
-function _transitionFadeIn(self, oldImage, newImage)
-	local transitionDuration = self:getSettings()["transitionDuration"]
-	local remaining = transitionDuration
-	local startT
-
-	return function(widget, surface)
-			if not startT then
-				-- getting start time on first loop avoids initial delay that can occur
-				startT = Framework:getTicks()
-			end
-
-			newImage:blit(surface, 0, 0)
-			oldImage:blitAlpha(surface, 0, 0, remaining * (255 / transitionDuration))
-			-- Alpha channel is 8bit
-			remaining = transitionDuration - (Framework:getTicks() - startT)
-			if remaining <= 0 then
-				Framework:_killTransition()
-				log:info(":changeSkin Transtion Finished")
-				self.eatEvents = false
-			end
+function _trans(self,trans, ...)
+	local fn = trans(...)
+	return function (...)
+		if fn(...) then
+			self.eatEvents = false
+			log:debug(self,":changeSkin:trans Finished!")
 		end
+	end
 end
 
 
