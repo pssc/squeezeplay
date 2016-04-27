@@ -110,3 +110,12 @@ NO_MMAP_SETTING
 
 ACTIVE
 	EN	Active
+
+PLUG_HW
+	EN	PlugHW:
+
+ERROR_TITLE
+	EN	Advanced Audio Error
+
+ALSA_INIT
+	EN	ALSA initialisation failed

@@ -15,6 +15,7 @@ local System        = require("jive.System")
 local Decode        = require("squeezeplay.decode")
 local Timer         = require("jive.ui.Timer")
 local Popup         = require("jive.ui.Popup")
+local Textarea       = require("jive.ui.Textarea")
 local Label         = require("jive.ui.Label")
 local Icon          = require("jive.ui.Icon")
 local Window           = require("jive.ui.Window")
@@ -60,10 +61,10 @@ function registerApplet(meta)
 	
         local ja = io.open("jive_alsa","r") -- cwd should be bin dir for jive alsa to exec anyway... using as test for alsa support... --FIXME OS linux check..
         if not ja or system == 'baby' or system == 'jive' or system =='fab4' then
-           return
-        else
            ja:close()
+           return
         end
+        ja:close()
 
 
         if not settings.active then
@@ -179,7 +180,7 @@ function registerApplet(meta)
 		log:info("effectsDevice: ", effectsDevice )
 
 		-- jive_alsa updated so... sample size can be fiddled with
-		Decode:open({
+		local ok , err = Decode:open({
 			alsaPlaybackDevice = playbackDevice,
 			alsaSampleSize = settings.sampleSize and settings.sampleSize or 0, -- system == 'fab4' and 24 or 16, -- auto detected on patched versions, will honor setting now 0 for auto.
 			alsaPlaybackBufferTime = settings.bufferTime,
@@ -187,7 +188,15 @@ function registerApplet(meta)
 			alsaEffectsDevice = effectsDevice,
                         alsaFlags = settings.nommap and FLAG_NOMMAP or nil,
 		})
-		
+		--if not ok then JiveMain:registerPostOnScreenInit(function Popup(meta:string(err), meta:string("ERROR_DOPEN")):show() end) end
+		if not ok then
+			local p = Popup("toast_popup", meta:string("ERROR_TITLE"))
+			local es = tostring(meta:string(err)).. " playbackDevice: " .. playbackDevice .. ( (" effectsDevice: ".. effectsDevice) or "")
+			log:warn(es)
+			p:addWidget(Textarea("toast_popup_textarea",  es))
+			p:focusWidget(nil)
+			p:show()
+		end
 	end
 
 	-- register menus
