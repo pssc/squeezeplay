@@ -326,6 +326,15 @@ DELAY_30_MIN
 	RU	30 минут
 	SV	30 minuter
 
+DELAY_1_HR
+	EN	1 Hour
+
+DELAY_2_HR
+	EN	2 Hour
+
+DELAY_4_HR
+	EN	4 Hour
+
 SCREENSAVER_NONE
 	CS	Žádný
 	DA	Ingen
@@ -340,4 +349,7 @@ SCREENSAVER_NONE
 	PL	Brak
 	RU	Нет
 	SV	Ingen
+
+SCREENSAVER_POWEROFF
+	EN	Power Off Timer
 

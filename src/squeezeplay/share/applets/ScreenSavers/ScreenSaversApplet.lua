@@ -70,6 +70,7 @@ function init(self, ...)
 	) 
 
 	self.timeout = self:getSettings()["timeout"]
+	self.poweroff = self:getSettings()["poweroff"]
 	self.extension = 0
 
 	self.active = {}
@@ -77,8 +78,9 @@ function init(self, ...)
 	self.isScreenSaverActive = false
 
 	self.timer = Timer(self.timeout, function() self:_activate() end, true)
+	self.timerPowerOff = Timer(self.poweroff, function() log:warn("power_off timer.") if self.poweroff > 0 then Framework:pushAction("power_off") end end, true)
 	--as we need the time as of then... in case some other event restarted us.
-	jiveMain:registerPostOnScreenInit(function() self.timer:restart() end)
+	jiveMain:registerPostOnScreenInit(function() self:_restartScreenSaverTimer() end,'ScreenSaver')
 
 	self.defaultSettings = self:getDefaultSettings()
 
@@ -92,8 +94,7 @@ function init(self, ...)
 			end
 			
 			log:debug("restart timer event=",event:tostring()," to ", self.timeout)
-			self.timer:restart(self.timeout)
-			self.extension = 0
+			self:_restartScreenSaverTimer(self.timeout)
 			return EVENT_UNUSED
 		end,
 		true
@@ -264,8 +265,9 @@ function _activate(self, the_screensaver, force, isServerRequest)
 		Framework.windowStack[1]:addListener(EVENT_WINDOW_INACTIVE,
 			function()
 				if not self.timer:isRunning() then
-					log:debug('Screen Saver Retry')
-					self.timer:restart(10000) -- FIXME
+					log:warn('Screen Saver Retry')
+					-- FIXME like a temp extension
+					self.timer:restart(10000)
 					self.extension = 0
 				end
 			end)
@@ -277,6 +279,9 @@ function _activate(self, the_screensaver, force, isServerRequest)
 	-- the "none" choice is false:false, for which the proper course is to do nothing
 	if self.currentSS == 'false:false' then
 		log:warn('"none" is the configured screensaver for ', self:_getMode(), ', so do nothing')
+		if self.poweroff and self:_getMode() == 'whenStopped' then
+			self.timerPowerOff:start()
+		end
 		return
 	end
 
@@ -306,11 +311,15 @@ function _activate(self, the_screensaver, force, isServerRequest)
 		if instance[screensaver.method](instance, force, screensaver.methodParam) ~= false then
 			log:info("activated " .. screensaver.applet .. " screensaver")
 		end
-		self.timer:stop() -- ?
+		self.timer:stop()
 		self.isScreenSaverActive = true
 	else
 		-- special case for screensaver of NONE
 		log:info('There is no screensaver applet available for this mode')
+	end
+
+	if self.poweroff and self:_getMode() == 'whenStopped' then
+		self.timerPowerOff:start()
 	end
 end
 
@@ -356,6 +365,7 @@ function _getOffScreensaver(self)
 	return self:getSettings()["whenOff"] or "BlankScreen:openScreensaver" --hardcode for backward compatability
 end
 
+
 function _getMode(self)
 	local player = appletManager:callService("getCurrentPlayer")
 	if not self:isSoftPowerOn() and System:hasSoftPower() then
@@ -367,6 +377,7 @@ function _getMode(self)
 	end
 	return 'whenStopped'
 end
+
 
 function _getDefaultScreensaver(self)
 	local ss
@@ -424,6 +435,7 @@ function _deactivate(self, window, the_screensaver)
 
 end
 
+
 -- switch screensavers on a player mode change
 function notify_playerModeChange(self, player, mode)
 	if not self:isSoftPowerOn() then
@@ -438,7 +450,7 @@ function notify_playerModeChange(self, player, mode)
 	end
 
 	self.active = {}
-	self:_activate(nil)
+	self:_activate()
 
 	log:debug("close active screensaver")
 	for i, window in ipairs(oldActive) do
@@ -447,6 +459,7 @@ function notify_playerModeChange(self, player, mode)
 end
 
 
+--FIXME poweron allow?
 local _powerAllowedActions = {
 			["play_preset_0"] = 1,
 			["play_preset_1"] = 1,
@@ -467,17 +480,13 @@ function _powerActionHandler(self, actionEvent)
 
 	if _powerAllowedActions[action] then
 		--for special allowed actions, turn on power and forward the action
-		jiveMain:setSoftPowerState("on")
+		--jiveMain:setSoftPowerState("on")
+		Framework:pushAction("power_on")
 
-		local translatedAction = action
-		if _powerAllowedActions[action] ~= 1 then
-			--certain actions like play during poweroff translate to other actions
-			translatedAction = _powerAllowedActions[action]
-		end
-		Framework:pushAction(translatedAction)
+		--certain actions like play during poweroff translate to other actions
+		Framework:pushAction(_powerAllowedActions[action] ~= 1 and action or _powerAllowedActions[action])
 		return
 	end
-
 	log:debug("show power on window (if the specific SS allows it)")
 	self:_showPowerOnWindow()
 end
@@ -571,8 +580,7 @@ function screensaverWindow(self, window, scrollAllowed, ssAllowedActions, mouseA
 				   self.current = nil
 				   if #self.active == 0 then
 					   log:debug("screensaver inactive")
-					   self.timer:restart(self.timeout)
-					   self.extension = 0
+					   self:_restartScreenSaverTimer()
 				   end
 
 				   log:debug("screensaver closed on Pop ", #self.active, " ", ssName)
@@ -596,7 +604,6 @@ function screensaverWindow(self, window, scrollAllowed, ssAllowedActions, mouseA
 					function ()
 						self:_showPowerOnWindow()
 					end)
-
 	end
 
 	log:debug("Overriding the default window action 'bump' handling to allow action to fall through to framework listeners")
@@ -608,8 +615,14 @@ end
 --service method
 function restartScreenSaverTimer(self)
 	log:debug("restartScreenSaverTimer() Service")
+	self:_restartScreenSaverTimer(self.timeout)
+end
+
+
+function _restartScreenSaverTimer(self,timeout)
 	self.extension = 0
-	self.timer:restart()
+	self.timer:restart(timeout)
+	self.timerPowerOff:stop()
 end
 
 
@@ -642,7 +655,8 @@ function deactivateScreensaver(self)
 	end
 
 	if not self:isSoftPowerOn() then
-		jiveMain:setSoftPowerState("on")
+		--jiveMain:setSoftPowerState("on")
+		Framework:pushAction("power_on")
 	end
 end
 
@@ -697,8 +711,14 @@ function setTimeout(self, timeout, timer)
 
 	if timer then
 		set[timer]=timeout
+		if timer ~= 'poweroff' then
+			self.timerPowerOff:setInterval(self.poweroff)
+			return
+		elseif timer ~= 'poweron_window_time' then
+			return
+		end
 		if timeout > self.timeout then
-			-- timer runs on shortest timer , as it will be extended
+			-- timer runs on shortest timer, as it will be extended
 			timeout = self.timeout
 		end
 	end
@@ -761,7 +781,7 @@ function screensaverSetting(self, menuItem, mode)
 
 	window:addListener(EVENT_WINDOW_POP, function() 
 			-- we may be moving off of false:false here, so when we leave this window, restart the SS timer
-			self:restartScreenSaverTimer()
+			self:_restartScreenSaverTimer()
 			self:storeSettings() 
 	end)
 
@@ -824,6 +844,21 @@ function timeoutSetting(self, menuItem, timer)
 				style = 'item_choice',
 				check = RadioButton("radio", group, function() self:setTimeout(1800000, timer) settings=true end, timeout == 1800000),
 			},
+			{
+				text = self:string('DELAY_1_HR'),
+				style = 'item_choice',
+				check = RadioButton("radio", group, function() self:setTimeout(3600000, timer) settings=true end, timeout == 3600000),
+			},
+			{
+				text = self:string('DELAY_2_HR'),
+				style = 'item_choice',
+				check = RadioButton("radio", group, function() self:setTimeout(7200000, timer) settings=true end, timeout == 7200000),
+			},
+			{
+				text = self:string('DELAY_4_HR'),
+				style = 'item_choice',
+				check = RadioButton("radio", group, function() self:setTimeout(14400000, timer) settings=true end, timeout == 14400000),
+			},
 		}))
 
 	window:addListener(EVENT_WINDOW_POP, function() if settings then self:storeSettings() end end)
@@ -857,6 +892,14 @@ function openAdvSettings(self, menuItem)
 				sound = "WINDOWSHOW",
 				callback = function(event, menu_item)
 						   self:timeoutSetting(menu_item ,'poweron_window_time')
+					   end
+			},
+			{
+				text = self:string("SCREENSAVER_POWEROFF"),
+				weight = 5,
+				sound = "WINDOWSHOW",
+				callback = function(event, menu_item)
+						   self:timeoutSetting(menu_item,'poweroff')
 					   end
 			},
 		})
@@ -898,7 +941,7 @@ function openSettings(self, menuItem)
 			},
 		})
 
-	-- only present a WHEN OFF option when there is a local player present
+	-- only present a WHEN OFF option when there is a local player present FIXME why?
 	if Player:getLocalPlayer() then
 		menu:addItem(
 			{

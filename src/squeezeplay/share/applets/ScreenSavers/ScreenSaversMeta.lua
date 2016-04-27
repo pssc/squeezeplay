@@ -40,6 +40,7 @@ function defaultSettings(self)
 		whenOff = "false:false",
 		timeout = 30000,
 		poweron_window_time = 10000,
+		poweroff = 14400000,
 	}
 end
 
@@ -47,6 +48,9 @@ function upgradeSettings(self, settings)
         if settings.poweron_window_time == nil then
               settings.poweron_window_time = 5000
         end
+	if settings.poweroff == nil then
+		settings.poweroff = 14400000
+	end
         return settings
 end
 
