@@ -31,7 +31,7 @@ end
 
 function defaultSettings(meta)
 	return { 
-		uuid = false
+		uuid = false,
 	}
 end
 
@@ -94,18 +94,20 @@ function registerApplet(meta)
 		uuid = settings.uuid,
 	})
 
-	System:setCapabilities({
-		["touch"] = 1,
-		["ir"] = 1,
-		["powerKey"] = 1,
-		["muteKey"] = 1,
-		["alarmKey"] = 1,
-		["audioByDefault"] = 1,
-		["wiredNetworking"] = 1,
-		["deviceRotation"] = 1,
-		["coreKeys"] = 1,
-		["presetKeys"] = 1,
-	})
+	if not System:hasCapabilities() then
+		System:setCapabilities({
+			["touch"] = 1,
+			["ir"] = 1,
+			["powerKey"] = 1,
+			["muteKey"] = 1,
+			["alarmKey"] = 1,
+			["audioByDefault"] = 1,
+			["wiredNetworking"] = 1,
+			["deviceRotation"] = 1,
+			["coreKeys"] = 1,
+			["presetKeys"] = 1,
+		})
+	end
 
 	--uncomment this to simulate fab4 scrollbar behavior
 --	System:setTouchpadBottomCorrection(30)
