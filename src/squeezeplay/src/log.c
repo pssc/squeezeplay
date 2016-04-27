@@ -15,7 +15,11 @@
 #define strcasecmp stricmp
 #endif
 
+#if defined(SQUEEZEOS)
 #define LOG_BUFFER_SIZE 512
+#else
+#define LOG_BUFFER_SIZE 1024
+#endif
 
 static enum log_priority appender_stdout = LOG_PRIORITY_DEBUG;
 static enum log_priority appender_syslog = LOG_PRIORITY_OFF;
@@ -123,7 +127,8 @@ struct log_category *log_category_get(const char *name) {
 
 	/* create category */
 	ptr = malloc(sizeof(struct log_category) + strlen(name) + 1);
-	ptr->priority = LOG_PRIORITY_INFO;
+	/* Default priority */
+	ptr->priority = LOG_PRIORITY_WARN;
 	strcpy(ptr->name, name);
 
 	ptr->next = category_head;
