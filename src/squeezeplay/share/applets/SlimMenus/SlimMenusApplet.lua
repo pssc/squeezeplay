@@ -552,19 +552,19 @@ local function _menuSink(self, isCurrentServer, server)
 				else
 					iconServer = _server
 				end
-				local _size = jiveMain:getSkinParam('THUMB_SIZE')
+				local _size = jiveMain:getSkinParam('THUMB_SIZE_MENU',true) or jiveMain:getSkinParam('THUMB_SIZE')
 				item.icon = Icon('icon')
-				iconServer:fetchArtwork(itemIcon, item.icon, _size, 'png')
+				iconServer:fetchArtwork(itemIcon, item.icon, _size )
 
 				-- Hack alert: redefine the checkSkin function
 				-- to reload images when the skin changes. We
 				-- should replace this with resizable icons.
 				local _style = item.icon.checkSkin
 				item.icon.checkSkin = function(...)
-					local s = jiveMain:getSkinParam('THUMB_SIZE')
+					local s = jiveMain:getSkinParam('THUMB_SIZE_MENU',true) or jiveMain:getSkinParam('THUMB_SIZE')
 					if s ~= _size then
 						_size = s
-						iconServer:fetchArtwork(itemIcon, item.icon, _size, 'png')
+						iconServer:fetchArtwork(itemIcon, item.icon, _size )
 					end
 
 					_style(...)
