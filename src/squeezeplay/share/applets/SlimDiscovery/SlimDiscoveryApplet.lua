@@ -59,14 +59,14 @@ module(..., Framework.constants)
 oo.class(_M, Applet)
 
 
--- constants
+-- constants or config FIXME?
 local PORT 				= 3546   -- port used to discover SqueezeCenters (UEML)
 local PORT 				= 3483   -- port used to discover SqueezeCenters
-local DISCOVERY_TIMEOUT = 120000 -- timeout (in milliseconds) before removing SqueezeCenters and Players
-local PROBE_TIMEOUT     = 30000  -- timeout to query player
-local SEARCHING_PERIOD  = 10000  -- searching period
-local DISCOVERY_PERIOD  = DISCOVERY_TIMEOUT - (PROBE_TIMEOUT + SEARCHING_PERIOD)  -- discovery period when we are connected
-
+local DISCOVERY_TIMEOUT 		= 120000 -- timeout (in milliseconds) before removing SqueezeCenters and Players
+local PROBE_TIMEOUT     		= 30000  -- timeout to query player
+local SEARCHING_PERIOD  		= 10000  -- searching period
+local DISCOVERY_PERIOD  		= DISCOVERY_TIMEOUT - (PROBE_TIMEOUT + SEARCHING_PERIOD)  -- discovery period when we are connected
+local TASK_TRY_LIMIT    		= 3
 
 
 -- a ltn12 source that crafts a datagram suitable to discover SqueezeCenters
@@ -268,7 +268,8 @@ function init(self, ...)
 
 	-- discovery timer starts in search mode we schedule a task to run asap
 	self.timer = Timer(SEARCHING_PERIOD,  function() self:_trigger() end)
-	jiveMain:registerPostOnScreenInit(function() self.timer:start() end)
+	--jiveMain:registerPostOnScreenInit(function() self.timer:start() end,'Discovery')
+	self.timer:start()
 
 	-- subscribe to the jnt so that we get network/server notifications
 	jnt:subscribe(self)
@@ -282,10 +283,17 @@ function _trigger(self)
 	log:debug("_trigger")
 	if not self.task then
 		log:debug("New Discover Task")
-		self.task = Task("Discover", self, _discovertask, nil , Task.PRIORITY_HIGH)
+		self.task = Task("Discover", self, _discovertask, nil , Task.PRIORITY_NORMAL)
 		self.task:addTask()
+		self.count = 0
 	else
-		log:warn(self.task, " not yet terminated")
+		log:warn(self.task, " not yet terminated ",count)
+		if self.count > TASK_TRY_LIMIT then
+			log:error (self.task, " forced terminaton ",count)
+			self:_debug()
+			self.task:removeTask()
+		        self.task = nil
+		end
 	end
 	log:debug("_triggered")
 end
@@ -730,7 +738,6 @@ function setPollList(self, poll)
 	-- get going with the new poll list
 	self:discoverPlayers()
 end
-
 
 
 --[[
