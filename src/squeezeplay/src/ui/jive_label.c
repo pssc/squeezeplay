@@ -141,12 +141,12 @@ static void prepare(lua_State *L) {
 	int max_width = 0;
 	int total_height = 0;
 	size_t num_lines = 0;
-	const char *str, *ptr, *nptr;
-	char *tmp;
+	const char *ptr, *nptr;
+	char *str;
+	char tmp;
 	Uint32 c;
 
 	peer = jive_getpeer(L, 1, &labelPeerMeta);
-
 
 	/* free existing text surfaces */
 	jive_label_gc_lines(peer);
@@ -167,13 +167,11 @@ static void prepare(lua_State *L) {
 	}
 	lua_call(L, 1, 1);
 
-	ptr = str = lua_tostring(L, -1);
+	ptr = str = (char *) lua_tostring(L, -1);
 
 	if (!ptr || *ptr == '\0') {
 		return;
 	}
-
-	tmp = alloca(strlen(ptr) + 1);
 
 	do {
 		LabelLine *line;
@@ -223,11 +221,11 @@ static void prepare(lua_State *L) {
 		line = &peer->line[num_lines++];
 
 		/* shadow and foreground text */
-		strncpy(tmp, str, len);
-		tmp[len] = '\0';
-
-		line->text_sh = is_sh ? jive_font_draw_text(font, sh, tmp) : NULL;
-		line->text_fg = jive_font_draw_text(font, fg, tmp);
+		tmp = str[len];
+		str[len] = '\0';
+		line->text_sh = is_sh ? jive_font_draw_text(font, sh, str) : NULL;
+		line->text_fg = jive_font_draw_text(font, fg, str);
+		str[len] =  tmp;
 
 		/* label dimensions */
 		jive_surface_get_size(line->text_fg, &width, NULL);
@@ -243,7 +241,7 @@ static void prepare(lua_State *L) {
 			c = utf8_get_char(ptr, &nptr);
 		}
 
-		str = ptr;
+		str = (char*) ptr;
 	} while (c != '\0');
 
 	/* text width and height */
@@ -264,7 +262,6 @@ int jiveL_label_layout(lua_State *L) {
 	 * 1: widget
 	 */
 
-	// FIXME
 	prepare(L);
 
 	peer = jive_getpeer(L, 1, &labelPeerMeta);
