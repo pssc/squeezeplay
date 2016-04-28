@@ -119,8 +119,9 @@ keyActionMappings.hold = {
 	[KEY_HOME] = "go_home",
 	[KEY_PLAY] = "create_mix",
 	[KEY_ADD]  = "add_end",
-	[KEY_UP]  = "page_up",
-	[KEY_DOWN]  = "page_down",
+	-- Now Repeatable
+	--[KEY_UP]  = "page_up",
+	--[KEY_DOWN]  = "page_down",
 	[KEY_BACK] = "go_home",
 	[KEY_LEFT] = "power",
 	[KEY_GO] = "add", --has no default assignment yet
