@@ -40,11 +40,11 @@ local EVENT_ALL         = jive.ui.EVENT_ALL
 local EVENT_MOUSE_ALL   = jive.ui.EVENT_MOUSE_ALL
 local EVENT_MOUSE_DOWN  = jive.ui.EVENT_MOUSE_DOWN
 local EVENT_MOUSE_UP    = jive.ui.EVENT_MOUSE_UP
-local EVENT_MOUSE_MOVE    = jive.ui.EVENT_MOUSE_MOVE
+local EVENT_MOUSE_MOVE  = jive.ui.EVENT_MOUSE_MOVE
 local EVENT_UNUSED      = jive.ui.EVENT_UNUSED
 
-local EVENT_SHOW      = jive.ui.EVENT_SHOW
-local EVENT_HIDE      = jive.ui.EVENT_HIDE
+local EVENT_SHOW        = jive.ui.EVENT_SHOW
+local EVENT_HIDE        = jive.ui.EVENT_HIDE
 
 
 module(...)
