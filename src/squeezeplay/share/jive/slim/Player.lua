@@ -1427,7 +1427,7 @@ function _process_displaystatus(self, event)
 			else
 				s.badge:setStyle('none')
 			end
-			self.slimServer:fetchArtwork(display["icon-id"] or display["icon"], s.artIcon, jiveMain:getSkinParam('POPUP_THUMB_SIZE'), 'png')
+			self.slimServer:fetchArtwork(display["icon-id"] or display["icon"], s.artIcon, jiveMain:getSkinParam('POPUP_THUMB_SIZE'))
 		elseif type == 'song' then
 			self.jnt:notify('playerTitleStatus', self, textValue, duration)
 			showMe = false
