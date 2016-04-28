@@ -51,7 +51,7 @@ local _assert, string, tostring, type = _assert, string, tostring, type
 local oo           = require("loop.simple")
 local Widget       = require("jive.ui.Widget")
 local Icon         = require("jive.ui.Icon")
-local Timer            = require("jive.ui.Timer")
+local Timer        = require("jive.ui.Timer")
 
 local log          = require("jive.utils.log").logger("squeezeplay.ui")
 
