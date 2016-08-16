@@ -23,6 +23,8 @@ local lfs              = require("lfs")
 
 local AppletManager    = require("jive.AppletManager")
 
+local log              = require("jive.utils.log").logger("applet.base")
+
 local EVENT_WINDOW_POP = jive.ui.EVENT_WINDOW_POP
 
 
@@ -98,12 +100,16 @@ function tieAndShowWindow(self, window, ...)
 	window:show(...)
 end
 
+--[[
 
+--]]
 local function dirIter(self, path)
 	local rpath = "applets/" .. self._entry.appletName .. "/" .. path
+	log:debug("dirIter rpath ",path)
 	
 	for dir in package.path:gmatch("([^;]*)%?[^;]*;") do
 		dir = dir .. rpath
+		log:debug("dirIter ",dir)
 
 		local mode = lfs.attributes(dir, "mode")
 		
@@ -119,8 +125,12 @@ end
 
 --[[
 
-An iterator over the applets files in path.
+=head2 self:readdir(path)
 
+An iterator over the applets files in path. Searches current applet and package.path
+for applets/appletName/path and iterates the contents
+
+=cut
 --]]
 function readdir(self, path)
 	local co = coroutine.create(function() dirIter(self, path) end)
