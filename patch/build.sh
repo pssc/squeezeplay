@@ -1,95 +1,81 @@
 #!/bin/sh
 
-# Build ReduceBrightness patch for a specific Logitech Media Server (Squeezebox) version.
+# Build squeezeplay_pssc patch for a specific Logitech Media Server (Squeezebox) version.
 # Run ./build.sh to build for fab4 (Touch) and baby (Radio)
 # Run ./build.sh fab4 to only build for fab4 (Touch)
 # Run ./build.sh baby to only build for baby (Radio)
 
 # LMS version to build for
 VERSION="7.8"
+# Original git version
+ORIGINAL_GIT="49f41e4"
 # Patch version
-PATCH_VERSION="1.3"
+PATCH_VERSION=`git log --format="%H" -n 1 | cut -c 1-7`
 
 # Build defaults
-BUILD_FAB4=true
-BUILD_BABY=true
+BUILD_FOR="fab4 baby"
 
-if [ "$1" = "fab4" ]; then
-	BUILD_FAB4=true
-	BUILD_BABY=false
-elif [ "$1" = "baby" ]; then
-	BUILD_FAB4=false
-	BUILD_BABY=true
+if [ "$1" ]; then
+	BUILD_FOR="$1"
 fi
 
-mkdir -p ReduceBrightness-$PATCH_VERSION
-echo '*' > ReduceBrightness-$PATCH_VERSION/.gitignore
+mkdir -p squeezeplay_pssc-$PATCH_VERSION
+echo '*' > squeezeplay_pssc-$PATCH_VERSION/.gitignore
 
-if [ $BUILD_FAB4 = true ]; then
-	echo 'Building patch for Squeezebox Touch...'
+for TARGET in $BUILD_FOR
+do
+	echo "Building patch for $TARGET..."
 
-	git diff $VERSION ../src/squeezeplay_fab4/share/applets/SqueezeboxFab4/* > ReduceBrightness-$PATCH_VERSION/ReduceBrightness-fab4-$PATCH_VERSION.patch
+	FILES="src/squeezeplay/share/* src/squeezeplay_$TARGET/share/*"
 
-	cd ReduceBrightness-$PATCH_VERSION
-	sed 's/--- a\/src\/squeezeplay_fab4\/share\//--- share\/jive\//g' ReduceBrightness-fab4-$PATCH_VERSION.patch > ReduceBrightness-fab4.patch.tmp
-	mv ReduceBrightness-fab4.patch.tmp ReduceBrightness-fab4-$PATCH_VERSION.patch
-	sed 's/+++ b\/src\/squeezeplay_fab4\/share\//+++ share\/jive\//g' ReduceBrightness-fab4-$PATCH_VERSION.patch > ReduceBrightness-fab4.patch.tmp
-	mv ReduceBrightness-fab4.patch.tmp ReduceBrightness-fab4-$PATCH_VERSION.patch
-
-	CHECKSUM=`sha1sum ReduceBrightness-fab4-$PATCH_VERSION.patch | awk '{print $1}'`
-
-	# Copy base XML file to output directory
-	cp ../repo.xml repo.xml
+	cd ..
+	FILES=`git diff $ORIGINAL_GIT --name-only $FILES`
 	
+	# Strip items in blacklist config file
+	if [ -e "patch/blacklist_$TARGET.conf" ]; then
+		for BLACKLIST_ITEM in `cat patch/blacklist_$TARGET.conf`
+		do
+			# Skip comment items
+			if [ `echo "$BLACKLIST_ITEM" | cut -c 1` == "#" ]; then
+				continue
+			fi
+			FILES=`echo "$FILES" | grep -v "$BLACKLIST_ITEM"`
+		done
+	fi
+
+	git diff $ORIGINAL_GIT $FILES > patch/squeezeplay_pssc-$PATCH_VERSION/squeezeplay_pssc-$TARGET-$PATCH_VERSION.patch
+
+	cd patch/squeezeplay_pssc-$PATCH_VERSION
+	CHECKSUM=`shasum squeezeplay_pssc-$TARGET-$PATCH_VERSION.patch | awk '{print $1}'`
+	
+	# Read template XML
+	PATCH_TEMPLATE=`cat ../patch-template.xml`
+
 	# Replace placeholder with proper checksum
-	sed 's/%CHECKSUM%/'${CHECKSUM}'/g' repo.xml > repo.xml.tmp
-	mv repo.xml.tmp repo.xml
+	PATCH_TEMPLATE=`echo "$PATCH_TEMPLATE" | sed 's/%CHECKSUM%/'${CHECKSUM}'/g'`
 	
 	# Replace placeholder with proper file name
-	sed 's/%PATCH%/ReduceBrightness-fab4-'${PATCH_VERSION}'.patch/g' repo.xml > repo.xml.tmp
-	mv repo.xml.tmp repo.xml
+	PATCH_TEMPLATE=`echo "$PATCH_TEMPLATE" | sed 's/%PATCH%/squeezeplay_pssc-'${TARGET}'-'${PATCH_VERSION}'.patch/g'`
 
 	# Replace version info
-	sed 's/%VERSION%/'${VERSION}'/g' repo.xml > repo.xml.tmp
-	mv repo.xml.tmp repo.xml
-	sed 's/%PATCH_VERSION%/'${PATCH_VERSION}'/g' repo.xml > repo.xml.tmp
-	mv repo.xml.tmp repo.xml
+	PATCH_TEMPLATE=`echo "$PATCH_TEMPLATE" | sed 's/%TARGET%/'${TARGET}'/g'`
+	PATCH_TEMPLATE=`echo "$PATCH_TEMPLATE" | sed 's/%VERSION%/'${VERSION}'/g'`
+	PATCH_TEMPLATE=`echo "$PATCH_TEMPLATE" | sed 's/%PATCH_VERSION%/'${PATCH_VERSION}'/g'`
+
+	PATCH=`echo "$PATCH $PATCH_TEMPLATE"`
+
 	cd ..
-fi
+done
 
-if [ $BUILD_BABY = true ]; then
-	echo 'Building patch for Squeezebox Radio...'
-	git diff $VERSION ../src/squeezeplay_baby/share/applets/SqueezeboxBaby/* > ReduceBrightness-$PATCH_VERSION/ReduceBrightness-baby-$PATCH_VERSION.patch
-
-	cd ReduceBrightness-$PATCH_VERSION
-	sed 's/--- a\/src\/squeezeplay_baby\/share\//--- share\/jive\//g' ReduceBrightness-baby-$PATCH_VERSION.patch > ReduceBrightness-baby.patch.tmp
-	mv ReduceBrightness-baby.patch.tmp ReduceBrightness-baby-$PATCH_VERSION.patch
-	sed 's/+++ b\/src\/squeezeplay_baby\/share\//+++ share\/jive\//g' ReduceBrightness-baby-$PATCH_VERSION.patch > ReduceBrightness-baby.patch.tmp
-	mv ReduceBrightness-baby.patch.tmp ReduceBrightness-baby-$PATCH_VERSION.patch
-
-	CHECKSUM=`sha1sum ReduceBrightness-fab4-$PATCH_VERSION.patch | awk '{print $1}'`
-	CHECKSUMBABY=`sha1sum ReduceBrightness-baby-$PATCH_VERSION.patch | awk '{print $1}'`
-
-	# Copy base XML file to output directory
-	cp ../repo-beta.xml repo-beta.xml
-	
-	# Replace placeholder with proper checksum
-	sed 's/%CHECKSUM%/'${CHECKSUM}'/g' repo-beta.xml > repo-beta.xml.tmp
-	mv repo-beta.xml.tmp repo-beta.xml
-	sed 's/%CHECKSUMBABY%/'${CHECKSUMBABY}'/g' repo-beta.xml > repo-beta.xml.tmp
-	mv repo-beta.xml.tmp repo-beta.xml
-	
-	# Replace placeholder with proper file name
-	sed 's/%PATCH%/ReduceBrightness-fab4-'${PATCH_VERSION}'.patch/g' repo-beta.xml > repo-beta.xml.tmp
-	mv repo-beta.xml.tmp repo-beta.xml
-	sed 's/%PATCHBABY%/ReduceBrightness-baby-'${PATCH_VERSION}'.patch/g' repo-beta.xml > repo-beta.xml.tmp
-	mv repo-beta.xml.tmp repo-beta.xml
-	
-	# Replace version info
-	sed 's/%VERSION%/'${VERSION}'/g' repo-beta.xml > repo-beta.xml.tmp
-	mv repo-beta.xml.tmp repo-beta.xml
-	sed 's/%PATCH_VERSION%/'${PATCH_VERSION}'/g' repo-beta.xml > repo-beta.xml.tmp
-	mv repo-beta.xml.tmp repo-beta.xml
-	cd ..
-fi
-
+# Write the final repo.xml file
+cat > squeezeplay_pssc-$PATCH_VERSION/repo.xml <<EOL
+<?xml version="1.0"?>
+<extensions>
+	<details>
+		<title lang="EN">Squeezeplay update by pssc</title>
+	</details>
+	<patches>
+$PATCH
+	</patches>
+</extensions>
+EOL

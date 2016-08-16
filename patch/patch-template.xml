@@ -1,0 +1,7 @@
+		<patch name="squeezeplay-update" target="%TARGET%" version="%PATCH_VERSION%" minTarget="7.5" maxTarget="%VERSION%">
+		    <title lang="EN">Squeezeplay update</title>
+		    <desc lang="EN">Squeezeplay updates originaly for SqueezePi</desc>
+		    <creator>pssc</creator>
+		    <url>http://pssc.github.io/squeezeplay/%PATCH%</url>
+		    <sha>%CHECKSUM%</sha>
+		</patch>
