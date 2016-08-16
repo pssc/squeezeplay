@@ -8,6 +8,8 @@ local Framework       = require("jive.ui.Framework")
 local Widget          = require("jive.ui.Widget")
 local Window          = require("jive.ui.Window")
 local Surface         = require("jive.ui.Surface")
+local SnapshotWindow  = require("jive.ui.SnapshotWindow")
+
 
 local log             = require("jive.utils.log").logger("squeezeplay.ui")
 
@@ -51,7 +53,7 @@ end
 
 function draw(self, surface, layer)
 	if not Framework.transition then
-		--draw snapshot version of previous version because drawing both windows is too cpu-intensive
+		-- draw snapshot version of previous version because drawing both windows is too cpu-intensive
 		self._bg:blit(surface, 0, 0)
 	end
 	Window.draw(self, surface, layer)
@@ -76,11 +78,9 @@ function show(self)
 		Window.show(self)
 		self.isTopContextMenu = true
 	end
-
 end
 
 function hide(self)
-
 	local stack = Framework.windowStack
 
 	local idx = 1
@@ -95,16 +95,12 @@ function hide(self)
 	else
 		Window.hide(self)
 	end
-
 end
 
 
 function _capture(self)
-	local sw, sh = Framework:getScreenSize()
-	local img = Surface:newRGB(sw, sh)
-
-	--take snapshot of screen
-	Framework:draw(img)
+	local img = SnapshotWindow.captureScreen()
+	local sw, sh = img:getSize()
 
 	if not self.noShading then
 		--apply shading - tried via maskImg, but child CM windows didn't display maksImg correct
@@ -112,11 +108,6 @@ function _capture(self)
 	end
 	return img
 end
-
-
---function borderLayout(self)
---	Window.borderLayout(self, true)
---end
 
 
 function __tostring(self)
