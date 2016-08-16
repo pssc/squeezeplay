@@ -36,6 +36,8 @@ local Framework = require("jive.ui.Framework")
 local debug	= require("jive.utils.debug")
 local log       = require("jive.utils.log").logger("squeezeplay.timer")
 
+local FRAME_RATE    = jive.ui.FRAME_RATE
+
 
 -- our class
 module(..., oo.class)
@@ -59,9 +61,15 @@ function __init(self, interval, callback, once)
 	_assert(type(interval) == "number", debug.traceback())
 	_assert(type(callback) == "function")
 
+	local creator = debug.getinfo(3,'S')
+	if (string.find(creator.short_src,"Widget.lua")) then
+		creator = debug.getinfo(4,'S')
+	end
+
 	return oo.rawnew(self, {
 		interval = interval,
 		callback = callback,
+		creator = creator,
 		once = once or false,
 	})
 end
@@ -174,6 +182,8 @@ function _runTimer(self, now)
 		debug.dump(timers)
 	end
 
+	local now = Framework:getTicks()
+	local TIMER_THRESHOLD = (1000 / FRAME_RATE ) * 2 -- TWO FRAMES
 	while timers[1] and timers[1].expires <= now do
 		local timer = table.remove(timers, 1)
 
@@ -188,7 +198,14 @@ function _runTimer(self, now)
 			timer.expires = nil
 		end
 
+		log:info("Run Timer in ",timer.creator.short_src,"(",timer.creator.linedefined,")")
 		local status, err = pcall(timer.callback)
+		local finish = Framework:getTicks()
+		local time = finish - now
+		if time > TIMER_THRESHOLD then
+			log:warn("Run took ",time,"ms ",timer.creator.short_src,"(",timer.creator.linedefined,")")
+		end
+
 		if not status then
 			log:warn("timer error: ", err)
 		end
