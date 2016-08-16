@@ -24,7 +24,6 @@ local _assert, ipairs, pairs, setmetatable, tostring, tonumber, type = _assert, 
 
 local oo       = require("loop.simple")
 
-local debug    = require("debug")
 local string   = require("string")
 local table    = require("table")
 local socket   = require("socket")
@@ -32,7 +31,7 @@ local socket   = require("socket")
 local DNS      = require("jive.net.DNS")
 local Task     = require("jive.ui.Task")
 local log      = require("jive.utils.log").logger("net.proxy")
-local jd       = require("jive.utils.debug")
+local debug    = require("jive.utils.debug")
 
 
 -- jive.net.proxy is a base class
@@ -337,7 +336,7 @@ function isProxied(self,test)
 							log:error(self,":isProxied DNS:toip no task for ",self.host," resolving ",n)
 						end
 						if not ip and err then
-							log:warn(self,":isProxied DNS:toip (",n,") ",jd.view(err)," ",debug.traceback())
+							log:warn(self,":isProxied DNS:toip (",n,") ",debug.view(err)," ",debug.traceback())
 						elseif ip and string.find(self.host,ip) then
 							proxying = false
 						end
