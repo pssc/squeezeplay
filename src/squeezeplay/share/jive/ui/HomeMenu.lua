@@ -13,6 +13,7 @@ local Icon          = require("jive.ui.Icon")
 local debug         = require("jive.utils.debug")
 local log           = require("jive.utils.log").logger("squeezeplay.ui")
 local logd          = require("jive.utils.log").logger("squeezeplay.ui.draw")
+local fun	    = require("jive.utils.fun")
 
 local appletManager = require("jive.AppletManager")
 
@@ -25,21 +26,7 @@ local EVENT_UNUSED                = jive.ui.EVENT_UNUSED
 module(..., oo.class)
 
 -- defines a new item that inherits from an existing item
-local function _uses(parent, value)
-	local item = {}
-	setmetatable(item, { __index = parent })
-
-	for k,v in pairs(value or {}) do
-		if type(v) == "table" and type(parent[k]) == "table" then
-		-- recursively inherrit from parent item
-			item[k] = _uses(parent[k], v)
-		else
-			item[k] = v
-		end
-	end
-
-	return item
-end
+local _uses = fun.uses
 
 local function bumpAction(self)
 	self.window:playSound("BUMP")
