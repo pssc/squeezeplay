@@ -33,7 +33,7 @@ do
 	
 	# Strip items in blacklist config file
 	if [ -e "patch/blacklist_$TARGET.conf" ]; then
-		for BLACKLIST_ITEM in `cat patch/blacklist_$TARGET.conf`
+		for BLACKLIST_ITEM in `cat patch/blacklist_$TARGET.conf patch/blacklist.conf`
 		do
 			# Skip comment items
 			if [ `echo "$BLACKLIST_ITEM" | cut -c 1` == "#" ]; then
