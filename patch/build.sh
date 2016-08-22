@@ -29,7 +29,7 @@ do
 	FILES="src/squeezeplay/share/* src/squeezeplay_$TARGET/share/*"
 
 	cd ..
-	FILES=`git diff $ORIGINAL_GIT --name-only $FILES`
+	FILES=`git diff $ORIGINAL_GIT --igniore-all-space --name-only $FILES`
 	
 	# Strip items in blacklist config file
 	if [ -e "patch/blacklist_$TARGET.conf" ]; then
