@@ -293,7 +293,7 @@ function updateLoadingIcon(self)
 		and not string.match(self.serverData.appParameters.iconId, "MyApps") then
 
 		-- don't display the My Apps icon in case we're browsing flickr/facebook through the My Apps menu
-		self.serverData.server:fetchArtwork(self.serverData.appParameters.iconId, icon, jiveMain:getSkinParam('POPUP_THUMB_SIZE'))
+		self.serverData.server:fetchArtwork(self.serverData.appParameters.iconId, icon, jiveMain:getSkinParamOrNil('POPUP_THUMB_SIZE') or jiveMain:getSkinParam('THUMB_SIZE'))
 	end
 	
 	return icon
