@@ -243,13 +243,15 @@ end
 
 -- skin
 -- The meta arranges for this to be called to skin the interface.
-function skin(self, s)
-	Framework:setVideoMode(480, 272, 0, false)
+function skin(self, s, reload, useDefaultSize)
+	local screenWidth, screenHeight = 480, 272
 
-	local screenWidth, screenHeight = Framework:getScreenSize()
+	if not useDefaultSize then
+                screenWidth, screenHeight = Framework:getScreenSize()
+        end
 
 	--init lastInputType so selected item style is not shown on skin load
-	Framework.mostRecentInputType = "mouse"
+	Framework.mostRecentInputType = "ir"
 
 	-- skin
 	local thisSkin = 'remote'
@@ -2637,7 +2639,9 @@ function skin(self, s)
 			zOrder = 9999
 	}
 
-
+	if useDefaultSize then
+		Framework:setVideoMode(screenWidth, screenHeight, 0, false)
+        end
 end
 
 
