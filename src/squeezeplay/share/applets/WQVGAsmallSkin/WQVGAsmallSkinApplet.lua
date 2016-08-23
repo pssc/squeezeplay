@@ -1916,7 +1916,7 @@ function skin(self, s , reload, useDefaultSize)
 		group = {
 			padding = 10,
 			order = { 'icon', 'text' },
-			text = { 
+			text = {
 				padding = { 10, 12, 12, 12 } ,
 				align = 'top-left',
 				w = WH_FILL,
@@ -1924,8 +1924,8 @@ function skin(self, s , reload, useDefaultSize)
 				font = _font(HELP_FONT_SIZE),
 				lineHeight = HELP_FONT_SIZE + 5,
 			},
-			icon = { 
-				align = 'top-left', 
+			icon = {
+				align = 'top-left',
 				border = { 12, 12, 0, 0 },
 				img = _loadImage(self, "UNOFFICIAL/menu_album_noartwork_64.png"),
 				h = WH_FILL,
@@ -3412,7 +3412,7 @@ function skin(self, s , reload, useDefaultSize)
 			vumeter_analog = {
 				position = LAYOUT_NONE,
 				x = 0,
-				y = TITLE_HEIGHT + 38,
+				y = TITLE_HEIGHT + 38,-- 85 -- FIXME what is 38? its used alot?
 				w = 480,
 				h = 272 - (TITLE_HEIGHT + 38 + 38),
 				border = { 0, 0, 0, 0 },
