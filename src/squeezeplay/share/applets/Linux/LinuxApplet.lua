@@ -1,5 +1,5 @@
 -- Base Class for linux based devices...
-local pcall, unpack, tonumber, tostring = pcall, unpack, tonumber, tostring
+local pcall, unpack, tonumber, tostring, pairs = pcall, unpack, tonumber, tostring, pairs
 
 local oo                     = require("loop.simple")
 local os                     = require("os")
@@ -9,7 +9,7 @@ local lfs                    = require("lfs")
 local string                 = require("jive.utils.string")
 local table                  = require("jive.utils.table")
 
-local Applet                 = require("jive.Applet")
+local AppletUI               = require("jive.AppletUI")
 local System                 = require("jive.System")
 
 local Player                 = require("jive.slim.Player")
@@ -26,16 +26,18 @@ local Timer                  = require("jive.ui.Timer")
 local SimpleMenu             = require("jive.ui.SimpleMenu")
 local Window                 = require("jive.ui.Window")
 
+local Process                = require("jive.net.Process")
 local debug                  = require("jive.utils.debug")
 local log                    = require("jive.utils.log").logger("applet.Linux")
 
 local jnt                    = jnt
 local jiveMain               = jiveMain
 local appletManager          = appletManager
+local iconbar                = iconbar
 
 
 module(..., Framework.constants)
-oo.class(_M, Applet)
+oo.class(_M, AppletUI)
 
 local skipbacklight = {}
 local skipblanking = {}
@@ -67,6 +69,7 @@ end
 function sysReadNumber(self, attr)
          return sysReadString(self, attr,true)
 end
+
 
 function sysReadString(self, attr, num)
 	local fh = self["sysr_" .. attr]
@@ -126,6 +129,7 @@ local function _errorWindow(self, title)
 end
 
 
+-- borked hw not needed FIXME?
 function verifyMacUUID(self)
 	mac = System:getMacAddress()
 	uuid = System:getUUID()
@@ -176,7 +180,7 @@ function betaHardware(self, euthanize)
 				window:hide(Window.transitionNone)
 			end, true):start()
 		end
-	end)
+	end,"Beta HW")
 end
 
 
@@ -379,7 +383,7 @@ end
 
 -- framebuffer blanking... and backlight
 -- Screen on/off support for standard fbdevices or at lease as close as we can get
-function setBrightness(self,level)
+function setBrightness(self,level,only)
         if level == "off" then
                 level = 0
         elseif level == "on" then
@@ -393,7 +397,7 @@ function setBrightness(self,level)
 
 	-- Blanking is the inverse of level
 	local val = level == 0 and 1 or 0
-	if self:getSettings()["blanking"] then
+	if self:getSettings()["blanking"] and (not only or only == "blanking") then
 		dirNodeSetValue("/sys/class/graphics","blank",val,skipblanking)
 	end
 	-- /sys/class/backlight/soc\:backlight/bl_power
@@ -401,7 +405,7 @@ function setBrightness(self,level)
 	-- FB_BLANK_UNBLANK (0)   : power on
 	-- FB_BLANK_POWERDOWN (4) : power off
 	val = level == 0 and 4 or 0
-	if self:getSettings()["backlight"] then
+	if self:getSettings()["backlight"] and (not only or only == "backlight") then
 		dirNodeSetValue("/sys/class/backlight","bl_power",val,skipbacklight)
 	end
 end
@@ -433,6 +437,96 @@ function dirNodeSetValue(dir,node,val,skip)
                 end
 		break -- oddness as we are in a double loop
 	until true end
+end
+
+function notify_playerCurrent(self, player)
+        -- if not passed a player, or if player hasn't change, exit
+        if not player or not player:isConnected() then
+                return
+        end
+        if self.player == player then
+                return
+        end
+        self.player = player
+
+	if not self:getSettings()['time_sync_toggle'] then
+		local sink = function(chunk, err)
+			if err then
+				log:warn(err)
+				return
+			end
+			log:debug('date sync epoch: ', chunk.data.date_epoch)
+			if chunk.data.date_epoch then
+				self:setDate(chunk.data.date_epoch)
+			end
+		end
+
+		-- setup a once/hour
+		player:subscribe(
+			'/slim/datestatus/' .. player:getId(),
+			sink,
+			player:getId(),
+			{ 'date', 'subscribe:3600' }
+		)
+	end
+end
+
+function notify_playerDelete(self, player)
+        if self.player ~= player then
+                return
+        end
+        self.player = false
+
+        log:debug('unsubscribing from datestatus/', player:getId())
+        player:unsubscribe('/slim/datestatus/' .. player:getId())
+end
+
+
+function setDate(self, epoch)
+        local command = "date -s @"..epoch.." 2>&1"
+	local p = Process(jnt, command)
+	p:readPid(p:logSink("date",function (...)log:info(...)end),false)
+end
+
+
+function _settingToEnv(self,key)
+        local st = self:getSettings()
+        local mt = self:getSettingsMeta()
+        local data = ""
+
+        log:warn("settingToEnv ",key)
+        if mt[key] and mt[key].class == "env" then
+                data = "# "..key.." - "..tostring(self:string(self:metaClassString(key).."_"..string.upper(key))).."\n"
+        end
+
+        log:warn("settingToEnv ",key)
+        if st.env[key] and mt[key] then
+                data = data..key.."="..tostring(st.env[key]).."\nexport "..key.."\n"
+        elseif not mt[key] then
+                data = data..'# Unknown env '..key.."\n"
+        end
+        log:warn("settingToEnv ",data)
+        return data
+end
+
+
+function storeEnv(self)
+        local st = self:getSettings()
+        local mt = self:getSettingsMeta()
+        local file = st['env_file'] or "../etc/default/squeezeplay"
+
+	log:warn("storeEnv ",st['env_unstable'])
+        if st['env_unstable'] then
+                local data = "# "..tostring(self:string("ENV_FILE_HEADER")).."\n"
+                for k,v in pairs(mt) do
+                        if v['class'] == "env" then
+                                data = data .. self:_settingToEnv(k)
+                        end
+                end
+                log:warn("storeEnv ", file, "\n", data)
+                System:atomicWrite(file, data)
+                st['env_unstable'] = nil
+        end
 end
 
 --[[
