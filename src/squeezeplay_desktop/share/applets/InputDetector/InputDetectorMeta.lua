@@ -45,6 +45,8 @@ function defaultSettings(meta)
         return { 
 		devicelist = {},
 		default_mapping = 2, -- index into mappings lua indexs from 1
+		hidraw = false,
+		notsdevice = false,
 	}
 end
 
@@ -58,14 +60,11 @@ function registerApplet(meta)
 
 	jiveMain:addItem(meta:menuItem('appletInputDetectorSettings', 'advancedSettings', meta:string("APPLET_NAME"), function(applet, ...) local w = applet:menu(...) w:show() end))
 	meta:registerService("getInputDetectorMapping")
-	meta:registerService("startInputDetector")
-
-	--  is a resident Applet
-        appletManager:loadApplet("InputDetector")
 end
 
 function configureApplet(meta)
-	appletManager:callService("startInputDetector")
+	--  is a resident Applet
+        appletManager:loadApplet("InputDetector")
 end
 
 --[[
