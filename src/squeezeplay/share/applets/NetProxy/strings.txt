@@ -49,9 +49,26 @@ PF_SERVER
 PF_SERVER_HELP
 	EN	Use IP addresses only, Match is on noproxy address and port is the port shifted offset on any requests
 
+SETTING_SSH_TUNNEL_SCRIPT_TOGGLE
+	EN	Run SSH Tunnel
+
+MENU_SSH_TUNNEL
+	EN	SSH Tunneling
+
+SETTING_SSH_TUNNEL_SERVER
+	EN	Desination Server
+
+SETTING_SSH_TUNNEL_PORT
+	EN	Port
+
+SETTING_SSH_TUNNEL_PORT_NOPROXY
+	EN	Optional SSH Port when not Proxying
+
+HELP_SSH_TUNNEL
+	EN	For use with a port forwarding proxy rule (match server address):-\n    tunnels port 10000 to remote 9000\n    tunnels port 4483 to remote 3483\nFor use with a HTTP proxy rule(exclude server adddress):-\n    tunnels port 8888 to remote 8888.\nProvides remote server support via ssh, key needs to be installed manually in users .ssh directory.
+
 REMOVE
 	EN	Remove
 
 EDIT
 	EN	Edit
-

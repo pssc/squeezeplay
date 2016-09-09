@@ -10,7 +10,6 @@ An applet to configure a squeezplay network proxy
 =head1 FUNCTIONS
 
 Applet related methods are described in L<jive.Applet>. 
-NetProxyApplet overrides the following methods:
 
 =cut
 --]]
@@ -21,36 +20,33 @@ local ipairs, pairs, tostring ,select, tonumber, type = ipairs, pairs, tostring,
 
 local table           = require("table")
 local string          = require("string")
-
-
+local os              = require("os")
 local oo              = require("loop.simple")
 
-local Applet          = require("jive.Applet")
-local Event           = require("jive.ui.Event")
 local Framework       = require("jive.ui.Framework")
 local SimpleMenu      = require("jive.ui.SimpleMenu")
 local Window          = require("jive.ui.Window")
-local Icon            = require("jive.ui.Icon")
-local Group           = require("jive.ui.Group")
-local Label           = require("jive.ui.Label")
 local Choice          = require("jive.ui.Choice")
 local Textarea        = require("jive.ui.Textarea")
-local Textinput       = require("jive.ui.Textinput")
-local Keyboard        = require("jive.ui.Keyboard")
-local Button          = require("jive.ui.Button")
-local Popup           = require("jive.ui.Popup")
-local System          = require("jive.System")
+local Timer           = require("jive.ui.Timer")
+
 local debug           = require("jive.utils.debug")
+
+local Process	      = require("jive.net.Process")
+local Proxy           = require("jive.net.Proxy")
+
+local AppletUI        = require("jive.AppletUI")
+local System          = require("jive.System")
 
 local jnt             = jnt
 local appletManager   = appletManager
-
-local Proxy           = require("jive.net.Proxy")
+local jiveMain	      = jiveMain
 
 local CONNECT_TIMEOUT = 20
+local RESTART_PERIOD  = 30000
 
 module(..., Framework.constants)
-oo.class(_M, Applet)
+oo.class(_M, AppletUI)
 
 function menu(self, menuItem)
 
@@ -58,7 +54,7 @@ function menu(self, menuItem)
 
         local window = Window("text_list", self:string('APPLET_NAME'))
 
-	local fresh = function()
+	local fresh = function(...)
         	log:debug(self,":menu.fresh()")
 		local nw = self:menu(menuItem)
 		-- nw:hide(Window.transtionNone)
@@ -69,12 +65,6 @@ function menu(self, menuItem)
 
         -- Menu for Settings...
         local menu = SimpleMenu("menu", { 
-		-- Globals
-                {
-			id='help',
-			text= self:string('HELP'),
-			style = 'item_text',
-                },
 		{
 			id = 'BigSwitch',
 			text = self:string('PROXY'),
@@ -104,6 +94,15 @@ function menu(self, menuItem)
 			end
 		}
 	})
+	menu:setHeaderWidget(Textarea("help_text", self:string('HELP')))
+
+	if System:getMachine() == "squeezeplay" then
+		local nm = self:addSubMenu(menu,"ssh_tunnel")
+		self:metaMenuToggle(nm,"ssh_tunnel_script_toggle")
+		self:metaMenuKeyboard(nm,"ssh_tunnel_server","querty")
+		self:metaMenuKeyboard(nm,"ssh_tunnel_port","numeric")
+		self:metaMenuKeyboard(nm,"ssh_tunnel_port_noproxy","numeric")
+	end
 
 	-- PROXIES GO GO GO
 	for i in Proxy:iterProxies() do
@@ -324,60 +323,50 @@ function menuNoProxyOptions(self,menuItem,i,j,refresh)
 	})
 	
 	window:addWidget(menu)
-	self:tieWindow(window)
 	return window
 end
 
-function keyboardWindow(self, menuItem, style, val, setfn)
-
-        local window = Window("text_list", menuItem.text)
-	local vaidinput = nil
-	local min = 1
-	local max = 50
-
-	-- FIXME switch like on
-	if ( style == 'numeric' ) then 
-		vaidinput = "0123456789"
-		max = 6
+function init(self)
+	if string.match(os.getenv("OS") or "", "Windows") then
+		return
 	end
+	Process.init(jiveMain)
 
-        local v = Textinput.textValue(val, min, max)
+	self.state = {}
+	-- FIXME only atcive
+        local timer = Timer(RESTART_PERIOD,  function() self:_trigger(self.state) end)
+	self:_trigger(self.state)
+	timer:start()
 
-        local textinput = Textinput("textinput", v,
-                function(_, value)
-                        log:debug("Input ", value,":",value:getValue())
-                        window:playSound("WINDOWSHOW")
-                        window:hide(Window.transitionPushLeft)
-                        return setfn and setfn(value:getValue()) or false
-                end, vaidinput)
-        local backspace = Keyboard.backspace()
-        local group = Group('keyboard_textinput', { textinput = textinput, backspace = backspace } )
-
-        window:addWidget(group)
-        window:addWidget(Keyboard('keyboard', style, textinput))
-        window:focusWidget(group)
-
-        self:tieAndShowWindow(window)
-        return window
+	return self
 end
 
-function map(f, t)
-  local t2 = {}
-  for k,v in pairs(t) do t2[k] = f(v) end
-  return t2
-end
+function _trigger(self,state)
+	local st = self:getSettings()
+	local server = st['ssh_tunnel_server']
+	local port = st['ssh_tunnel_port'] or 22
+	local directport = st['ssh_tunnel_port_noproxy'] or "" -- nil
+	local cmd = "./squeezeplay-ssh-tunnel.sh"
 
+	if st['ssh_tunnel_server'] and st['ssh_tunnel_script_toggle'] and not state['tunnel'] or (state['tunnel'] and state['tunnel']:status() == "dead") then
+		local cmdline = cmd .." ".. server .." ".. port .." ".. directport .." 2>&1"
+		log:warn("Starting tunnel: ", cmdline)
+		state['tunnel'] = Process(jnt, cmdline)
+		state['tunnel']:readPid(state['tunnel']:logSink("tunnel",function (...)log:info(...)end),false) -- redirect may not work?
+	end
+end
 
 function free(self)
-	log:debug(self,":free()")
-	local set = self:getSettings()
-	set['proxies'] = Proxy.getSettings()
-	set['proxy'] = Proxy.getProxyState()
+	log:warn(self,":free()")
+	local st = self:getSettings()
+	st['proxies'] = Proxy.getSettings()
+	st['proxy'] = Proxy.getProxyState()
         if log:isDebug() then
-            debug.dump(set,4)
+            debug.dump(st,4)
         end
+	-- st['settings_unstable'] = true FIXME  no change?
 	self:storeSettings() -- Applet Mananger should do this...
 	log:debug(self,":free() end")
-	return true
+	return not st['ssh_tunnel_server_toggle']
 end
 
