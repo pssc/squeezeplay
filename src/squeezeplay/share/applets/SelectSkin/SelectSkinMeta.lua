@@ -29,8 +29,6 @@ local arg           = arg
 module(...)
 oo.class(_M, AppletMeta)
 
-local THUMB_SIZE_MENU = 40
-
 function jiveVersion(meta)
 	return 1, 1
 end
@@ -89,17 +87,31 @@ function notify_serverConnected(meta, server)
 end
 
 
+-- FIXME skins should do this?... or theme loading...
 function _artworkspec(meta, server)
-	-- FIXME skins should do this?... or theme loading...
-	local size = jiveMain:getSkinParam('THUMB_SIZE_MENU',true) or THUMB_SIZE_MENU
-	--FIXME bogus.. cover ART...
-	local spec = size .. 'x' .. size .. '_m'
 	local ver = server:isMoreThan("7.7")
+	local t_size = jiveMain:getSkinParam('THUMB_SIZE')
+	local p_size = jiveMain:getSkinParamOrNil('POPUP_THUMB_SIZE')
+	local m_size = jiveMain:getSkinParamOrNil('THUMB_SIZE_MENU')
+	local l_size = jiveMain:getSkinParamOrNil('THUMB_SIZE_PLAYLIST')
+	-- Cover ART for now playing in _getIcon in NP app.
+	-- FIXME general register/service for specs?
+	local skin = jiveMain:getSelectedSkin()
 	-- Version my be unkown we will reconnect after we have this...
-	if ver then
-		server:request(nil, nil, { 'artworkspec', 'add', spec, 'squeezeplayskin' }) --FXIME in theme loading?
-	elseif ver == false then
-		log:warn("Unable to send artwork spec for ",server, " Version ",server:getVersion())
+	if ver == false then
+		log:warn("Unable to send artwork spec for ",server, " Version ",server:getVersion(), " ", skin)
+		return false
+	end
+
+	server:request(nil, nil, { 'artworkspec', 'add', t_size..'x'..t_size..'_t', skin })
+	if m_size then
+		server:request(nil, nil, { 'artworkspec', 'add', m_size..'x'..m_size..'_m', skin })
+	end
+	if l_size then
+		server:request(nil, nil, { 'artworkspec', 'add', l_size..'x'..l_size..'_l', skin })
+	end
+	if p_size then
+		server:request(nil, nil, { 'artworkspec', 'add', p_size..'x'..p_size..'_p', skin })
 	end
 end
 
