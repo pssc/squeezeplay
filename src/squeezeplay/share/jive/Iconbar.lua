@@ -11,13 +11,13 @@ The Iconbar class implements the Jive iconbar at the bottom of the screen. It re
 =head1 SYNOPSIS
 
  -- Create the iconbar (this done for you in JiveMain)
- iconbar = Iconbar()
+ -- iconbar = Iconbar()
 
  -- Update playmode icon
- iconbar:setPlaymode('stop')
+ -- iconbar:setPlaymode('stop')
 
  -- force iconbar update
- iconbar:update()
+ -- iconbar:update()
 
 =head1 FUNCTIONS
 
@@ -273,7 +273,8 @@ function __init(self, jnt)
 	Framework:addWidget(obj.iconbarGroup)
 	Framework:addWidget(obj.button_time)
 
-	obj.button_time:addTimer(1000,  -- every second
+	-- FIXME runs even with no IconBar...
+	obj.timer = obj.button_time:addTimer(1000,  -- every second
 			      function() 
 				      obj:update()
 			      end)
