@@ -628,16 +628,16 @@ end
 
 --service method
 function getDefaultWallpaper(self)
-	local wallpaper = "bb_encore.png" -- default, if none found examining serial
+	local wallpaper = "320x240_encore.png" -- default, if none found examining serial
 	if self._serial then
 		local colorCode = self._serial:sub(11,12)
 
 		if colorCode == "00" then
 			log:debug("case is black")
-			wallpaper = "bb_encore.png"
+			wallpaper = "320x240_encore.png"
 		elseif colorCode == "01" then
 			log:debug("case is red")
-			wallpaper = "bb_encorered.png"
+			wallpaper = "320x240_encorered.png"
 		else
 			log:warn("No case color found (assuming black) examining serial: ", self._serial )
 		end

@@ -92,7 +92,6 @@ function registerApplet(meta)
 	meta:registerService("setBrightness")
 	meta:registerService("getWakeupAlarm")
 	meta:registerService("setWakeupAlarm")
-	meta:registerService("getDefaultWallpaper")
 	meta:registerService("performHalfDuplexBugTest")
 	meta:registerService("poweroff")
 	meta:registerService("lowBattery")
@@ -109,6 +108,7 @@ function configureApplet(meta)
 	local applet = appletManager:getAppletInstance("SqueezeboxBaby")
 
 	applet:_configureInit()
+	appletManager:addDefaultSetting("SetupWallpaper", "QVGAlandscapeSkin", applet:getDefaultWallpaper())
 end
 
 
