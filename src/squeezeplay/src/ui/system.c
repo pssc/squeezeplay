@@ -8,6 +8,7 @@
 #include "common.h"
 #include "jive.h"
 #include "version.h"
+#include <stdint.h>
 
 
 static char *mac_address;
@@ -114,7 +115,7 @@ static int system_get_user_dir(lua_State *L) {
 }
 
 
-static int system_init(lua_State *L) {
+static int system_lua_init(lua_State *L) {
 	/* stack is:
 	 * 1: system
 	 * 2: table
@@ -370,7 +371,87 @@ static int system_atomic_write(lua_State *L)
 }
 
 
+static int system_lua_smbus(lua_State *L) {
+	/* Stack
+		1	System
+		2	bus
+	*/
+	char const *bus = lua_tostring(L, 2);
+	int busid = platform_smbus(bus);
+
+	if (busid >= 0) {
+		lua_pushinteger(L, busid);
+		return 1;
+	} else {
+		return luaL_error(L, "smbus_open: %s", strerror(errno));
+	}
+	//lua_pushnil(L);
+	//return 1;
+}
+
+
+static int system_lua_smbus_device(lua_State *L) {
+	/* Stack
+		1	System
+		2	bus
+		3	address
+	*/
+	int addr = lua_tointeger(L, 3);
+	int bus = lua_tointeger(L, 2);
+	addr = platform_smbus_device(bus,addr);
+	if (addr >= 0) {
+		lua_pushinteger(L, addr);
+		return 1;
+	}
+	return luaL_error(L, "smbus_read: %s", strerror(errno));
+	//lua_pushnil(L);
+	//return 1;
+}
+
+
+static int system_lua_smbus_read_byte_data(lua_State *L) {
+	/* Stack
+		1	System
+		2	dr
+		3	command
+	*/
+	int dr = lua_tointeger(L, 2);
+	int command = lua_tointeger(L, 3);
+	int ret =  platform_smbus_read_byte_data(dr,(uint8_t) command);
+	if (ret >= 0 ) {
+		lua_pushinteger(L, ret);
+		return 1;
+	}
+	lua_pushnil(L);
+	return 1;
+}
+
+
+static int system_lua_smbus_write_byte_data(lua_State *L) {
+	/* Stack
+		1	System
+		2	dr
+		3	command
+		4	value
+	*/
+	int dr = lua_tointeger(L, 2);
+	int command = lua_tointeger(L, 3);
+	int value = lua_tointeger(L, 4);
+	int ret =  platform_smbus_write_byte_data(dr, (uint8_t)command, (uint8_t)value);
+	if (ret >= 0 ) {
+		return 0;
+	}
+	return luaL_error(L, "smbus_write: %s", strerror(errno));
+	//lua_pushnil(L);
+	//return 1;
+}
+
+
 static const struct luaL_Reg squeezeplay_system_methods[] = {
+	{ "smbus", system_lua_smbus },
+	{ "smbusDevice", system_lua_smbus_device },
+	{ "smbusReadData", system_lua_smbus_read_byte_data },
+	{ "smbusWriteData", system_lua_smbus_write_byte_data },
 	{ "getArch", system_lua_get_arch },
 	{ "getMachine", system_lua_get_machine },
 	{ "getMacAddress", system_get_mac_address },
@@ -379,7 +460,7 @@ static const struct luaL_Reg squeezeplay_system_methods[] = {
 	{ "getUserDir", system_get_user_dir },
 	{ "findFile", system_find_file },
 	{ "atomicWrite", system_atomic_write },
-	{ "init", system_init },
+	{ "init", system_lua_init },
 	{ NULL, NULL }
 };
 

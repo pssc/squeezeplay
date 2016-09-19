@@ -26,8 +26,14 @@
 
 #include <netinet/in.h>
 #include <linux/if.h>
+#include <linux/i2c-dev.h>
 #include <execinfo.h>
+#include <pwd.h>
+#include <stdint.h>
 
+
+#define SP_PREFIX "/.squeezeplay"
+#define SP_PREFIX_LEN 14
 
 static LOG_CATEGORY *log_sp;
 static lua_State *Lsig = NULL;
@@ -35,14 +41,24 @@ static lua_Hook Hf = NULL;
 static int Hmask = 0;
 static int Hcount = 0;
 
+// FIXME leeks?
 char *platform_get_home_dir() {
-    char *dir;
     const char *home = getenv("HOME");
+    char *dir;
 
-    dir = malloc(strlen(home) + 14);
-    strcpy(dir, home);
-    strcat(dir, "/.squeezeplay");
-
+    if (home) {
+       dir = malloc(strlen(home) + SP_PREFIX_LEN);
+       strcpy(dir, home);
+    } else {
+       struct passwd *pwd = getpwuid(getuid());
+       if (pwd) {
+           dir = malloc(strlen(pwd->pw_dir) + SP_PREFIX_LEN);
+           strcpy(dir, pwd->pw_dir);
+	} else {
+           dir = malloc(SP_PREFIX_LEN);
+       }
+    }
+    strcat(dir, SP_PREFIX);
     return dir;
 }
 
@@ -146,7 +162,7 @@ char *platform_get_arch() {
 
 
 #ifdef SQUEEZEOS
-/* This is not in the standard lunux watchdog...
+/* This is not in the standard linux watchdog...
  */
 static int wdog_sem_id = -1;
 
@@ -214,7 +230,7 @@ int watchdog_keepalive(int watchdog_id, int count) {
 	return watchdog_sem_keepalive(watchdog_id, count);
 }
 #else
-/* For standard lunux/BSD watchdog
+/* For standard linux/BSD watchdog
  * Use a file mtime monitor ~ 30 - 60 Seconds
  * we dont have any ability to control next update time with this.
  */
@@ -244,6 +260,38 @@ int watchdog_keepalive(int watchdog_id, int count) {
 	return 0;
 }
 #endif
+
+
+int platform_smbus(const char *adapter) {
+	char filename[20];
+	int file;
+
+	snprintf(filename, 19, "/dev/i2c-%s", adapter);
+	file = open(filename, O_RDWR);
+
+	/* ERROR HANDLING in system you can check errno to see what went wrong */
+	return file;
+}
+
+
+int platform_smbus_device(int adapter,int addr) {
+	if (ioctl(adapter, I2C_SLAVE, addr) < 0) {
+		/* ERROR HANDLING; you can check errno to see what went wrong */
+		//return errno; //
+	}
+	return adapter;
+}
+
+
+int platform_smbus_read_byte_data(int file, uint8_t reg) {
+	return i2c_smbus_read_byte_data(file, (__u8) reg);
+}
+
+
+int platform_smbus_write_byte_data(int file, uint8_t reg, uint8_t value) {
+	return i2c_smbus_write_byte_data(file, (__u8) reg, (__u8) value);
+}
+
 
 static void print_trace(void)
 {
@@ -363,6 +411,20 @@ static void term_handler(int  signum) {
 	jive_send_quit();
 }
 
+
+static void hup_handler(int  signum) {
+        struct sigaction sa;
+
+        sa.sa_handler = SIG_DFL;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = 0;
+        sigaction(signum, &sa, NULL);
+
+        LOG_ERROR(log_sp, "SIGHUP squeezeplay %s", JIVE_VERSION);
+	raise(SIGHUP);
+}
+
+
 static void platform_exit(void) {
 	// Note we have been here
 	LOG_WARN(log_sp, "platform_exit squeezeplay %s", JIVE_VERSION);
@@ -387,6 +449,9 @@ void platform_init(lua_State *L) {
 
 	sa.sa_handler = term_handler;
 	sigaction(SIGTERM, &sa, NULL);
+
+	sa.sa_handler = term_handler;
+	sigaction(SIGHUP, &sa, NULL);
 
 	atexit(platform_exit);
 }
