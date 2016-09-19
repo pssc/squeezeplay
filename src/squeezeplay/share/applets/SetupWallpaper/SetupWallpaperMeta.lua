@@ -33,38 +33,45 @@ function jiveVersion(meta)
 end
 
 
-function defaultSettings(meta)
-	return { 
-		WQVGAsmallSkin = "fab4_encore.png",
-		WQVGAlargeSkin = "fab4_encore.png",
-		FullscreenSkin = "jive_midnight.png",
-		QVGAportraitSkin  = "jive_encore.png",
-		QVGAlandscapeSkin = _getQVGAlandscapeSkinWallpaper(meta),
+function settingsMeta(meta)
+	return {
+		bgPerSkin = { limit="toggle"},
+		unfiltered = { limit="toggle"},
 	}
 end
 
-function _getQVGAlandscapeSkinWallpaper(meta)
-	local wallpaper = appletManager:callService("getDefaultWallpaper")
 
-	if not wallpaper then
-		wallpaper = "bb_encore.png"
-	end
-	return wallpaper
+function defaultSettings(meta)
+	-- FIXME Should be in players SqueezeboxApplet, these are default bg for skins
+	-- FIXME should be set by Skin if not set by SqueezeboxApplet
+	return {
+		-- FIXME resize
+		bgPerSkin	= false,
+		unfiltered	= false,
+		WQVGAsmallSkin = "480x272_encore.png", --fab4
+		WQVGAlargeSkin = "480x272_encore.png", --fab4
+		FullscreenSkin = "240x320_midnight.png",
+		QVGAportraitSkin  = "240x320_encore.png", --jive
+		QVGAlandscapeSkin = "320x240_encore.png", --baby changes dependant on model
+	}
 end
 
 
 function registerApplet(meta)
 	meta:registerService("showBackground")
 	meta:registerService("setBackground")
+	--meta:registerService("addBackground")
 	-- add a menu item for configuration
-	jiveMain:addItem(meta:menuItem('appletSetupWallpaper', 'screenSettings', 'WALLPAPER', function(applet, ...) applet:settingsShow(...) end))
+	jiveMain:addItem(meta:menuItem('appletSetupWallpaper', 'screenSettings', 'APPLET_NAME', function(applet, ...) applet:settingsShow(...) end))
+	jiveMain:addItem(meta:menuItem('appletAdvSetupWallpaper', 'advancedSettings', "APPLET_NAME", function(applet, ...) applet:presentMeta(...) end))
 
 end
 
-function configureApplet(meta)
 
+function configureApplet(meta)
 	-- load default wallpaper before connecting to a player (nil will load default)
-	appletManager:callService("setBackground", nil)
+	-- will also cause applet to load and subscribe
+	appletManager:callService("showBackground")
 end
 
 

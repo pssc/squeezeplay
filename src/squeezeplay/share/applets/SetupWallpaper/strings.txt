@@ -8,8 +8,7 @@
 # squeezeplay_fab4/share/applets/SetupWallpaper/wallpaper/
 # squeezeplay_jive/share/applets/SetupWallpaper/wallpaper/
 # etc.
-
-WALLPAPER
+APPLET_NAME
 	CS	Wallpaper (Tapeta)
 	DA	Tapet
 	DE	Hintergrundbild
@@ -203,4 +202,10 @@ VIBRATO
 	PL	Vibrato
 	RU	Вибрато
 	SV	Vibrato
+
+SETTING_BGPERSKIN
+	EN	Backgrouds per skin
+
+SETTING_UNFILTERED
+	EN	Don't filter by Resolution (Restart Needed)
 
