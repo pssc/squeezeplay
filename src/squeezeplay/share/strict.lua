@@ -12,6 +12,7 @@ if mt == nil then
   setmetatable(_G, mt)
 end
 
+--__STRICT = true
 mt.__declared = {}
 
 mt.__newindex = function (t, n, v)
@@ -32,3 +33,6 @@ mt.__index = function (t, n)
   return rawget(t, n)
 end
 
+--function global(...)
+--   for _, v in ipairs{...} do mt.__declared[v] = true end
+--end
