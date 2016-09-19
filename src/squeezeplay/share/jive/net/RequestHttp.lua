@@ -46,13 +46,12 @@ local string    = require("string")
 local oo        = require("loop.base")
 local url       = require("socket.url")
 local table     = require("jive.utils.table")
-local ltn12       = require("ltn12")
+local ltn12     = require("ltn12")
 
 local Task      = require("jive.ui.Task")
 
 local log       = require("jive.utils.log").logger("net.http")
 local jnt       = jnt
-local jive      = jive
 
 -- our class
 module(..., oo.class)
