@@ -23,6 +23,7 @@ local jive          = jive
 local jnt           = jnt
 local tonumber      = tonumber
 
+local JIVE_VERSION   = jive.JIVE_VERSION
 
 
 module(...)
@@ -47,11 +48,17 @@ function defaultSettings(meta)
 		display_power = true,
 		autoaudio = true, -- FIXME
 				  -- as Alsa driver doesnt support anything other than 16bit
-		rt = false,
 		-- Linux Applet control
 		backlight = true,
 		blanking = true,
 	}
+end
+
+
+function upgradeSettings(self, settings)
+	settings['rt'] = nil
+	settings['Revision'] = nil
+	return settings
 end
 
 
@@ -63,153 +70,176 @@ function settingsMeta(meta)
 		cec_toggle = { limit="toggle"},
 		time_sync_toggle = { limit="toggle"},
 		display_power = { limit="toggle"},
+		nosplash_sound = { limit="toggle"},
+
 		backlight = { limit="toggle"},
 		blanking = { limit="toggle"},
 	}
 end
 
-
-function registerApplet(meta)
-        -- Check pi...
+function _piHW(self)
 	local f = io.open(CPU_INFO)
-        local pi,hw
-        if not f then
-		-- warn?
-        	return
-        end
+	if not f then return end
+	local pi = { model="unkown", memory=256, maker="",}
 
-	local settings = meta:getSettings()
-
-	-- Pi try our med for unkown models for pi is an hw type then refine when we have a revsion
+	-- possible Pi try identify HW then rev,
+	-- unkown models will get a basic service
         for line in f:lines() do
         	if string.match(line, "Hardware%s+: BCM2708") then
-			hw = "BCM2708"
+			pi.hw = "BCM2708"
 		elseif string.match(line, "Hardware%s+: BCM2709") then
-			hw = "BCM2709"
-		elseif hw and string.match(line, "Revision%s+: %x+") then
+			pi.hw = "BCM2709"
+		elseif pi.hw and string.match(line, "Serial%s+: (%x+)") then
+			pi.serial = string.match(line, "Serial%s+: (%x+)")
+		elseif pi.hw and string.match(line, "Revision%s+: %x+") then
 			local nrev = string.match(line, "Revision%s+: (%x+)")
-			pi = { hw=hw, model="error", version=0, memory=256, revision=0, maker="", ov=false }
 			log:debug("Raw Revision: ", nrev)
-			nrev = tonumber(nrev,16)
-			-- FIXME Detect new scheme
-			if (not settings['Revision'] and nrev ) or (nrev and settings['Revision'] and settings['Revision'] != nrev) then
-				settings['Revision']=nrev
-				-- olde style overvolting - that will add in  1000000
-				if ( nrev > 1000000 and pi.hw == "BCM2708"  and nrev < 9000000 ) then
-					pi.ov = true
-					nrev = nrev - 1000000
-                  		end
-                  		pi.revision=nrev
-
-				if pi.hw == "BCM2708" and (rev == 0 or nrev == 1 or nrev == 13 or (nrev > 0x14 and nrev < 0x900091)) then
-					log:error("Error Determining model of Pi")
-					pi = false
-				elseif pi.hw == "BCM2709" then
-					pi.model = "2"
-					pi.memory = 1024
-					pi.version = 1.1
-					pi.maker = "Sony"
-				elseif nrev == 0x900092 then
-					pi.model = "Zero"
-					pi.version = 1
-					pi.memory = 512
-					pi.maker = "Sony"
-				elseif nrev == 0x02 then
-					pi.model = "B"
-					pi.version = 1
-					pi.memory = 256
-					pi.maker = "Egoman"
-				elseif nrev == 0x03 then
-					pi.model = "B"
-					pi.version = 1.1
-					pi.memory = 256
-					pi.maker = "Egomanx, Fuses/D14 removed."
-				elseif nrev == 0x04 then
-					pi.model = "B"
-					pi.version = 2
-					pi.memory = 256
-					pi.maker = "Sony"
-				elseif nrev == 0x05 then
-					pi.model = "B"
-					pi.version = 1.1
-					pi.memory = 256
-					pi.maker = "Qisda"
-				elseif nrev == 0x06 then
-					pi.model = "B"
-					pi.version = 2
-					pi.memory = 256
-					pi.maker = "Egoman"
-				elseif nrev == 0x07 then
-					pi.model = "A"
-					pi.version = 2
-					pi.memory = 256
-					pi.maker = "Egoman"
-				elseif nrev == 0x08 then
-					pi.model = "A"
-					pi.version = 2
-					pi.memory = 256
-					pi.maker = "Sony"
-				elseif nrev == 0x09 then
-					pi.model = "A"
-					pi.version = 2
-					pi.memory = 256
-					pi.maker = "Qisda"
-				elseif nrev == 0x0d then
-					pi.model = "B"
-					pi.version = 2
-					pi.memory = 512
-					pi.maker = "Egoman"
-				elseif nrev == 0x0e then
-					pi.model = "B"
-					pi.version = 2
-					pi.memory = 512
-					pi.maker = "Sony"
-				elseif nrev == 0x0f then
-					pi.model = "B"
-					pi.version = 2
-					pi.memory = 512
-					pi.maker = "Qisda"
-				elseif nrev == 0x10 then
-					pi.model = "B+"
-					pi.version = 1.2
-					pi.memory = 512
-					pi.maker = "Sony"
-				elseif nrev == 0x11 then
-					pi.model = "CM"
-					pi.version = 1.2
-					pi.memory = 512
-					pi.maker = "Sony"
-				elseif nrev == 0x12 then
-					pi.model = "A+"
-					pi.version = 1.2
-					pi.memory = 256
-					pi.maker = "Sony"
-				elseif nrev == 0x13 then
-					pi = nil
-				elseif nrev == 0x14 then -- Unsure
-					pi.model = "CM"
-					pi.version = 1.1
-					pi.memory = 512
-					pi.maker = "Sony"
-				end
-				settings['pi'] = pi
-				-- save...
-				-- reset? settings.
-			end
+			pi.revision = tonumber(nrev,16)
 		end
 	end
         f:close()
+	return (pi.hw and pi.serial and pi.revision) and pi or nil
+end
 
+
+function _piResolv(self,pi)
+	local nrev = pi.revision
+	-- FIXME Detect new scheme
+	log:debug("Detecting Pi with Revision: ", nrev)
+	-- olde style overvolting - that will add in 1000000
+	if ( nrev > 1000000 and pi.hw == "BCM2708" and nrev < 0x900091 ) then
+		pi.ov = true
+		nrev = nrev - 1000000
+	end
+
+	if pi.hw == "BCM2708" and
+	   (rev == 0 or nrev == 1 or nrev == 0x13 or
+	   (nrev > 0x14 and nrev < 0x900091)) then
+		log:warn("Error Determining model of impossible Pi ")
+		pi.model="error"
+	elseif pi.hw == "BCM2709" then
+		pi.model = "2 B"
+		pi.memory = 1024
+		pi.version = 1.1
+		pi.maker = "Sony"
+		if nrev == 0xa02082 then
+			pi.model = "3 B"
+			pi.version = 1.2
+		end
+	elseif nrev == 0x900092 then
+		pi.model = "Zero"
+		pi.version = 2
+		pi.memory = 512
+		pi.maker = "Sony"
+	elseif nrev == 0x02 then
+		pi.model = "B"
+		pi.version = 1
+		pi.memory = 256
+		pi.maker = "Egoman"
+	elseif nrev == 0x03 then
+		pi.model = "B"
+		pi.version = 1.1
+		pi.memory = 256
+		pi.maker = "Egomanx, Fuses/D14 removed."
+	elseif nrev == 0x04 then
+		pi.model = "B"
+		pi.version = 2
+		pi.memory = 256
+		pi.maker = "Sony"
+	elseif nrev == 0x05 then
+		pi.model = "B"
+		pi.version = 1.1
+		pi.memory = 256
+		pi.maker = "Qisda"
+	elseif nrev == 0x06 then
+		pi.model = "B"
+		pi.version = 2
+		pi.memory = 256
+		pi.maker = "Egoman"
+	elseif nrev == 0x07 then
+		pi.model = "A"
+		pi.version = 2
+		pi.memory = 256
+		pi.maker = "Egoman"
+	elseif nrev == 0x08 then
+		pi.model = "A"
+		pi.version = 2
+		pi.memory = 256
+		pi.maker = "Sony"
+	elseif nrev == 0x09 then
+		pi.model = "A"
+		pi.version = 2
+		pi.memory = 256
+		pi.maker = "Qisda"
+	elseif nrev == 0x0d then
+		pi.model = "B"
+		pi.version = 2
+		pi.memory = 512
+		pi.maker = "Egoman"
+	elseif nrev == 0x0e then
+		pi.model = "B"
+		pi.version = 2
+		pi.memory = 512
+		pi.maker = "Sony"
+	elseif nrev == 0x0f then
+		pi.model = "B"
+		pi.version = 2
+		pi.memory = 512
+		pi.maker = "Qisda"
+	elseif nrev == 0x10 then
+		pi.model = "B+"
+		pi.version = 1.2
+		pi.memory = 512
+		pi.maker = "Sony"
+	elseif nrev == 0x11 then
+		pi.model = "CM"
+		pi.version = 1.2
+		pi.memory = 512
+		pi.maker = "Sony"
+	elseif nrev == 0x12 then
+		pi.model = "A+"
+		pi.version = 1.2
+		pi.memory = 256
+		pi.maker = "Sony"
+	elseif nrev == 0x14 then -- Unsure
+		pi.model = "CM"
+		pi.version = 1.1
+		pi.memory = 512
+		pi.maker = "Sony"
+	else
+		log:warn("Unkown pi ",pi.hw," r",pi.revsion)
+	end
+	return pi
+end
+
+function registerApplet(meta)
+        -- Check pi...
+	local pi = meta:_piHW()
         if not pi then
-	   log:info("No pi")
+	   log:debug("No Pi hardware")
            return
         end
-        log:info("Revision: ", string.format("%04x",settings['Revision']))
+	local store
+	local settings = meta:getSettings()
+
+	if not settings.pi or
+	   settings.pi.revision ~= pi.revision or
+	   settings.pi.serial ~= pi.serial or
+	   settings.pi.hw ~= pi.hw or
+	   settings.model == "error" or
+	   settings.model == "unkown" then
+		settings['pi'] = meta:_piResolv(pi)
+		--store = true
+	end
+
+        log:info("Version: ", JIVE_VERSION)
         log:info("Pi: ", debug.view(settings['pi']))
+        log:debug("Settings: ", debug.view(settings))
 
         -- sound... for pass through...
 	f = io.open("/usr/share/alsa/cards/bcm2835.conf")
 	if not f then
+		-- FIXME no ecode on copy fail
 		local pcms,err = io.popen("cp ../share/jive/applets/SqueezePi/bcm2835.conf /usr/share/alsa/cards/bcm2835.conf", "r")
 		if err then
 			log:error("Copy of sound card config failed ",err,".")
@@ -229,7 +259,7 @@ function registerApplet(meta)
 	-- DesktopJive
 	-- settings.mac
 	-- settings.uuid
-	--System:getMacAddress()
+	-- System:getMacAddress()
         -- set mac address and uuid
 	-- to depricate use of DesktopJive...
 	-- soft reset
@@ -254,16 +284,31 @@ function registerApplet(meta)
                 ["alarmKey"] = 1,
                 ["audioByDefault"] = 1,
                 ["wiredNetworking"] = 1,
-                ["deviceRotation"] = 1,
+                --["deviceRotation"] = 1,
+                --["sshTunnel"] = 1,
                 ["coreKeys"] = 1,
                 ["presetKeys"] = 1,
                 ["SMBus"] = 1,
                 ["Capabilities"] = 1,
 	})
+	local store = false
 
-       local store = false
-
-	-- Linux base Applet??
+	-- FIXME
+	--if not settings.uuid and pi.serial then
+	if pi.serial and pi.revision and not settings.uuid then
+		--7.8.0-r8064979
+		local mj,mr,po,co = string.match(JIVE_VERSION,"(%d+)\.(%d+)\.(%d+) r(%x+)")
+		local uuid = string.format("%16s",pi.serial) ..
+		string.format("%06x",pi.revision) ..
+		string.format("%01x",mj) ..
+		string.format("%01x",mr) ..
+		string.format("%01x",po) ..
+		string.format("%06x",tonumber(co,16))
+		log:info("uuid: ",uuid)
+		settings.uuid = uuid
+		store = true
+	end
+	-- Linux base Applet? Fall back
         if not settings.uuid then
                 store = true
 
@@ -279,7 +324,7 @@ function registerApplet(meta)
                 settings.mac = System:getMacAddress()
                 store = true
         end
-
+	--Fallback
         if not settings.mac then
                 -- random fallback FIXME Really?
                 mac = {}
@@ -292,8 +337,8 @@ function registerApplet(meta)
         end
 
         if store then
-                log:debug("Mac Address: ", settings.mac)
-                meta:storeSettings()
+		log:info("Store Settings")
+		meta:storeSettings()
         end
 
 	-- set system mac address and uuid
@@ -312,7 +357,7 @@ function registerApplet(meta)
 	-- Set the minimum support server version the version has to be greater than this ie 7.7+
 	SlimServer:setMinimumVersion("7.6")
 
-	-- audio playback defaults -- FIXME check decode open?
+	-- audio playback defaults -- FIXME check decode open? option?
 	appletManager:addDefaultSetting("Playback", "enableAudio", 1)
 
 	-- Screen savers
@@ -322,20 +367,30 @@ function registerApplet(meta)
 	appletManager:addDefaultSetting("ScreenSavers", "poweron_window_time", 12000)
 	-- settings = {whenPlaying="NowPlaying:openScreensaver",timeout=30000,poweron_window_time=10000,whenStopped="Clock:openDetailedClockTransparent",whenOff="Clock:openDetailedClockBlack",}
 
-	if jiveMain:getDefaultSkin() == 'QVGAportraitSkin' then -- Lowest common denominator
-		jiveMain:setDefaultSkin("800x480Skin") -- FIXME Resolution Detection Applet.... ... 800x600 as next vga based skin...
-	end
-	-- FIXME
 	appletManager:addDefaultSetting("SelectSkin","touch","800x480Skin")
 	appletManager:addDefaultSetting("SelectSkin","remote","HDSkin-800x480")
 	appletManager:addDefaultSetting("SelectSkin","skin","800x480Skin")
 
-	-- Set if default prefs FIXME wallpaper applet?
         --meta:registerService("getDefaultWallpaper") FIXME inconsistent for some skins...
+	-- getDefaultWallpaper service is only for baby it should be fixed/removed in baby and SetUP wallpaper...
+	-- setWallpaper?
 	appletManager:addDefaultSetting("SetupWallpaper", "unfiltered", true)
 	appletManager:addDefaultSetting("SetupWallpaper", "800x480Skin", "800x480_encore.png")
+	appletManager:addDefaultSetting("SetupWallpaper", "HDSkin-800x480", "800x480_nocturne.png")
 
-	--  Work round differnces in models
+	appletManager:addDefaultSetting("ImageViewer", "imageLimit", 0)
+
+	-- Detect Pi LCD and default to Local TS skin for input
+	if os.getenv("RPI_LCD") then
+		appletManager:addDefaultSetting("InputMapper", "default_mapping", 1)
+	end
+
+	if jiveMain:getDefaultSkin() == 'QVGAportraitSkin' then -- Lowest common denominator
+		jiveMain:setDefaultSkin("800x480Skin") -- FIXME Resolution Detection Applet.... ... 800x600 as next vga based skin...
+	end
+	-- FIXME
+
+	--  Work round differnces in models --FIXME pi3?
 	if (pi.model == "B" and pi.version < 2) then
 		appletManager:addDefaultSetting("VCNL4010","bus",0)
 	end
@@ -362,6 +417,13 @@ function registerApplet(meta)
         meta:registerService("poweroff")
         meta:registerService("reboot")
 	meta:registerService("setBrightness",true)
+
+	-- AppletUI
+	meta:registerService("registerEnv")
+	meta:registerService("unregisterEnv")
+	meta:registerService("getEnv")
+	meta:registerService("setEnv")
+
 
 	local command = "tvservice -a 2>&1"
         local f,err = io.popen(command, "r")

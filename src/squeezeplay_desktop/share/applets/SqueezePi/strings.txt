@@ -43,5 +43,104 @@ POWEROFF
 RESTART
 	EN	Restart
 
-Quit
+QUIT
 	EN	Quit
+
+ENV_FILE_HEADER
+	EN	Auto Generated Env Vars for SqueezePlay
+
+SETTING_FBCP_CONTROL
+	EN	Stop/Start framebuffer copy on remote skin
+
+SETTING_FBCP_BACKLIGHT
+	EN	Power Off/On backlight on remote skin
+
+SETTING_FBCP_TOGGLE
+	EN	Switch Remote skin options to local
+
+SETTING_CEC_TOGGLE
+	EN	Start HDMI-CEC (TV remote support) daemon
+
+SETTING_TIME_SYNC_TOGGLE
+	EN	Disable LMS time sync
+
+ENV_SDL_DISPMANX_FBCP
+	EN	Destination for copy
+
+MENU_SDL_DISPMANX_FBCP
+	EN	Frame buffer copy location
+
+HELP_SDL_DISPMANX_FBCP
+	EN	DISPMANX frame buffer cloned to this device. Example fbtft type display. (restart required)
+
+MENU_SDL_FBACCEL
+	EN	Graphics Acceleration
+
+ENV_SDL_FBACCEL
+	EN	SDL Graphics Acceleration Override.
+
+HELP_SDL_FBACCEL
+	EN	Force graphics accelection setting, Use with care.
+
+FBACCEL_UNSET
+	EN	Auto Dectect
+
+FBACCEL_NONE
+	EN	No Acceleration
+
+FBACCEL_DISPMANX
+	EN	Pi/Dispmanx Acceleration
+
+MENU_SDL_DISPMANX_DISPLAY
+	EN	Primary Display
+
+ENV_SDL_DISPMANX_DISPLAY
+	EN 	Primary Display
+
+HELP_SDL_DISPMANX_DISPLAY
+	EN	Use with care, Example - display on HDMI with console on Pi LCD running somthing else. Some settings may break your display. (restart required)
+
+MENU_SDL_DISPMANX_DISPLAY_ALT
+	EN	Secondary Display Support
+
+ENV_SDL_DISPMANX_DISPLAY
+	EN	Secondary Display
+
+HELP_SDL_DISPMANX_DISPLAY_ALT
+	EN	Used for enabling HDMI as well as Pi Screen for example. Some settings may break you display. (restart required)
+
+DISPMANX_DISPLAYS_UNSET
+	EN	Disable (Default)
+
+DISPMANX_DISPLAYS_LCD
+	EN	Pi Offical LCD Screen
+
+DISPMANX_DISPLAYS_HDMI
+	EN	Pi HDMI Out
+
+DISPMANX_DISPLAYS_OTHER
+	EN	Other Display
+
+DISPMANX_DISPLAYS_DEFAULT
+	EN	Default Display
+
+ENV_JIVE_FR
+	EN	Target frame rate(Restart required)
+
+DISABLE
+	EN	Disable
+
+SETTING_BACKLIGHT
+	EN	Control Backlight
+
+SETTING_BLANKING
+	EN	FrameBuffer Blanking
+
+SETTING_DISPLAY_POWER
+	EN	HDMI Power control
+
+SERIAL
+	EN	Serial
+
+SETTING_NOSPLASH_SOUND
+	EN	Disable splash sound
