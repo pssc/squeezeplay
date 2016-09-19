@@ -16,15 +16,16 @@ module(..., oo.class)
 
 
 -- constants
-PRIORITY_AUDIO = 1
-PRIORITY_HIGH = 2
-PRIORITY_LOW = 3
+PRIORITY_RT     = 1 -- Always runs
+PRIORITY_HIGH   = 2
+PRIORITY_NORMAL = 3
+PRIORITY_LOW    = 4
 
 
 -- the task list is modified while iterating over the entries,
 -- we use a linked list to make the iteration easier
--- three queues: streaming, high and low
-local taskHead = { nil, nil, nil }
+-- queues: RT, high, normal and low
+local taskHead = { nil, nil, nil, nil }
 
 -- the task that is active, or nil for the main thread
 local taskRunning = nil
@@ -41,7 +42,7 @@ function __init(self, name, obj, f, errf, priority)
 				      args = {},
 				      thread = coroutine.create(f),
 				      errf = errf,
-				      priority = priority or PRIORITY_LOW,
+				      priority = priority or PRIORITY_NORMAL,
 			      })
 
 	return obj
@@ -54,12 +55,13 @@ function resume(self)
 
 	taskRunning = self
 
-	local nerr, val = coroutine.resume(self.thread, self.obj, unpack(self.args))
+	local noerr, val = coroutine.resume(self.thread, self.obj, unpack(self.args))
 
 	taskRunning = nil
-	if nerr then
+	if noerr then
 		if val == nil then
 			val = (coroutine.status(self.thread) ~= "dead")
+			self.state = "dead"
 		end
 
 		if val then
@@ -90,12 +92,17 @@ function setArgs(self, ...)
 end
 
 
+function getState(self)
+	return self.state
+end
+
+
 -- add task to the end of the task list
 function addTask(self, ...)
 	log:debug("addTask ", self.name)
 
-	if self.state == "error" then
-		log:warn("task ", self.name, " in error state")
+	if self.state == "error" or self.state == "dead" then
+		log:warn("addTask ", self.name, " in ",self.state, " state")
 		return false
 	end
 
@@ -129,7 +136,7 @@ end
 function removeTask(self)
 	log:debug("removeTask ", self.name)
 
-	self.state = "suspended"
+	if self.state ~= "dead" then self.state = "suspended" end
 
 	-- unlink from linked list
 	if not taskHead then
