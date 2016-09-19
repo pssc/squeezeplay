@@ -290,8 +290,10 @@ static int decode_alsa_init(lua_State *L) {
 		return 1;
 	} else {
 		if (effects_device && effect_pid > 0 ) {
+			int status;
 			LOG_ERROR(log_audio_output, "Effects device: %s kill %d", effects_device, effect_pid);
 			kill(effect_pid, SIGTERM);
+			waitpid(effect_pid, &status, 0);
 		}
 		decode_audio_lock();
 		decode_audio->running = false;

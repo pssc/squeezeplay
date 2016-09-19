@@ -117,6 +117,7 @@ static void mqueue_write_buf(struct mqueue *mqueue, Uint8 *b, size_t n) {
 
 	while (n) {
 		bytes_write = fifo_bytes_until_wptr_wrap(&mqueue->fifo);
+		//fprintf(stderr,"mqueue_write_buf %d %d\n",n,bytes_write);
 		if (n < bytes_write) {
 			bytes_write = n;
 		}
@@ -130,18 +131,22 @@ static void mqueue_write_buf(struct mqueue *mqueue, Uint8 *b, size_t n) {
 }
 
 
-int mqueue_write_request(struct mqueue *mqueue, mqueue_func_t func, size_t len) {
+int mqueue_write_request(struct mqueue *mqueue, mqueue_func_t func, size_t extra) {
+	size_t len = sizeof (func) + extra;
+
 	if (fifo_lock(&mqueue->fifo) == -1) {
 		LOG_ERROR(log_audio_decode, "Failed to lock mutex %s", SDL_GetError());
 		return 0;
 	}
 
+	//fprintf(stderr,"mqueue_write_request %u %u %u\n",len,sizeof(func), fifo_bytes_free(&mqueue->fifo));
 	/* Check there is enough room in the mqueue */
 	if (len > fifo_bytes_free(&mqueue->fifo)) {
 		fifo_unlock(&mqueue->fifo);
 		return 0;
 	}
 
+	//fprintf(stderr,"mqueue_write_request %u %u %u\n",len,sizeof(func), fifo_bytes_free(&mqueue->fifo));
 	/* Write handler function */
 	mqueue_write_buf(mqueue, (Uint8 *)&func, sizeof(func));
 

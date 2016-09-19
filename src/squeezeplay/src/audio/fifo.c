@@ -14,7 +14,7 @@
 
 /*
 
-0  	rw	r	r	w		
+0  	rw	r	r	w
 1   		w			w	w
 2			w			r
 3
@@ -143,10 +143,9 @@ size_t fifo_bytes_used(struct fifo *fifo) {
 
 size_t fifo_bytes_free(struct fifo *fifo) {
 	ASSERT_FIFO_LOCKED(fifo);
-
-	return (fifo->rptr > fifo->wptr) ? (fifo->rptr - fifo->wptr - 1) : (fifo->rptr - fifo->wptr + fifo->size - 1);
+	return (fifo->size > 0) ? (fifo->rptr > fifo->wptr) ? (fifo->rptr - fifo->wptr - 1) : (fifo->rptr - fifo->wptr + fifo->size - 1) : 0;
 }
-	
+
 size_t fifo_bytes_until_rptr_wrap(struct fifo *fifo) {
 	ASSERT_FIFO_LOCKED(fifo);
 
@@ -166,7 +165,7 @@ void fifo_rptr_incby(struct fifo *fifo, size_t incby) {
 		fifo->rptr = 0;
 	} else {
 		fifo->rptr += incby;
-	}	
+	}
 }
 
 void fifo_wptr_incby(struct fifo *fifo, size_t incby) {
@@ -176,7 +175,7 @@ void fifo_wptr_incby(struct fifo *fifo, size_t incby) {
 		fifo->wptr = 0;
 	} else {
 		fifo->wptr += incby;
-	}	
+	}
 }
 
 int fifo_lock(struct fifo *fifo) {

@@ -187,6 +187,7 @@ static void decode_skip_ahead_handler(void) {
 
 
 static void decode_stop_handler(void) {
+	LOG_DEBUG(log_audio_decode, "decode_stop_handler s");
 	mqueue_read_complete(&decode_mqueue);
 
 	LOG_DEBUG(log_audio_decode, "decode_stop_handler");
@@ -525,7 +526,7 @@ void decode_queue_metadata(enum metadata_type type, u8_t *metadata, size_t metad
 
 
 void decode_queue_packet(void *data, size_t len) {
-	if (mqueue_write_request(&metadata_mqueue, (void *)1, sizeof(Uint32) + len)) {
+	if (mqueue_write_request(&metadata_mqueue, (mqueue_func_t) 1,sizeof(Uint32) + len)) {
 		mqueue_write_u32(&metadata_mqueue, len);
 		mqueue_write_array(&metadata_mqueue, data, len);
 		mqueue_write_complete(&metadata_mqueue);
@@ -665,15 +666,19 @@ static int decode_stop(lua_State *L) {
 	LOG_DEBUG(log_audio_decode, "decode_stop");
 
 	if (mqueue_write_request(&decode_mqueue, decode_stop_handler, 0)) {
+	LOG_DEBUG(log_audio_decode, "decode_stop lock");
 		decode_audio_lock();
+	LOG_DEBUG(log_audio_decode, "decode_stop locked");
 		decode_audio->state |= DECODE_STATE_STOPPING;
 		decode_audio_unlock();
 
+	LOG_DEBUG(log_audio_decode, "decode_stop unlocked");
 		mqueue_write_complete(&decode_mqueue);
 	}
 	else {
 		LOG_DEBUG(log_audio_decode, "Full message queue, dropped stop message");
 	}
+	LOG_DEBUG(log_audio_decode, "decode_stop end");
 
 	return 0;
 }
@@ -719,8 +724,8 @@ static int decode_start(lua_State *L) {
 	 * if we wait till the decoder thread resets it.
 	 */
 	current_decoder_state = 0;
-
-	if (mqueue_write_request(&decode_mqueue, decode_start_handler, 0)) {
+	i = lua_gettop(L);
+	if (mqueue_write_request(&decode_mqueue, decode_start_handler, i * sizeof(Uint32))) {
 		mqueue_write_u32(&decode_mqueue, (Uint32) luaL_optinteger(L, 2, 0)); /* decoder */
 		mqueue_write_u32(&decode_mqueue, (Uint32) luaL_optinteger(L, 3, 0)); /* transition_type */
 		mqueue_write_u32(&decode_mqueue, (Uint32) luaL_optinteger(L, 4, 0)); /* transition_period */
@@ -729,7 +734,7 @@ static int decode_start(lua_State *L) {
 		mqueue_write_u32(&decode_mqueue, (Uint32) luaL_optinteger(L, 7, 0)); /* polarity_inversion */
 		mqueue_write_u32(&decode_mqueue, (Uint32) luaL_optinteger(L, 8, 0)); /* output_channels */
 		
-		num_params = lua_gettop(L) - 8;
+		num_params = i - 8;
 		mqueue_write_u32(&decode_mqueue, num_params);
 		for (i = 0; i < num_params; i++) {
 			mqueue_write_u8(&decode_mqueue, (Uint8) luaL_optinteger(L, 9 + i, 0));
@@ -1006,46 +1011,53 @@ static int decode_audio_open(lua_State *L) {
 	struct decode_audio_func *f = NULL;
 	char *errstr = NULL;
 
-	if (decode_audio || decode_thread) {
+	if (decode_audio && decode_thread) {
 		/* already initialized */
 		lua_pushboolean(L, 1);
 		return 1;
 	}
 
-	/* initialise audio output - try in order: null, alsa, portaudio */
+	/* initialise audio output - try in order: alsa, portaudio, null */
 	/* this allows fallback from alsa to portaudio on systems where this fails - e.g. ubuntu desktop */
 
-#ifdef HAVE_NULLAUDIO
-	f = &decode_null;
-	if (!f->init(L)) {
-		errstr = "null audio init failed";
-		f = NULL;
-	}
-#endif
 #ifdef HAVE_LIBASOUND
+	LOG_INFO(log_audio_decode, "alsa");
 	if (!f) {
 		f = &decode_alsa;
 		if (!f->init(L)) {
-			errstr = "alsa audio init failed";
+			errstr = "ALSA_INIT";
 			f = NULL;
 		}
 	}
 #endif
 #ifdef HAVE_LIBPORTAUDIO
+	LOG_INFO(log_audio_decode, "portaudio");
 	if (!f) {
 		f = &decode_portaudio;
 		if (!f->init(L)) {
-			errstr = "port audio init failed";
+			errstr = "PORTA_INIT";
 			f = NULL;
 		}
+	}
+#endif
+#ifdef HAVE_NULLAUDIO
+	LOG_INFO(log_audio_decode, "null");
+	f = &decode_null;
+	if (!f->init(L)) {
+		errstr = "NULL_INIT";
+		f = NULL;
 	}
 #endif
 
 	/* no audio device available */
 	if (!f) {
+		errstr = errstr ? errstr : "attempted";
 		lua_pushnil(L);
-		lua_pushstring(L, errstr ? errstr : "No audio support");
+		lua_pushstring(L, errstr);
+		LOG_ERROR(log_audio_decode,"No audio support %s",errstr);
 		return 2;
+	} else if (errstr) {
+		LOG_INFO(log_audio_decode,"%s",errstr);
 	}
 
 	assert(decode_audio);
@@ -1053,10 +1065,11 @@ static int decode_audio_open(lua_State *L) {
 
 	decode_audio->f = f;
 
-	/* start decoder thread */
+	// init fifo's earlier to prevent wedage later if audio init fails?
 	mqueue_init(&decode_mqueue, decode_mqueue_buffer, sizeof(decode_mqueue_buffer));
 	mqueue_init(&metadata_mqueue, metadata_mqueue_buffer, sizeof(metadata_mqueue_buffer));
 
+	/* start decoder thread */
 	decode_thread = SDL_CreateThread(decode_thread_execute, NULL);
 
 	lua_pushboolean(L, 1);
