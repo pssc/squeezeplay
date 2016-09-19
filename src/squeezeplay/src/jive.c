@@ -130,17 +130,17 @@ static void paths_setup(lua_State *L, char *app) {
 	temp = malloc(PATH_MAX+1);
 	if (!temp) {
 		l_message("Error", "malloc failure for temp");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 	binpath = malloc(PATH_MAX+1);
 	if (!binpath) {
 		l_message("Error", "malloc failure for binpath");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 	path = malloc(PATH_MAX+1);
 	if (!path) {
 		l_message("Error", "malloc failure for path");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 
 	// full path to jive binary
@@ -466,12 +466,12 @@ static void redirect_stdio() {
 	stdoutpath = malloc(PATH_MAX+1);
 	if (!stdoutpath) {
 		l_message("Error", "malloc failure for stdoutpath");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 	stderrpath = malloc(PATH_MAX+1);
 	if (!stderrpath) {
 		l_message("Error", "stderrpath failure for binpath");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 
 	get_stdout_file_path(stdoutpath);
