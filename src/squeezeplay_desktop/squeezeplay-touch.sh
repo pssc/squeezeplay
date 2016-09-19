@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
-##
+## Depends bash, awk, ts_calibrate, fbcp, fbset
 
 ## Change this if you changed your install path
 SP_INSTALL_DIR=${SP_INSTALL_DIR:-"/opt/squeezeplay"}
@@ -28,7 +28,7 @@ if [ -r "/dev/input/touchscreen-big" -a ! -r "${TSLIB_CALIBFILE}" ];then
 elif [ -r "/dev/input/touchscreen-rpi-lcd" -a ! -r "${TSLIB_CALIBFILE}" ];then
 	export TSLIB_TSDEVICE="/dev/input/touchscreen-rpi-lcd"
 	export TSLIB_CALIBFILE="${SP_INSTALL_DIR}/etc/pointercal-touchscreen-rpi-lcd"
-	[  ! -r "$TSLIB_CALIBFILE" -a -r "$SP_INSTALL_DIR$TSLIB_CALIBFILE" ] export TSLIB_CALIBFILE="$SP_INSTALL_DIR$TSLIB_CALIBFILE"
+	[  ! -r "$TSLIB_CALIBFILE" -a -r "$SP_INSTALL_DIR$TSLIB_CALIBFILE" ] && export TSLIB_CALIBFILE="$SP_INSTALL_DIR$TSLIB_CALIBFILE"
 elif [ -r "/dev/input/touchscreen-medium" -a ! -r "${TSLIB_CALIBFILE}" ];then
 	export TSLIB_TSDEVICE="/dev/input/touchscreen-medium"
 	export TSLIB_CALIBFILE="/etc/pointercal-touchscreen-medium"
@@ -39,8 +39,10 @@ elif [ -r "$TSLIB_TSDEVICE" ];then
 	fi
 fi
 
-RPI_LCD=$(grep -q "FT5406 memory based driver" /proc/bus/input/devices && echo /dev/input/event0)
-if [ ! -r ${TSLIB_TSDEVICE} -a -n ${RPI_LCD} ];then
+#RPI_LCD=$(grep -A 5 -q "FT5406 memory based driver" /proc/bus/input/devices | awk '/^H:/ { print "/dev/input/"$3;exit }' )
+RPI_LCD=$(awk '/FT5406 memory based driver/ {for(a=0;a<=5;a++) {getline; {if(match($0,/event[0-9]+/)) { print "/dev/input/"substr($0, RSTART,RLENGTH);exit}}}}' /proc/bus/input/devices)
+if [ ! -r "${TSLIB_TSDEVICE}" -a -n "${RPI_LCD}" ];then
+	export RPI_LCD
         export TSLIB_TSDEVICE=${RPI_LCD}
 	export TSLIB_CALIBFILE="${SP_INSTALL_DIR}/etc/pointercal-touchscreen-rpi-lcd"
 fi
