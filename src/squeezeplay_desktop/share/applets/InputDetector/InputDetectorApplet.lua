@@ -46,7 +46,7 @@ local appletManager = appletManager
 
 -- contants
 local mappings = { "UNMAPPED","LOCAL","REMOTE","IGNORE" }
-local readsize = 2 -- Could lead to blocking... > 1
+local readsize = 2 -- Could lead to blocking... > 1 -- sizeof(input_event)
 
 -- runtime
 local mapping = nil
@@ -350,13 +350,11 @@ function monitordevices(self)
 		elseif err ~= "timeout" then
 			for n,fd in ipairs(r) do
 				log:debug("monitordevices fd consume data ",fd.detail.name," ",fd.file)
-				--fd.dev:seek("end") -- char dev seems not to be seekable
 				-- consume data on fd
 				local data = 'x'
 				local lr, err = {fd} , nil
-				-- Framework:tcischars(fd.dev:fileno()) will not work on non seekable devices either
 				while(#lr > 0 and data and not err) do
-					data = fd.dev:read(readsize) -- blocking
+					data = fd.detail.handler == "raw" and 1 or fd.dev:read(readsize) -- blocking
 					lr,_,err = socket.select(lr,nil,0)
 				end
 				log:debug("monitordevices consumed data")
