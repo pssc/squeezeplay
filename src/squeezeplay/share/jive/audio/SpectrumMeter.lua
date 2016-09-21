@@ -22,8 +22,6 @@ oo.class(_M, Icon)
 function __init(self, style)
 	local obj = oo.rawnew(self, Icon(style))
 
-	obj.val = { 0, 0 }
-
 	log:info("FRAME_RATE ",FRAME_RATE)
 	obj:addAnimation(function() obj:reDraw() end, FRAME_RATE)
 
@@ -33,13 +31,10 @@ end
 
 function _skin(self)
 	Icon._skin(self)
-
 -- Black background instead of image
 ---	self.bgImg = self:styleImage("bgImg")
 	self.bgCol = self:styleColor("bg", { 0xff, 0xff, 0xff, 0xff })
-
 	self.barColor = self:styleColor("barColor", { 0xff, 0xff, 0xff, 0xff })
-
 	self.capColor = self:styleColor("capColor", { 0xff, 0xff, 0xff, 0xff })
 end
 
@@ -66,7 +61,6 @@ function _layout(self)
 	self.clipSubbands = {}
 
 	self.isMono =  self:styleValue("isMono")
-
 	self.capHeight = self:styleValue("capHeight")
 	self.capSpace = self:styleValue("capSpace")
 	self.channelFlipped = self:styleValue("channelFlipped")
@@ -132,7 +126,7 @@ function _layout(self)
 
 	self.y = y + h - b
 
-	self.cap = { {}, {} }
+	self.cap = { {},{} }
 	for i = 1, numBars[1] do
 		self.cap[1][i] = 0
 	end
@@ -140,7 +134,6 @@ function _layout(self)
 	for i = 1, numBars[2] do
 		self.cap[2][i] = 0
 	end
-
 end
 
 
@@ -155,10 +148,11 @@ function draw(self, surface)
 		self.backgroundDrawn = true
 	end
 
-	local bins = { {}, {} }
-
+	if Framework.inTransition() then return end
+	local bins = {}
 	bins[1], bins[2] = decode:spectrum()
 
+	-- self.x1, self.y  FIXME static info?
 	_drawBins(
 		self, surface, bins, 1, self.x1, self.y, self.barsInBin[1],
 		self.barWidth[1], self.barSpace[1], self.binSpace[1],
@@ -176,47 +170,47 @@ function _drawBins(self, surface, bins, ch, x, y, barsInBin, barWidth, barSpace,
 	local bch = bins[ch]
 	local cch = self.cap[ch]
 	local barSize = barWidth + barSpace
+	local barOff = barWidth - 1
+        local barsInBinOff = barsInBin - 1
+        local capTot = capHeight + capSpace
+        local xBarOff = barWidth * barsInBin + barSpace * barsInBinOff + binSpace
 	log:debug("_drawBins")
 
+	local x1, x2
 	for i = 1, #bch do
 		bch[i] = bch[i] * barHeightMulti
 
-		-- bar
-		if bch[i] > 0 then
-			for k = 0, barsInBin - 1 do
-				surface:filledRectangle(
-					x + (k * barSize),
-					y,
-					x + (barWidth - 1) + (k * barSize),
-					y - bch[i] + 1,
-					self.barColor
-				)
-			end
-		end
-		
 		if bch[i] >= cch[i] then
 			cch[i] = bch[i]
 		elseif cch[i] > 0 then
 			cch[i] = cch[i] - barHeightMulti
-			if cch[i] < 0 then
-				cch[i] = 0
-			end
+			if cch[i] < 0 then cch[i] = 0 end
 		end
 
-		-- cap
-		if capHeight > 0 then
-			for k = 0, barsInBin - 1 do
+		if bch[i] > 0 then
+			for k = 0, barsInBinOff do
+				x1 = x + (k * barSize)
+				x2 = x1 + barOff
+
+				-- bar
 				surface:filledRectangle(
-					x + (k * barSize),
+					x1,
+					y,
+					x2,
+					y - bch[i] + 1,
+					self.barColor
+				)
+				-- cap
+				surface:filledRectangle(
+					x1,
 					y - cch[i] - capSpace,
-					x + (barWidth - 1) + (k * barSize),
+					x2,
 					y - cch[i] - capHeight - capSpace,
 					self.capColor
 				)
 			end
 		end
-
-		x = x + barWidth * barsInBin + barSpace * (barsInBin - 1) + binSpace
+		x = x + xBarOff
 	end
 end
 
