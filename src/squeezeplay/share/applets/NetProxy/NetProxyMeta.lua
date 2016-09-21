@@ -86,7 +86,7 @@ end
 
 function configureApplet(meta)
 	local st = meta:getSettings()
-	if st['ssh_tunnel_server_toggle'] then
+	if st['ssh_tunnel_script_toggle'] then
 		appletManager:loadApplet("NetProxy")
 	end
 end

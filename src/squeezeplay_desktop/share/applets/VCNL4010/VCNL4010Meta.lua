@@ -53,13 +53,13 @@ function registerApplet(meta)
 			return
 		end
 
-		log:warn("smbus ",debug.view(settings))
+		log:info("smbus ",debug.view(settings))
 
 		local bus = System:smbus(settings["bus"])
 		local ref = System:smbusDevice(bus,settings["address"])
 		local p_r = System:smbusReadData(ref,0x81) --VCNL4010_PRODUCTIDREV
 
-		if p_r > 0 then --FIXME spilt productid and rev and check...
+		if p_r and p_r > 0 then --FIXME spilt productid and rev and check...
 			log:warn("Ref ",ref, " VCNL4010_PRODUCTIDREV = ",p_r)
 			--Resident applet in confgiure?
 			local app = appletManager:loadApplet("VCNL4010")

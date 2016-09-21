@@ -46,7 +46,7 @@ export JIVE_FR
 # but for audio to be streamed we need the data provided form the jive network thread
 # stream... so elevate above the rest of the system
 CHRT="nice -n ${JIVE_NICE:--3}"
-if [ -n "${JIVE_RT_PRI}" ] then
+if [ -n "${JIVE_RT_PRI}" ]; then
 	chrt --version  >/dev/null 2>&1 || NF="$NF chrt"
 	if [ -n "$NF" ];then
 		echo "did not find$NF" >&2

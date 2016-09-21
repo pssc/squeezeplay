@@ -96,6 +96,7 @@ function menu(self, menuItem)
 	})
 	menu:setHeaderWidget(Textarea("help_text", self:string('HELP')))
 
+	-- FIMXE cap?
 	if System:getMachine() == "squeezeplay" then
 		local nm = self:addSubMenu(menu,"ssh_tunnel")
 		self:metaMenuToggle(nm,"ssh_tunnel_script_toggle")

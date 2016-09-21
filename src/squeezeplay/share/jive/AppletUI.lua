@@ -545,6 +545,7 @@ function presentMetaItem(self,key,menu)
         log:warn(key,"=",debug.view(meta))
 	local i
 
+	-- FIXME generate fn from limmit auto with big if
         if meta.limit == 'dict' or meta.limit == 'func' then
         	-- construct menu on dict
                 local dict = meta.limit == 'func' and meta.func() or meta.dict
@@ -632,15 +633,14 @@ end
 
 
 function metaMenuKeyboard(self,menu,key,t,f)
-	--unset?
-	local unset = self:getSettingsMeta()[key]['unset']
+	local meta = self:getSettingsMeta()[key]
         menu:addItem({
                  text = self:string(self:metaClassString(key).."_"..string.upper(key)),
                  callback = function(event, mI)
 				-- numeric FIXME
 				self:keyboardWindow(mI,t,tostring(self:getMetaValue(key) or ''),
 					function(value)
-						if value == '' and unset then
+						if value == '' and meta.unset then
 							value = nil
 						end
 						if value ~= self:getMetaValue(key) then
