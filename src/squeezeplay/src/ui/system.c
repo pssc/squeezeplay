@@ -18,6 +18,7 @@ static char *machine;
 static int hardware_rev;
 static char *homedir;
 static char *resource_path = NULL;
+LOG_CATEGORY *log_system;
 
 // public API
 const char * system_get_machine(void) {
@@ -446,6 +447,36 @@ static int system_lua_smbus_write_byte_data(lua_State *L) {
 	//return 1;
 }
 
+#if defined(WIN32)
+static int system_lua_fionread(lua_State *L) {
+	/* Stack
+		1	System
+		2	descriptor
+	*/
+	int des = lua_tointeger(L, 2);
+	int len = platform_fionread(des);
+	if (len >= 0) {
+		lua_pushinteger(L, ret);
+		return 1;
+	}
+	return luaL_error(L, "System:fionread: %s", strerror(errno));
+	//lua_pushnil(L);
+	//return 1;
+}
+#endif
+
+int system_lua_putenv(lua_State *L) {
+	/* stack is:
+	 * 1: system
+	 * 2: value not nil
+	 */
+	const char *env = lua_tostring(L, 2);
+	LOG_INFO(log_system,"System:putenv %s",env);
+	if (env) {
+		SDL_putenv((char *)env);
+	}
+	return 0;
+}
 
 static const struct luaL_Reg squeezeplay_system_methods[] = {
 	{ "smbus", system_lua_smbus },
@@ -461,6 +492,10 @@ static const struct luaL_Reg squeezeplay_system_methods[] = {
 	{ "findFile", system_find_file },
 	{ "atomicWrite", system_atomic_write },
 	{ "init", system_lua_init },
+#if defined(WIN32)
+	{ "fionread", system_lua_fionread },
+#endif
+	{ "putenv", system_lua_putenv },
 	{ NULL, NULL }
 };
 
@@ -481,6 +516,8 @@ int luaopen_squeezeplay_system(lua_State *L) {
 int squeezeplay_system_init(lua_State *L) {
 	const char *homeenv = getenv("SQUEEZEPLAY_HOME");
 	char *ptr;
+
+	log_system = LOG_CATEGORY_GET("squeezeplay.system");
 
 	mac_address = platform_get_mac_address();
 	if (mac_address) {

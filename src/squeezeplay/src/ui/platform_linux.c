@@ -27,10 +27,12 @@
 #include <netinet/in.h>
 #include <linux/if.h>
 #include <linux/i2c-dev.h>
+#include <linux/input.h>
 #include <execinfo.h>
 #include <pwd.h>
 #include <stdint.h>
 
+#include "log.h"
 
 #define SP_PREFIX "/.squeezeplay"
 #define SP_PREFIX_LEN 14
@@ -292,6 +294,18 @@ int platform_smbus_write_byte_data(int file, uint8_t reg, uint8_t value) {
 	return i2c_smbus_write_byte_data(file, (__u8) reg, (__u8) value);
 }
 
+int platform_fionread(int des) {
+	int charin = 0;
+
+	if(ioctl(des, FIONREAD, &charin) < 0) {
+		LOG_WARN(log_sp, "platform fionread %u %d",des,charin);
+		charin = -1;
+	}
+	//FIXME Does not work here LOG_DEBUG redfined?
+	//LOG_DEBUG(log_sp, "platform fionread %u %d",des,charin);
+	log_category_log(log_sp, LOG_PRIORITY_DEBUG, "platform fionread %u %d",des,charin);
+	return charin;
+}
 
 static void print_trace(void)
 {

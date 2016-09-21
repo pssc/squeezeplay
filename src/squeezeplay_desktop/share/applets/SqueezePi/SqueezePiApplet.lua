@@ -354,10 +354,10 @@ function notify_skinSelected(self)
 
 	if (self:getEnv('SDL_DISPMANX_FBCP') and mapping and fbcp) then
 		if mapping == "REMOTE" and not toggle then
-			Framework:putenv("SDL_DISPMANX_FBCP")
+			System:putenv("SDL_DISPMANX_FBCP")
 			if backlight then self:setBrightness("off","backlight") end
 		else
-			Framework:putenv("SDL_DISPMANX_FBCP="..(st.env['SDL_DISPMANX_FBCP'] or "1"))
+			System:putenv("SDL_DISPMANX_FBCP="..(st.env['SDL_DISPMANX_FBCP'] or "1"))
 			if backlight then self:setBrightness("on","backlight") end
 		end
 		Framework:getModes()
