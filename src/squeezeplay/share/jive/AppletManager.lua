@@ -18,15 +18,13 @@ TODO
 --]]
 
 -- stuff we use
-local package, pairs, error, load, loadfile, io, assert, os = package, pairs, error, load, loadfile, io, assert, os
+local package, pairs, error, load, loadfile, assert = package, pairs, error, load, loadfile, assert
 local setfenv, getfenv, require, pcall, unpack = setfenv, getfenv, require, pcall, unpack
 local tostring, tonumber, collectgarbage, type = tostring, tonumber, collectgarbage, type
 
-local string           = require("jive.utils.string")
                        
 local oo               = require("loop.simple")
 local io               = require("io")
-local lfs              = require("lfs")
                        
 local debug            = require("jive.utils.debug")
 local utilLog          = require("jive.utils.log")
@@ -34,11 +32,11 @@ local log              = require("jive.utils.log").logger("squeezeplay.applets")
 local locale           = require("jive.utils.locale")
 local dumper           = require("jive.utils.dumper")
 local table            = require("jive.utils.table")
-local jd               = require("jive.utils.debug")
+local lfs              = require("jive.utils.lfs")
+local fun              = require("jive.utils.fun")
+local string           = require("jive.utils.string")
 
 local System           = require("jive.System")
-
-local debug 	= 		nil
 
 local JIVE_VERSION     = jive.JIVE_VERSION
 local EVENT_ACTION     = jive.ui.EVENT_ACTION
@@ -93,32 +91,10 @@ function _initUserpathdir()
 	
 	log:info("User Path: ", _userpathdir)
 	
-	_mkdirRecursive(_userpathdir)
-	_mkdirRecursive(_usersettingsdir)
-	
+	lfs.mkdirRecursive(_userpathdir)
+	lfs.mkdirRecursive(_usersettingsdir)
 end
 
-function _mkdirRecursive(dir)
-    --normalize to "/"
-    local dir = dir:gsub("\\", "/")
-   
-    local newPath = ""
-    for i, element in pairs(string.split('/', dir)) do
-        newPath = newPath .. element
-        if i ~= 1 then --first element is (for full path): blank for unix , "<drive-letter>:" for windows
-            if lfs.attributes(newPath, "mode") == nil then
-                log:debug("Making directory: " , newPath)
-
-                local created, err = lfs.mkdir(newPath)
-                if not created then
-                    error (string.format ("error creating dir '%s' (%s)", newPath, err))
-                end	
-            end
-        end
-        newPath = newPath .. "/"
-    end
-    
-end
 
 -- _saveApplet
 -- creates entries for appletsDb, calculates paths and module names
@@ -265,56 +241,39 @@ local function _registerMeta(entry)
 	local obj = class()
  
 	-- check Applet version
--- FIXME the JIVE_VERSION has changed from '1' to '7.x'. lets not break
--- the applets now.
---	local ver = tonumber(string.match(JIVE_VERSION, "(%d+)"))
-	local ver = 1
+	-- FIXME the JIVE_VERSION has changed from '1' to '7.x'. lets not break
+	-- the applets now.
+	--[[
+	local ver = tonumber(string.match(JIVE_VERSION, "(%d+)"))
 	local min, max = obj:jiveVersion()
 	if min < ver or max > ver then
 		error("Incompatible applet " .. entry.appletName)
 	end
+	--]]
 
+	entry.settingsMeta = obj:settingsMeta()
 	entry.defaultSettings = obj:defaultSettings()
 
-	if not entry.settings then
-		entry.settings = obj:defaultSettings()
+	-- apply global defaults
+	local globalDefaultSettings = _getDefaultSettings(entry.appletName)
 
-		--apply global defaults
-		local globalDefaultSettings = _getDefaultSettings(entry.appletName)
-	
-		if globalDefaultSettings then		
-			if not entry.settings then
-				entry.settings = {}
-			end
-			
-			for settingName, settingValue in pairs(globalDefaultSettings) do
-				--global defaults override applet default settings
-				log:debug("Setting global default: ", settingName, "=", settingValue)
-				entry.settings[settingName] = settingValue
-			end
+	if globalDefaultSettings and not entry.settings then
+		for settingName, settingValue in pairs(globalDefaultSettings) do
+			log:info("Setting global default: ", settingName, "=", settingValue)
+			entry.defaultSettings[settingName] = settingValue
 		end
+	end
 
+	if not entry.settings then
+		entry.settings = entry.defaultSettings and fun.uses(entry.defaultSettings) or nil
 	else
 		entry.settings = obj:upgradeSettings(entry.settings)
 	end
 
-	--apply global overrides
---	local overrideSettings = _getOverrideSettings(entry.appletName)
---
---	if defaultSettings then
---		if not entry.settings then
---			entry.settings = {}
---		end
---		
---		for settingName, settingValue in pairs(defaultSettings) do
---			--global defaults override applet default settings
---			entry.settings[settingName] = settingValue
---		end
---	end
-	
 	obj._entry = entry
 	obj._settings = entry.settings
-	obj._defaultSettings = entry.settings
+	obj._settingsMeta = entry.settingsMeta
+	obj._defaultSettings = entry.defaultSettings
 	obj._stringsTable = entry.stringsTable
 
 	entry.metaObj = obj
@@ -403,7 +362,7 @@ end
 -- discover
 -- finds and loads applets
 function discover(self)
-	log:debug("AppletManager:loadApplets")
+	log:debug("AppletManager:discover")
 
 	_findApplets()
 	_loadAndRegisterMetas()
@@ -502,6 +461,7 @@ local function _evalApplet(entry)
 	obj._entry = entry
 	obj._settings = entry.settings
 	obj._defaultSettings = entry.defaultSettings
+	obj._settingsMeta = entry.settingsMeta
 	obj._stringsTable = entry.stringsTable
 
 	obj:init()
@@ -766,7 +726,7 @@ function _freeApplet(self, entry)
 		)
 
 		if continue == nil then
-			-- warn if applet returns nil
+			-- error if applet returns nil
 			log:error(entry.appletName, ":free() returned nil")
 		end
 
@@ -774,6 +734,9 @@ function _freeApplet(self, entry)
 			-- the only way for continue to be false is to have the loaded applet have a free funtion
 			-- that successfully executes and returns false.
 			return
+		end
+		if entry.serviceCalled then
+			log:warn(entry.appletName, ":freeing applet with service called")
 		end
 	end
 	
@@ -799,6 +762,7 @@ function addDefaultSetting(self, appletName, settingName, settingValue)
 	if not _defaultSettingsByAppletName[appletName] then
 		_defaultSettingsByAppletName[appletName] = {}
 	end
+	log:info("addDefaultSetting ",_defaultSettingsByAppletName[appletName]," ",appletName,":",settingName," = ",settingValue)
 	_defaultSettingsByAppletName[appletName][settingName] = settingValue
 end
 
@@ -861,7 +825,22 @@ function _callService(self, service, ...)
 		return
 	end
 
-	return _applet[service](_applet, ...)
+	local x = { _applet[service](_applet, ...) }
+	-- Breaks BBCRadio,SlimBrowser posssibly knock on to SlimMenus
+	-- FIXME applets probably need to be resident if they have state
+	-- at the moment this is implicit if you have a service that is called
+	-- though your applet could get dumped out by a tied window... say by your settings window
+	-- unless marked as residenti(via free) this is probably a source of odd behaviour
+	if _applet.freeService and _applet.freeService() then
+		-- Try Free after service call only if applet marked safe.
+		log:info('Free after_callService service ',service,' ',type(x))
+		self:freeApplet(_appletName)
+	else
+		local entry = _appletsDb[_appletName]
+		entry.serviceCalled = true
+	end
+
+	return unpack(x)
 end
 
 

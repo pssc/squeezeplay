@@ -76,11 +76,24 @@ end
 =head2 self:defaultSettings()
 
 Returns a table with the default settings for this applet, or nil
-if not settings are used.
+if settings are not used.
 
 =cut
 --]]
 function defaultSettings(self)
+	return nil
+end
+
+--[[
+
+=head2 self:settingsMeta()
+
+Returns a table with the default meta settings for this applet, or nil
+if meta settings are not used.
+
+=cut
+--]]
+function settingsMeta(self)
 	return nil
 end
 
@@ -121,7 +134,7 @@ local lastMenuApplet = false
 
 --[[
 
-=head2 self:menuItem(label, closure)
+=head2 self:menuItem(id, node, label, closure, weight, extras, iconStyle)
 
 Convenience method that returns a MenuItem to be used in the SimpleMenu
 to open an applet. I<label> is a string token, and I<closure>
