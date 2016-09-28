@@ -31,10 +31,9 @@ struct jive_perfwarn perfwarn = { 0, 0, 0, 0, 0, 0 };
 
 /* button hold threshold 1 seconds */
 #define HOLD_TIMEOUT 1000
-
 #define LONG_HOLD_TIMEOUT 3750
-
 #define POINTER_TIMEOUT 20000
+
 
 static bool update_screen = true;
 
@@ -197,9 +196,28 @@ int jive_traceback (lua_State *L) {
 	return 1;
 }
 
-void jive_quit(void) {
+void jive_sdl_quit(void) {
 	SDL_Quit();
-	LOG_WARN(log_ui,"JIVE Quit atexit");
+	LOG_WARN(log_ui,"JIVE sdl Quit atexit");
+}
+
+
+void dump_modes(SDL_Rect **modes)
+{
+	/* Check is there are any modes available */
+	if(modes == (SDL_Rect **)0) {
+		LOG_INFO(log_ui_draw,"No modes available!");
+	}
+
+	/* Check if our resolution is restricted */
+	if(modes == (SDL_Rect **)-1) {
+		LOG_INFO(log_ui_draw,"All resolutions available.");
+	} else {
+		int i;
+		/* Print valid modes */
+		LOG_INFO(log_ui_draw,"Available Modes");
+		for(i=0;modes[i];++i) LOG_INFO(log_ui_draw,"  %d x %d", modes[i]->w, modes[i]->h);
+	}
 }
 
 static int jiveL_initSDL(lua_State *L) {
@@ -209,9 +227,6 @@ static int jiveL_initSDL(lua_State *L) {
 	Uint16 splash_w, splash_h;
 	bool fullscreen = false;
 	char splashfile[32] = "jive/splash.png";
-
-       SDL_Rect **modes;
-       int i;
 #endif
 	/* logging */
 	log_ui_draw = LOG_CATEGORY_GET("squeezeplay.ui.draw");
@@ -231,14 +246,15 @@ static int jiveL_initSDL(lua_State *L) {
 #   define JIVE_SDL_FEATURES (SDL_INIT_VIDEO)
 #endif
 	LOG_INFO(log_ui_draw, "initSDL");
-	if (atexit(jive_quit) != 0) {
-		LOG_ERROR(log_ui,"jive_quit atexit fail");
+	if (atexit(jive_sdl_quit) != 0) {
+		LOG_ERROR(log_ui,"jive_sdl_quit atexit fail");
 	}
 	/* initialise SDL */
 	if (SDL_Init(JIVE_SDL_FEATURES) < 0) {
 		LOG_ERROR(log_ui, "SDL_Init(V|T): %s\n", SDL_GetError());
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
+	LOG_INFO(log_ui_draw, "initSDL Done");
 
 	/* report video info */
 	if ((video_info = SDL_GetVideoInfo())) {
@@ -248,21 +264,7 @@ static int jiveL_initSDL(lua_State *L) {
 	}
 
 	/* Get available fullscreen/hardware modes this needs to be synced with jive_surface_set_video_mode */
-	modes=SDL_ListModes(NULL, SDL_FULLSCREEN|SDL_HWSURFACE|SDL_DOUBLEBUF);
-
-	/* Check is there are any modes available */
-	if(modes == (SDL_Rect **)0) {
-		LOG_INFO(log_ui_draw,"No modes available!");
-	}
-
-	/* Check if our resolution is restricted */
-	if(modes == (SDL_Rect **)-1) {
-		LOG_INFO(log_ui_draw,"All resolutions available.");
-	} else {
-		/* Print valid modes */
-		LOG_INFO(log_ui_draw,"Available Modes");
-		for(i=0;modes[i];++i) LOG_INFO(log_ui_draw,"  %d x %d", modes[i]->w, modes[i]->h);
-	}
+	dump_modes(SDL_ListModes(NULL, SDL_FULLSCREEN|SDL_HWSURFACE|SDL_DOUBLEBUF));
 
 	/* Register callback for additional events (used for multimedia keys)*/
 	SDL_EventState(SDL_SYSWMEVENT,SDL_ENABLE);
@@ -334,7 +336,7 @@ static int jiveL_initSDL(lua_State *L) {
 	srf = jive_surface_set_video_mode(screen_w, screen_h, screen_bpp, fullscreen);
 	if (!srf) {
 		LOG_ERROR(log_ui_draw, "Splash Video Mode Fail.");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	} else {
 		jive_surface_get_size(srf, &screen_w, &screen_h);
 		if ((video_info = SDL_GetVideoInfo())) {
@@ -363,7 +365,7 @@ static int jiveL_initSDL(lua_State *L) {
 	lua_getfield(L, 1, "screen");
 	if (lua_isnil(L, -1)) {
 		LOG_ERROR(log_ui_draw, "no screen table");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 
 	/* store screen surface */
@@ -387,10 +389,11 @@ static int jiveL_initSDL(lua_State *L) {
 	lua_setfield(L, -2, "style");
 	lua_pop(L, 2);
 
+#endif /* JIVE_NO_DISPLAY */
+
 	ui_watchdog = watchdog_get();
 	watchdog_keepalive(ui_watchdog, 6); /* 60 seconds to start with custom watchdog -- watchdog condigured with standard linux watchdog ~30 */
 
-#endif /* JIVE_NO_DISPLAY */
 	LOG_INFO(log_ui_draw, "initSDL End");
 
 	return 0;
@@ -442,6 +445,7 @@ void jive_send_quit(void) {
 }
 
 int jiveL_quit(lua_State *L) {
+	LOG_WARN(log_ui, "Framework:quit()");
 	/* de-reference all windows */
 	jiveL_getframework(L);
 	lua_pushnil(L);
@@ -451,10 +455,11 @@ int jiveL_quit(lua_State *L) {
 	/* force lua GC */
 	lua_gc(L, LUA_GCCOLLECT, 0);
 
+	/* Quit SDL via at exit */
 	return 0;
 }
 
-
+/* events once per frame */
 static int jiveL_process_events(lua_State *L) {
 	Uint32 r = 0;
 	SDL_Event event;
@@ -475,8 +480,7 @@ static int jiveL_process_events(lua_State *L) {
 	}
 	lua_rawgeti(L, -1, 1);
 
-
-	/* pump keyboard/mouse events once per frame */
+	/* pump keyboard/mouse */
 	SDL_PumpEvents();
 
 	if (jive_sdlevent_pump) {
@@ -530,8 +534,11 @@ int jiveL_set_update_screen(lua_State *L) {
 		lua_pushvalue(L, 1);
 		lua_call(L, 1, 0);
 
+#if SQUEEZEOS
 		/* short delay to allow video buffer to flip */
-		//SDL_Delay(50); SDL now patched for vsync on frame buffers that support it.
+		/* not needed with SDL patched for vsync or HW driver (eg pi) */
+		SDL_Delay(50);
+#endif
 	}
 
 	return 0;
@@ -559,7 +566,7 @@ static int _draw_screen(lua_State *L) {
 	/* Exit if we have no windows, nothing to draw */
 	lua_getfield(L, 1, "windowStack");
 	if (lua_objlen(L, -1) == 0) {
-		lua_pop(L, 2);
+		lua_pop(L, 1);
 
 		JIVEL_STACK_CHECK_ASSERT(L);
 		return 0;
@@ -630,7 +637,6 @@ static int _draw_screen(lua_State *L) {
 	if (!lua_isnil(L, -1)) {
 		/* Draw background */
 		jive_surface_set_clip(srf, NULL);
-		jive_tile_set_alpha(jive_background, 0); // no alpha channel
 		jive_tile_blit(jive_background, srf, 0, 0, screen_w, screen_h);
 
 		if (perfwarn.screen) t3 = jive_jiffies();
@@ -1008,7 +1014,11 @@ int jiveL_set_background(lua_State *L) {
 	if (jive_background) {
 		jive_tile_free(jive_background);
 	}
-	jive_background = jive_tile_ref(tolua_tousertype(L, 2, 0));
+	if (lua_isnil(L, 2)) {
+		jive_background = jive_tile_fill_color(0x000000FF);
+	} else {
+		jive_background = jive_tile_ref(tolua_tousertype(L, 2, 0));
+	}
 	next_jive_origin++;
 
 	return 0;
@@ -1219,20 +1229,21 @@ static int process_event(lua_State *L, SDL_Event *event) {
 	case SDL_KEYDOWN:
 		/*
 		  this emulates the scrollwheel using keypresses - remove for them moment as we want 4 way navigation
-
-		if (event->key.keysym.mod == KMOD_NONE || event->key.keysym.mod == KMOD_NUM) {
+		*/
+		if (key_state == KEY_STATE_SENT && (event->key.keysym.mod == KMOD_NONE || event->key.keysym.mod == KMOD_NUM)) {
 			if (event->key.keysym.sym == SDLK_UP) {
 				jevent.type = JIVE_EVENT_SCROLL;
 				--(jevent.u.scroll.rel);
+				LOG_DEBUG(log_ui_input, "Emulate the scrollwheel SDLK_UP %d",jevent.u.scroll.rel);
 				break;
 			}
 			else if (event->key.keysym.sym == SDLK_DOWN) {
 				jevent.type = JIVE_EVENT_SCROLL;
 				++(jevent.u.scroll.rel);
+				LOG_DEBUG(log_ui_input, "Emulate the scrollwheel SDLK_DOWN %d",jevent.u.scroll.rel);
 				break;
 			}
 		}
-                */
 		// Fall through
 
 	case SDL_KEYUP: {
@@ -1256,8 +1267,7 @@ static int process_event(lua_State *L, SDL_Event *event) {
 			if (event->type == SDL_KEYDOWN) {
 				jevent.type = JIVE_EVENT_IR_DOWN;
 				jevent.u.ir.code = ir->code;
-			}
-			else {
+			} else {
 				JiveEvent irup;
 
 				jevent.type = JIVE_EVENT_IR_PRESS;
@@ -1281,7 +1291,6 @@ static int process_event(lua_State *L, SDL_Event *event) {
 			}
 			entry++;
 		}
-
 
 		if (entry->keysym == SDLK_UNKNOWN) {
 			while (unicode->keysym != SDLK_UNKNOWN) {
@@ -1309,7 +1318,6 @@ static int process_event(lua_State *L, SDL_Event *event) {
 		} else if (event->type == SDL_KEYDOWN) {
 			bool repeatable = (entry->keysym == SDLK_PAGEUP || entry->keysym == SDLK_PAGEDOWN || entry->keysym == SDLK_UP || entry->keysym == SDLK_DOWN ) ? true : false;
 				//|| entry->keysym == SDLK_LEFT || entry->keysym == SDLK_RIGHT) ? true : false;
-			//FIXME on JIVE KEY Mapping? & unicode? define in Inputmap?
 			/* handle pgup/pgdn and cursors up/down as repeatable with long hold supported 
 			   we dont do this for left right as that jives us no way of generating back/go as we loose hold functions 
 			   on menu items wthout a go button.*/
@@ -1325,7 +1333,7 @@ static int process_event(lua_State *L, SDL_Event *event) {
 			switch (key_state) {
 				case KEY_STATE_NONE:
 					if  (repeatable) {
-						key_timeout = now + LONG_HOLD_TIMEOUT;
+						key_timeout = now + (LONG_HOLD_TIMEOUT/2);
 					}
 					// fall through
 
@@ -1334,12 +1342,12 @@ static int process_event(lua_State *L, SDL_Event *event) {
 					jevent.type = (key_state == KEY_STATE_NONE ) ? JIVE_EVENT_KEY_DOWN : JIVE_EVENT_KEY_PRESS;
 					jevent.u.key.code = entry->keycode;
 
-					/* repeatable keys font reset timer*/
-					if  (!repeatable) {
+					/* non repeatable key reset timer */
+					if (!repeatable) {
 						key_timeout = now + HOLD_TIMEOUT;
 					}
-					LOG_DEBUG(log_ui_input, "JIVE_EVENT_KEY_%s %x timeout %d",(key_state == KEY_STATE_NONE) ? "DOWN" : "PRESS" ,entry->keycode,key_timeout-now);
 					key_state = KEY_STATE_DOWN;
+					LOG_DEBUG(log_ui_input, "JIVE_EVENT_KEY_%s %x timeout %d",(key_state == KEY_STATE_NONE) ? "DOWN" : "PRESS" ,entry->keycode,key_timeout-now);
 					key_mask |= entry->keycode;
 				break;
 
@@ -1409,8 +1417,8 @@ static int process_event(lua_State *L, SDL_Event *event) {
 
 		screen_w = event->resize.w;
 		screen_h = event->resize.h;
-                screen_isfull = jive_surface_isSDLFullScreen(NULL);
-                //bpp?
+		screen_isfull = jive_surface_isSDLFullScreen(NULL);
+		// FIXME bpp?
 
 		/* update video surface */
 		srf = jive_surface_set_video_mode(screen_w, screen_h, 0, screen_isfull);
@@ -1423,13 +1431,13 @@ static int process_event(lua_State *L, SDL_Event *event) {
 		lua_rawseti(L, -2, 3);
 		lua_pushinteger(L, screen_h);
 		lua_rawseti(L, -2, 4);
-                lua_pop(L, 1);
+		lua_pop(L, 1);
 
 		/* store new screen surface */
-                tolua_pushusertype(L, srf, "Surface");
-                lua_setfield(L, -2, "surface");
+		tolua_pushusertype(L, srf, "Surface");
+		lua_setfield(L, -2, "surface");
 
-                lua_pop(L, 1);
+		lua_pop(L, 1);
 
 		next_jive_origin++;
 
@@ -1492,14 +1500,27 @@ static void process_timers(lua_State *L) {
 		jevent.type = JIVE_EVENT_KEY_HOLD;
 		jevent.u.key.code = key_mask;
 		key_state = KEY_STATE_SENT;
+		key_timeout = 0;
 
 		do_dispatch_event(L, &jevent);
-
-		key_timeout = 0;
 		LOG_INFO(log_ui_input, "JIVE_EVENT_KEY_HOLD %x",jevent.u.key.code);
 	}
 }
 
+//FIXME just used to get DISPMANX SDL drvier to reread env VAR for display switching
+//will need refactoring for mode selection as we just dump out
+int jiveL_get_modes(lua_State *L) {
+	 /* stack is:
+         * 1: framework
+	 * 2: w
+         * 3: h
+         * 4: bpp
+         * 5: flags
+         */
+	SDL_Rect **modes = SDL_ListModes(NULL, 0);
+	dump_modes(modes);
+	return 0;
+}
 
 int jiveL_perfwarn(lua_State *L) {
 	/* stack is:
@@ -1658,6 +1679,7 @@ static const struct luaL_Reg core_methods[] = {
 	{ "setBackground", jiveL_set_background },
 	{ "styleChanged", jiveL_style_changed },
 	{ "perfwarn", jiveL_perfwarn },
+	{ "getModes", jiveL_get_modes },
 	{ "_event", jiveL_event },
 	{ NULL, NULL }
 };
