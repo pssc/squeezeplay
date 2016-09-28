@@ -64,6 +64,10 @@ local DECODE_HIGH_BITRATE_THRESHOLD = 254 * 1024
 local DECODE_HIGH_RATE_THRESHOLD = 976 * 1024
 local OUTPUT_TIME_THRESHOLD = 100 --was 50
 
+-- FIXME this gets called a lot almost once per frame
+-- 250 was ok shorter when synced maybe for better idle
+local TIMER = 500 -- was 100
+
 -- Handlers to allow applets to extend playback capabilties via spdr:// urls
 local streamHandlers = {}
 
@@ -115,7 +119,7 @@ function __init(self, jnt, slimproto)
 		return obj:_reconnect()
 	end)
 	
-	obj.timer = Timer(100, function()
+	obj.timer = Timer(TIMER, function()
 		obj:_timerCallback()
 	end)
 	obj.timer:start()
@@ -271,10 +275,11 @@ function sendStatus(self, status, event, serverTimestamp)
 	self.statusTimestamp = Framework:getTicks()
 end
 
-
+-- This gets called lots
 function _timerCallback(self)
 	local status = decode:status()
 	if status == nil then
+		log:warn("nil decode")
 		return
 	end
 
@@ -299,6 +304,7 @@ function _timerCallback(self)
 	end
 --]]
 
+	--FIXME what does this do..
 	if status.decodeState & DECODE_RUNNING ~= 0 then
 		self.jnt:cpuActive(self)
 		self.jnt:networkActive(self)
@@ -559,14 +565,14 @@ function _streamConnect(self, serverIp, serverPort, reader, writer, slaves)
 	
 		self:_proxyInit(slaves, self.stream)
 
-		local wtask = Task("streambufW", self, _streamWrite, nil, Task.PRIORITY_AUDIO)
+		local wtask = Task("streambufW", self, _streamWrite, nil, Task.PRIORITY_RT)
 		self.jnt:t_addWrite(self.stream, wtask, STREAM_WRITE_TIMEOUT)
 	
-		self.rtask = Task("streambufR", self, _streamRead, nil, Task.PRIORITY_AUDIO)
+		self.rtask = Task("streambufR", self, _streamRead, nil, Task.PRIORITY_RT)
 		self:_proxyAndStream(true)
 
 		self.slimproto:sendStatus('STMc')
-	end, nil, Task.PRIORITY_AUDIO):addTask()
+	end, nil, Task.PRIORITY_RT):addTask()
 end
 
 function _proxyQueueSegment(self, chunk)
@@ -661,10 +667,10 @@ function _proxyAccept(self, networkErr)
 			stream:settimeout(0)
 			conn.wtask = Task("proxyW", self, 
 					function (self, networkErr) self:_proxyWrite(conn, networkErr) end,
-					nil, Task.PRIORITY_AUDIO)
+					nil, Task.PRIORITY_RT)
 			conn.rtask = Task("proxyR", self, 
 					function (self, networkErr) self:_proxyRead(conn, networkErr) end,
-					nil, Task.PRIORITY_AUDIO)
+					nil, Task.PRIORITY_RT)
 			self.jnt:t_addRead(conn.stream, conn.rtask, STREAM_WRITE_TIMEOUT) -- read and discard the request
 			table.insert(self.proxy.connections, conn)
 			
@@ -732,7 +738,7 @@ function _proxyInit(self, expected, stream)
 			self.proxyListener:settimeout(0)
 		end
 		
-		proxy.listenTask = Task("proxyListen", self, _proxyAccept, nil, Task.PRIORITY_AUDIO)
+		proxy.listenTask = Task("proxyListen", self, _proxyAccept, nil, Task.PRIORITY_RT)
 		self.jnt:t_addRead(self.proxyListener, proxy.listenTask, PROXY_CONNECT_TIMEOUT)
 		
 		self.proxy = proxy
