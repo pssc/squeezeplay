@@ -32,7 +32,6 @@ local _assert, collectgarbage, jive, ipairs, load, pairs, require, setfenv, stri
 
 local oo            = require("loop.simple")
 local table         = require("jive.utils.table")
-
 local debug         = require("jive.utils.debug")
 
 local EVENT_SHOW    = jive.ui.EVENT_SHOW
@@ -78,11 +77,13 @@ local Window        = require("jive.ui.Window")
 local Sample        = require("squeezeplay.sample")
 
 local log           = require("jive.utils.log").logger("squeezeplay.ui")
+local logFrame      = require("jive.utils.log").logger("squeezeplay.ui.frame")
 local logDraw       = require("jive.utils.log").logger("squeezeplay.ui.draw")
 local logTask       = require("jive.utils.log").logger("squeezeplay.task")
 
 local dumper        = require("jive.utils.dumper")
 local io            = require("io")
+local socket        = require("socket")
 
 -- import C functions
 jive.frameworkOpen()
@@ -283,84 +284,141 @@ Main event loop.
 =cut
 --]]
 function eventLoop(self, netTask)
+	local running = true
+	local eventTask = Task("processEvents", self,
+		function(self)
+			-- must wrap C function
+			while self:processEvents() do
+				--log:warn("ev...")
+				Task:yield(false)
+			end
+			running = false
+			log:warn("processEvents exit")
+		end, nil, Task.PRIORITY_HIGH)
+	local gcTask = Task("GC", self,
+		function(self)
+			repeat
+				collectgarbage("step")
+				Task:yield(false)
+			until(false)
+		end, nil, Task.PRIORITY_HIGH)
+	local timerTask = Task("timers", self,
+		function(self)
+			while (true) do
+				Timer:_runTimer(self:getTicks())
+				Task:yield(false)
+			end
+		end, nil, Task.PRIORITY_HIGH)
 
-	local eventTask =
-		Task("ui",
-		     self,
-		     function(self)
-			     -- must wrap C function
-			     while self:processEvents() do end
-		     end)
+	-- frame rate interval in milliseconds
+	local FRAME_INT = math.floor(1000 / FRAME_RATE)
+	local TASK_TIME_LIMIT =  math.max(math.ceil(FRAME_INT *2),20)
+	local TASK_TIME_THRESHOLD =  math.floor(FRAME_INT / 2)
+	-- FIXME time for a vertical refesh. in the future this may need adjusting
+	-- per squeezeplay platform -- this proably shoulde be resoltion realted?
+	local FRAME_REFRESH = math.floor(FRAME_INT / 3)
+	local tPriMin = Task.PRIORITY_RT
+	local drops, fr, mdrop, count, framedue  = 0, 0, 0, 0, 0
+	local su, start, netWait, wait, gap
 
+	logTask:info("eventLoop Frame Interval ",FRAME_INT, "ms For FPS ",FRAME_RATE," Vrefresh ",FRAME_REFRESH,"ms")
 
+	local now = self:getTicks()
+	local last = now
+	local ttr = 2 -- Run with no netWait
+
+	-- Suspend normal collection as we manage this
 	collectgarbage("collect")
 	collectgarbage("stop")
 
+	-- process tasks:
+	-- all audio tasks + as many other tasks as possible until a frame is due
+	netTask:addTask(0)
 
-	-- frame rate in milliseconds
-	local framerate = math.floor(1000 / FRAME_RATE)
-
-	-- time for a vertical refesh. in the future this may need adjusting
-	-- per squeezeplay platform
-	local framerefresh = framerate >> 2
-
-	-- next frame due
-	local now = self:getTicks()
-	local framedue = now + framerate
-
-	local running = true
-	while running do
-		-- process tasks: 
-		-- all audio tasks + as many other tasks as possible until a frame is due
-		local tasks = false
+	-- The network task will block if other tasks are not runnable
+	-- until a file descriptor is ready for io or
+	-- it will timeout before the next frame should be drawn
+	-- netTask sanitises wait to 0 or more
+	repeat
+		start = now
+		netWait = ttr > 1 and 0 or ((framedue - now) / 2)
+		ttr = 0
+		netTask:setArgs(netWait)
 		for task in Task:iterator() do
-			local start = now
-			tasks = task:resume() or tasks
+			ttr = task:resume() and ttr + 1 or ttr
 			now = self:getTicks()
-			if now - start > 20 then
-				log:debug(task.name, " took ", now - start, " ms")
+			local time = now - start
+			if time > TASK_TIME_LIMIT and logTask:isInfo() then
+				logTask:warn(task, " took ", time, "ms")
 			end
-			if framedue <= now and task.priority > Task.PRIORITY_AUDIO then
+			start = now
+			count = count + 1
+			if now >= (framedue - TASK_TIME_THRESHOLD) and task.priority > tPriMin then
 				break
 			end
 		end
 
-		-- call the network task, if no tasks are runnable this blocks
-		-- until a file descriptor is ready for io or it will timeout
-		-- before the next frame should be drawn
-		if tasks then
-			netTask:setArgs(0)
-		else
-			netTask:setArgs(framedue - now)
+		-- not enough time to run more tasks so non busy wait
+		wait = framedue - now
+		if wait > FRAME_REFRESH then
+			socket.select(nil, nil, (wait-FRAME_REFRESH)/1000)
 		end
-		netTask:resume()
+		now = self:getTicks()
+
+		-- FIXME update screen first? then tasks...
+		if not running then break end
 
 		-- draw frame and process ui event queue
+		-- draw screen -- debug with log squeezeplay.perf = DEBUG
+		self:updateScreen()
+		fr = fr + 1
+		-- Next Frame...
+		framedue = framedue + FRAME_INT
+
+		-- Frame driven Tasks
+		timerTask:addTask()
+		eventTask:addTask()
+		gcTask:addTask()
+
 		now = self:getTicks()
-		if framedue <= now then
-			logTask:debug("--------")
+		if now > (framedue - FRAME_REFRESH) then
+			if log:isInfo() then
+				local x = (now - framedue) / FRAME_INT
+				if (x > 0 ) then
+					x = math.floor(x+0.5)
+				else
+					x = 1
+				end
+				drops = drops + x
+				if mdrop < x then
+					mdrop = x
+				end
+			end
+			-- drop frame from now
+			framedue = now + FRAME_INT
+		end
 
-			-- draw screen
-			self:updateScreen()
+		-- Frame Rate stats
+		if logFrame:isWarn() then
+			gap = now-last-1000 -- 1s period
+			if (gap >= 0) then
+				-- math.c gap/FRAME_INT
+				local sf = math.floor((gap/FRAME_INT)+0.5)
 
-			-- keep on top of the garbage
-			collectgarbage("step")
-
-			-- process ui event once per frame
-			Timer:_runTimer(now)
-			running = eventTask:resume()
-
-			-- when is the next frame due?
-			framedue = framedue + framerate
-
-			now = self:getTicks()
-			if now > framedue - framerefresh then
-				logTask:debug("Dropped frame. delay=", now-framedue, "ms")
-				framedue = now + framerefresh
+				if drops > 0 then
+					logFrame:warn("FR(",FRAME_RATE,"): e=",fr-sf-drops," fr=",fr ," dr=",drops,"/",mdrop, " st=", gap,"(",sf,")")
+				else
+					logFrame:info("FR(",FRAME_RATE,"): e=",fr-sf-drops," fr=",fr ," dr=",drops,"/",mdrop, " st=", gap,"(",sf,")")
+				end
+				last=now
+				fr = 0
+				drops = 0
+				mdrop = 0
+				count = 0
 			end
 		end
-	end
-
+	until (eventTask:getState() == "dead")
+	log:warn("eventLoop exit")
 	collectgarbage("restart")
 end
 
@@ -590,7 +648,6 @@ function callerToString(self)
 		return "C function"
 	end		
 
-	
 	-- else is a Lua function
 	return string.format("[%s]:%d", info.short_src, info.currentline)
 end
@@ -1193,6 +1250,9 @@ function _startTransition(self, newTransition)
 	transition = newTransition
 end
 
+function inTransition()
+	return transition ~= nil
+end
 
 function _killTransition(self)
 	transition = nil
