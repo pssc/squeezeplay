@@ -164,7 +164,6 @@ local function _t_select(self, timeout)
 		if e ~= 'timeout' then
 			log:error("Select Error: ",e)
 		end
-
 	else
 		-- call the write pumps
 		for i,v in ipairs(w) do
@@ -192,19 +191,20 @@ end
 -- _thread
 -- the thread function with the endless loop
 local function _run(self, timeout)
-	local ok, err
+	local ok, err, timeoutSecs
 
 	log:debug("NetworkThread starting...",timeout)
 
 	while true do
-		local timeoutSecs = timeout / 1000
+		timeoutSecs = timeout / 1000
 		if timeoutSecs < 0 then
+			-- poll
 			timeoutSecs = 0
 		elseif timeoutSecs > 0 then
 			log:debug("NetworkThread select timeout ",timeoutSecs)
 		end
 
-		ok, err = pcall(_t_select, self, timeoutSecs) -- Note timeout is effectivly 0 so we are polling as we will block 
+		ok, err = pcall(_t_select, self, timeoutSecs)
 		if not ok then
 			log:error("error in _t_select: " .. err)
 		end
@@ -255,7 +255,7 @@ function notify(self, event, ...)
 	for i=1, select('#', ...) do
 		a[i] = tostring(select(i, ...))
 	end
-	log:debug("NOTIFY: ", event, "(", table.concat(a, ", "), ")")
+	log:info("NOTIFY: ", event, "(", table.concat(a, ", "), ")")
 	
 	local method = "notify_" .. event
 	
@@ -266,7 +266,7 @@ function notify(self, event, ...)
 				log:error("Error running ", method, ":", resOrErr)
 			else
 				if k._entry and k._entry.appletName then
-					log:debug(method, ' sent to ', k._entry.appletName)
+					log:debug(method, ' called on ', k._entry.appletName)
 				end
 			end
 		end
@@ -411,7 +411,7 @@ function arp(self, host, sink)
 			cmd = "arp -a " .. host
 	end
 
-	local proc = Process(self, cmd)
+	local proc = Process(self, cmd) -- arp
 	proc:read(function(chunk, err)
 			if err then
 					return sink(nil, err)
