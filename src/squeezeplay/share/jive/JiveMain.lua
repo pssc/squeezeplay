@@ -24,7 +24,9 @@ local math          = require("math")
 local os            = require("os")
 local coroutine     = require("coroutine")
 local oo            = require("loop.simple")
+-- local bit	    = require("bit") FIXME we need to make use backward compat for old installs
 
+local Process       = require("jive.net.Process")
 local NetworkThread = require("jive.net.NetworkThread")
 local Iconbar       = require("jive.Iconbar")
 local AppletManager = require("jive.AppletManager")
@@ -45,7 +47,10 @@ local _inputToActionMap = require("jive.InputToActionMap")
 
 local debug         = require("jive.utils.debug")
 local log           = require("jive.utils.log").logger("squeezeplay")
-local logheap       = require("jive.utils.log").logger("squeezeplay.heap")
+local logI          = require("jive.utils.log").logger("squeezeplay.ui.input")
+local logHeap       = require("jive.utils.log").logger("squeezeplay.heap")
+local logPerf       = require("jive.utils.log").logger("squeezeplay.perf")
+local logPerfHook   = require("jive.utils.log").logger("squeezeplay.perf.hook")
 --require("profiler")
 
 local EVENT_IR_ALL         = jive.ui.EVENT_IR_ALL
@@ -88,7 +93,8 @@ local JIVE_VERSION      = jive.JIVE_VERSION
 -- Classes
 local JiveMain = oo.class({}, HomeMenu)
 
-local SPLASH_DELAY = 2000
+-- FIXME env setting? seconds
+local SPLASH_DELAY = 25
 local HEAP_DELAY = 60000
 
 
@@ -114,6 +120,8 @@ local irCodes = {
   
 local _defaultSkin
 local _fullscreen
+local _postOnScreenInits = {}
+local _postOffScreenCleans = {}
 
 function JiveMain:goHome()
 		local windowStack = Framework.windowStack
@@ -127,7 +135,7 @@ function JiveMain:goHome()
 		end
 end
 
-function JiveMain:disconnectPlayer( event) --self, event not used in our case, could be left out
+function JiveMain:disconnectPlayer(event) --self, event not used in our case, could be left out
 	appletManager:callService("setCurrentPlayer", nil)
 	JiveMain:goHome()
 end
@@ -271,35 +279,31 @@ function JiveMain:__init()
 	local initTime = os.time()
 	math.randomseed(initTime)
 
+--	profiler.start()
 	-- Initialise UI
 	Framework:init()
-
-	-- Singleton instances (globals)
-	jnt = NetworkThread()
-
-	appletManager = AppletManager(jnt)
-	iconbar = Iconbar(jnt)
-	
-	-- Singleton instances (locals)
-	_globalStrings = locale:readGlobalStringsFile()
-
 	Framework:initIRCodeMappings()
-
 	-- register the default actions
 	Framework:registerActions(_inputToActionMap)
 
+	-- Singleton instances (locals)
+	_globalStrings = locale:readGlobalStringsFile()
+
+	-- Singleton instances (globals)
 	-- create the main menu
 	jiveMain = oo.rawnew(self, HomeMenu(_globalStrings:str("HOME"), nil, "hometitle"))
-
-
---	profiler.start()
+	jnt = NetworkThread()
+	appletManager = AppletManager(jnt)
+	iconbar = Iconbar(jnt)
 
 	-- menu nodes to add...these are menu items that are used by applets
 	JiveMain:jiveMainNodes(_globalStrings)
 
-	-- init our listeners
 	jiveMain.skins = {}
+	-- other local inits
+	Process.init(jiveMain)
 
+	-- init our listeners
 
 	Framework:addListener(EVENT_IR_ALL,
 		function(event) return _irHandler(event) end,
@@ -358,7 +362,7 @@ function JiveMain:__init()
 				Framework.mostRecentInputType = "mouse"
 			end
 			--FIXME not sure what to do about char/mouse, since it is a bit of a hybrid input type. So far usages don't care.
-			log:debug("EVENT_ALL_INPUT ",event:tostring(),":",Framework.mostRecentInputType,":",idm)
+			logI:debug("EVENT_ALL_INPUT ",event:tostring(),":",Framework.mostRecentInputType,":",idm)
 			return EVENT_UNUSED
 		end,
 		true
@@ -369,8 +373,8 @@ function JiveMain:__init()
 		function(event)
 			if (not Framework:isValidIRCode(event)) then
 				--is foreign remote code, consume so it doesn't appear as input to the app (future ir blaster code might still care)
-				if log:isDebug() then
-					log:debug("Consuming foreign IR event: ", event:tostring())
+				if logI:isDebug() then
+					log:debugI("Consuming foreign IR event: ", event:tostring())
 				end
 				return EVENT_CONSUME
 			end
@@ -382,42 +386,50 @@ function JiveMain:__init()
 
 
 	-- debug: set event warning thresholds (0 = off)
-	--Framework:perfwarn({ screen = 50, layout = 1, draw = 0, event = 50, queue = 5, garbage = 10 })
-	--jive.perfhook(50)
+	if (logPerf:isDebug()) then
+		logPerf:warn("Performance Warnings enabled")
+		--Framework:perfwarn({ screen = 50, layout = 1, draw = 0, event = 50, queue = 5, garbage = 10 })
+		Framework:perfwarn({ screen = 50, layout = 0, draw = 0, event = 50, queue = 5, garbage = 10 })
+		if logPerfHook:isDebug() then
+			logPerfiHook:warn("Performance Hook Warnings enabled")
+			jive.perfhook(50)
+		end
+	end
 
 	-- Splash screen is displayied in init
 	-- applet load variable so start timers before reload could this be moved further up?
-	local splashHandler = Framework:addListener(ACTION | EVENT_CHAR_PRESS | EVENT_KEY_ALL | EVENT_SCROLL,
-							    function()
-							        JiveMain:performPostOnScreenInit()
-								Framework:setUpdateScreen(true)
-								log:debug("Fired Handler")
-								return EVENT_UNUSED
-							    end)
-	local splashTimer = Timer(SPLASH_DELAY - (os.time() - initTime),
+	local splashHandler = Framework:addListener(ACTION | EVENT_CHAR_PRESS | EVENT_KEY_ALL | EVENT_SCROLL, function(event)
+					JiveMain:performPostOnScreenInit()
+					Framework:setUpdateScreen(true)
+					log:debug("Fired Handler ",event:tostring())
+					return EVENT_UNUSED
+				end)
+	-- os time in seconds timer in mills
+	local splashTimer = Timer((SPLASH_DELAY - (os.time() - initTime))*1000,
 		function()
 			JiveMain:performPostOnScreenInit()
-			Framework:setUpdateScreen(true)
 			Framework:removeListener(splashHandler)
+			Framework:setUpdateScreen(true)
 			log:debug("Fired Timer")
 		end,
 		true)
+	log:debug("Start Timer")
 	splashTimer:start()
 
-	if not logheap:isDebug() then
+	if logHeap:isDebug() then
 		local heapTimer = Timer(HEAP_DELAY,
 			function()
 			local s = jive.heap()
-			logheap:debug("--- HEAP total/new/free ---")
-			logheap:debug("number=", s["number"]);
-			logheap:debug("integer=", s["integer"]);
-			logheap:debug("boolean=", s["boolean"]);
-			logheap:debug("string=", s["string"]);
-			logheap:debug("table=", s["table"], "/", s["new_table"], "/", s["free_table"]);
-			logheap:debug("function=", s["function"], "/", s["new_function"], "/", s["free_function"]);
-			logheap:debug("thread=", s["thread"], "/", s["new_thread"], "/", s["free_thread"]);
-			logheap:debug("userdata=", s["userdata"], "/", s["new_userdata"], "/", s["free_userdata"]);
-			logheap:debug("lightuserdata=", s["lightuserdata"], "/", s["new_lightuserdata"], "/", s["free_lightuserdata"]);
+			logHeap:debug("--- HEAP total/new/free ---")
+			logHeap:debug("number=", s["number"]);
+			logHeap:debug("integer=", s["integer"]);
+			logHeap:debug("boolean=", s["boolean"]);
+			logHeap:debug("string=", s["string"]);
+			logHeap:debug("table=", s["table"], "/", s["new_table"], "/", s["free_table"]);
+			logHeap:debug("function=", s["function"], "/", s["new_function"], "/", s["free_function"]);
+			logHeap:debug("thread=", s["thread"], "/", s["new_thread"], "/", s["free_thread"]);
+			logHeap:debug("userdata=", s["userdata"], "/", s["new_userdata"], "/", s["free_userdata"]);
+			logHeap:debug("lightuserdata=", s["lightuserdata"], "/", s["new_lightuserdata"], "/", s["free_lightuserdata"]);
 		end)
 		heapTimer:start()
 	end
@@ -432,7 +444,7 @@ function JiveMain:__init()
 	local fw, fh = Framework:getScreenSize()
 
 	-- show splash screen for +SPLASH_DELAY seconds, or until key/scroll events (splash displayed by init)
-	-- howerver on mode chnage... we have blanck screen...  FIXME redisplay plash?
+	-- however on mode change... we have blank screen... FIXME redisplay splash?
         if fw == sw and sh == fh then
 		Framework:setUpdateScreen(false)
 	else
@@ -442,36 +454,65 @@ function JiveMain:__init()
 
 	-- run event loop
 	Framework:eventLoop(jnt:task())
-
 	Framework:quit()
 
+	JiveMain:performPostOffScreenClean()
+
 --	profiler.stop()
+	log:warn("JiveMain Exit")
 end
 
 
-function JiveMain:registerPostOnScreenInit(callback)
-	if not JiveMain.postOnScreenInits then
-		JiveMain.postOnScreenInits = {}
-	end
-	table.insert(JiveMain.postOnScreenInits, callback)
-
+function JiveMain:registerPostOnScreenInit(callback,name)
+	_assert(type(callback) == "function")
+	-- FIXME name via introspection
+	local entry = { callback = callback, name = name or "no name",}
+	table.insert(_postOnScreenInits, entry)
+	return entry
 end
+
 
 -- perform activities that need to run once the skin is loaded and the screen is visible
 function JiveMain:performPostOnScreenInit()
-	if not JiveMain.postOnScreenInits then
-		return
+	for i, v in ipairs(_postOnScreenInits) do
+		log:info("Calling postOnScreenInit callback ",v.name)
+		v.callback()
 	end
-
-	for i, callback in ipairs(JiveMain.postOnScreenInits) do
-		log:info("Calling postOnScreenInits callback")
-		callback()
-	end
-	JiveMain.postOnScreenInits = {}
+	_postOnScreenInits = {}
 end
 
-function JiveMain:jiveMainNodes(globalStrings)
 
+function JiveMain:registerPostOffScreenClean(callback,name)
+	_assert(type(callback) == "function")
+	_assert(type(name) == "string")
+	-- FIXME name via introspection
+	local entry =  { callback = callback, name = name or "no name",}
+	-- LIFO
+	table.insert(_postOffScreenCleans, 1, entry)
+	return entry
+end
+
+
+function JiveMain:performPostOffScreenClean()
+	for i, v in ipairs(_postOffScreenCleans) do
+		log:warn("Calling postOffScreenClean callback ",v.name)
+		v.callback()
+	end
+	_postOffScreenCleans = {}
+end
+
+
+function JiveMain:removePostOffScreenClean(handel)
+	for i, v in ipairs(_postOffScreenCleans) do
+		if v == handel then
+			return table.remove(_postOffScreenCleans,i)
+		end
+	end
+	return nil
+end
+
+
+function JiveMain:jiveMainNodes(globalStrings)
 	-- this can be called after language change, 
 	-- so we need to bring in _globalStrings again if it wasn't provided to the method
 	if globalStrings then
@@ -494,8 +535,6 @@ function JiveMain:jiveMainNodes(globalStrings)
 	jiveMain:addNode( { id = 'networkSettings', node = 'advancedSettings', noCustom = 1, text = _globalStrings:str("NETWORK_NETWORKING"), weight = 100, windowStyle = 'text_only' })
 	jiveMain:addNode( { id = 'settingsAudio', iconStyle = "hm_settingsAudio", node = 'settings', noCustom = 1, text = _globalStrings:str("AUDIO_SETTINGS"), weight = 40, windowStyle = 'text_only' })
 	jiveMain:addNode( { id = 'settingsBrightness', iconStyle = "hm_settingsBrightness", node = 'settings', noCustom = 1, text = _globalStrings:str("BRIGHTNESS_SETTINGS"), weight = 45, windowStyle = 'text_only' })
-
-
 end
 
 --[[
@@ -613,7 +652,7 @@ function JiveMain:setSelectedSkin(skinId)
         local oldSkinId = self.selectedSkin
         if _loadSkin(self, skinId, false, true) then
                 self.selectedSkin = skinId
-		jnt:notify("skinSelected")
+		jnt:notify("skinSelected",oldSkinId ,self.selectedSkin)
                 if oldSkinId and self.skins[oldSkinId] and self.skins[oldSkinId][1] ~= self.skins[skinId][1] then
 			if oldSkinId ~= appletManager:callService("getSelectedSkinNameForType", "touch") and 
 			   oldSkinId ~= appletManager:callService("getSelectedSkinNameForType", "remote") then
@@ -634,12 +673,20 @@ function JiveMain:getSkinParam(key,warn)
 		end
 	end
 
-	if warn then log:warn('no value for skinParam ', key, ' found') else
-           log:error('no value for skinParam ', key, ' found') 
+	if warn then
+		log:warn('no value for skinParam ', key, ' found')
+	elseif warn == nil then
+		log:error('no value for skinParam ', key, ' found')
 	end
+
 	return nil
 end
 
+
+
+function JiveMain:getSkinParamOrNil(key)
+	return JiveMain:getSkinParam(key,false)
+end
 
 function JiveMain:reloadSkin(reload)
         log:info("reload(", skinId, ")")
