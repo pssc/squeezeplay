@@ -18,6 +18,7 @@ Description: Logitech SqueezePlay
 Package: squeezeplay-common
 Architecture: all
 Depends: squeezeplay
+Suggests: x11vnc
 Description: Logitech SqueezePlay Lua Code and supporting scripts and config
  SqueezePlay is a Grapical client for the Logitech/SqueezeCenter music streaming server.
  Lua based code.
