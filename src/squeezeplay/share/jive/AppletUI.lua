@@ -2,7 +2,7 @@
 --[[
 =head1 NAME
 
-jive.AppletUI - The applet wth meta based UI class.
+jive.AppletUI - The applets with a meta settings based UI class.
 
 =head1 DESCRIPTION
 
