@@ -98,7 +98,7 @@ function registerApplet(meta)
 	-- check output device is available else bring up popup and restart if output attaches
 	local playbackDeviceFound = true
 
-	if settings.playbackDevice != "default" then
+	if settings.playbackDevice and settings.playbackDevice != "default" then
 		local card = settings.playbackDevice
 		
 		local pcm,hw  = string.match(card, "^([%w]+):([%w=]+)")
