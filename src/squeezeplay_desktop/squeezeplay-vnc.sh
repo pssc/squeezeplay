@@ -13,7 +13,8 @@ export SDL_FBDEV=${SDL_FBDEV:-/dev/fb0}
 if [ -z "$DISPLAY" ];then
 	export SDL_VIDEODRIVER=fbcon
 	export SDL_FBACCEL=0
-	x11vn c-no6 -mdns -nolookup -nopw -shared -many -rawfb $SDL_FBDEV &
+	export JIVE_FR=16
+	x11vnc -no6 -mdns -nolookup -nopw -shared -many -rawfb $SDL_FBDEV &
 	VNC=$!
 else
 	x11vnc -no6 -mdns -nolookup -nopw -shared -many &
