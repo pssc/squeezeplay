@@ -55,6 +55,7 @@ function configureApplet(meta)
 
 	-- set the poll list for discovery of slimservers based on our settings
 	if appletManager:hasService("setPollList") then
+		log:info("Poll ",meta:getSettings().poll)
 		appletManager:callService("setPollList", meta:getSettings().poll)
 	end
 
