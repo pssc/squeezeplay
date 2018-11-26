@@ -7,12 +7,13 @@ Build-Depends: debhelper (>= 4.0.0), libmad0-dev, libflac-dev, libasound-dev, li
 Standards-Version: 3.6.2
 
 Package: squeezeplay
-Architecture: any
-Depends: libmad0, libflac8, libasound2, libjpeg62-turbo, libpng16-16, libogg0, squeezeplay-common, fonts-freefont-ttf, libfreetype6
+Architecture: all
+Depends: squeezeplay-bin
 Recommends: alsa-utils, wicd-curses, wicd
-Suggests: libpacparser1,  autossh, liblog4cplus-1.0-4, libboost-thread1.49.0, libboost-system1.49.0, libboost-program-options1.49.0, libcec2 (>= 2.2.0)
+Suggests: autossh, libcec-daemon
 Description: Logitech SqueezePlay
  SqueezePlay is a Grapical client for the Logitech/SqueezeCenter music streaming server.
+ Supporting configuration.
  .
 
 Package: squeezeplay-common
@@ -22,5 +23,14 @@ Suggests: x11vnc
 Description: Logitech SqueezePlay Lua Code and supporting scripts and config
  SqueezePlay is a Grapical client for the Logitech/SqueezeCenter music streaming server.
  Lua based code.
+ .
+
+Package: squeezeplay-bin
+Architecture: any
+Depends: squeezeplay-common
+Depends: libmad0, libflac8, libasound2, libjpeg62-turbo, libpng16-16, libogg0, squeezeplay-common, fonts-freefont-ttf, libfreetype6
+Description: Logitech SqueezePlay
+ SqueezePlay is a Grapical client for the Logitech/SqueezeCenter music streaming server.
+ Jive core lua and sdl based platfrom.
  .
 
