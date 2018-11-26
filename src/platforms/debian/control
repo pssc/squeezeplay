@@ -8,7 +8,7 @@ Standards-Version: 3.6.2
 
 Package: squeezeplay
 Architecture: all
-Depends: squeezeplay-bin
+Depends: squeezeplay-common
 Recommends: alsa-utils, wicd-curses, wicd
 Suggests: autossh, libcec-daemon
 Description: Logitech SqueezePlay
@@ -18,7 +18,7 @@ Description: Logitech SqueezePlay
 
 Package: squeezeplay-common
 Architecture: all
-Depends: squeezeplay
+Depends: squeezeplay-bin
 Suggests: x11vnc
 Description: Logitech SqueezePlay Lua Code and supporting scripts and config
  SqueezePlay is a Grapical client for the Logitech/SqueezeCenter music streaming server.
@@ -27,7 +27,6 @@ Description: Logitech SqueezePlay Lua Code and supporting scripts and config
 
 Package: squeezeplay-bin
 Architecture: any
-Depends: squeezeplay-common
 Depends: libmad0, libflac8, libasound2, libjpeg62-turbo, libpng16-16, libogg0, squeezeplay-common, fonts-freefont-ttf, libfreetype6
 Description: Logitech SqueezePlay
  SqueezePlay is a Grapical client for the Logitech/SqueezeCenter music streaming server.
