@@ -30,6 +30,6 @@ Architecture: any
 Depends: libmad0, libflac8, libasound2, libjpeg62-turbo, libpng16-16, libogg0, squeezeplay-common, fonts-freefont-ttf, libfreetype6
 Description: Logitech SqueezePlay
  SqueezePlay is a Grapical client for the Logitech/SqueezeCenter music streaming server.
- Jive core lua and sdl based platfrom.
+ Jive core, a lua and sdl based platfrom.
  .
 
