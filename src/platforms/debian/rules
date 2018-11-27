@@ -10,6 +10,7 @@ tmp=$(CURDIR)/debian/tmp
 build=$(CURDIR)/../../build/linux/
 squeezeplay=$(CURDIR)/debian/$(package)
 squeezeplay_common=$(CURDIR)/debian/$(package)-common
+squeezeplay_bin=$(CURDIR)/debian/$(package)-bin
 
 clean:
 	dh_testdir
@@ -17,6 +18,7 @@ clean:
 	rm -f $(CURDIR)/debian/files
 	rm -rf $(squeezeplay)
 	rm -rf $(squeezeplay_common)
+	rm -rf $(squeezeplay_bin)
 	rm -f $(CURDIR)/opt/squeezeplay
 	-rmdir $(CURDIR)/opt
 	-rm $(CURDIR)/lib
