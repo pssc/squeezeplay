@@ -59,11 +59,10 @@ end
 
 
 function registerApplet(meta)
-	local settings = meta:getSettings()
-
 	-- this allows us to share state with the applet
 	meta.state = {}
 
+	-- FIXME Capabilities?
 	if not System:hasAudioByDefault() then
 		jiveMain:addItem(meta:menuItem('audioPlayback', 'advancedSettingsBetaFeatures', "AUDIO_PLAYBACK", function(applet, ...) applet:settingsShow(meta.state) end))
 	end
