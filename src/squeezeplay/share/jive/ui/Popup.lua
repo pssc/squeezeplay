@@ -90,6 +90,7 @@ end
 =head1 LICENSE
 
 Copyright 2010 Logitech. All Rights Reserved.
+Copyright 2018 Phillip Camp. All Rights Reserved.
 
 This file is licensed under BSD. Please see the LICENSE file for details.
 
