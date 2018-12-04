@@ -80,7 +80,8 @@ end
 
 
 function __tostring(self)
-	return "Popup()"
+	local str = (self.title and self.title ~= "") and self.title or self.style
+	return "Popup(".. tostring(str)..")"
 end
 
 
