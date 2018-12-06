@@ -490,8 +490,9 @@ Returns a boolean as to whether the clock appears to be set correctly
 
 =cut
 --]]
+-- FIXME time sync or ts disbalked flags... dates stamp from file?
 function isClockSet()
-	if tonumber(os.date("%Y")) < 2010 then
+	if tonumber(os.date("%Y")) < 2018 then
 		return false
 	end
 	return true
