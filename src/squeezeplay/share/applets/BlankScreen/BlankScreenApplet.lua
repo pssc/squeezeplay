@@ -17,10 +17,8 @@ BlankScreenApplet overrides the following methods:
 --]]
 
 
--- stuff we use
 local oo               = require("loop.simple")
 
---local jiveBSP          = require("jiveBSP")
 local Framework        = require("jive.ui.Framework")
 local Window           = require("jive.ui.Window")
 local Timer            = require("jive.ui.Timer")
@@ -31,7 +29,7 @@ local Label            = require("jive.ui.Label")
 local debug            = require("jive.utils.debug")
 local datetime         = require("jive.utils.datetime")
 local System           = require("jive.System")
-local Applet        = require("jive.Applet")
+local Applet           = require("jive.Applet")
 
 local jnt              = jnt
 local appletManager    = appletManager
@@ -42,9 +40,11 @@ oo.class(_M, Applet)
 
 function closeScreensaver(self)
 	-- nothing to do here, brightness is refreshed via window event handler in init()
+	log:info("closeScreensaver")
 end
 
 function openScreensaver(self, menuItem)
+	log:info("openScreensaver")
 	self.sw, self.sh = Framework:getScreenSize()
 
 	-- create window and icon
@@ -59,8 +59,9 @@ function openScreensaver(self, menuItem)
 
 	self.window:addListener(EVENT_WINDOW_ACTIVE | EVENT_HIDE,
 		function(event)
-			local type = event:getType()
-			if type == EVENT_WINDOW_ACTIVE then
+			local t = event:getType()
+			if t == EVENT_WINDOW_ACTIVE then
+				log:debug("event ",t)
 				self:_setBrightness("off")
 			else
 				self:_setBrightness("on")
@@ -72,6 +73,7 @@ function openScreensaver(self, menuItem)
 
 	self.window:addListener(EVENT_MOTION,
 		function()
+			log:debug("hide")
 			self.window:hide()
 			return EVENT_CONSUME
 		end)
@@ -94,6 +96,7 @@ function onOverlayWindowShown(self)
 	self:_setBrightness("on")
 
 	local clockSet = datetime:isClockSet()
+	log:info("showOverlay clockset ",clockSet)
 
 	if clockSet then
 		local time = datetime:getCurrentTime()
@@ -113,6 +116,8 @@ end
 
 function onOverlayWindowHidden(self)
 	self:_setBrightness("off")
+
+	log:info("hideOverlay timelabel ",self.timeLabel)
 	if self.timeLabel then
 		self.window:removeWidget(self.timeLabel)
 		self.timeLabel = nil
@@ -129,6 +134,7 @@ end
 =head1 LICENSE
 
 Copyright 2010 Logitech. All Rights Reserved.
+Copyright 2018 Phillip Camp. All Rights Reserved.
 
 This file is licensed under BSD. Please see the LICENSE file for details.
 
