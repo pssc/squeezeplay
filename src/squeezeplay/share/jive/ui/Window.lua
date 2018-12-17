@@ -348,6 +348,7 @@ function show(self, transition)
 		return
 	end
 
+	log:debug("show ",self)
 
 	if not self.contextMenu and not self.transient then
 		self:hideContextMenus()
@@ -399,7 +400,7 @@ function show(self, transition)
 
 	--Surely the framework would redarw?
 	--Framework:reDraw()
-	log:warn("Framework:reDraw() ",self)
+	log:warn("Would Framework:reDraw() ",self)
 end
 
 
@@ -622,7 +623,7 @@ function hide(self, transition)
 		end
 
 		--FIXME
-		log:warn("was topwindow:reDraw() ",topwindow)
+		log:warn("Would topwindow:reDraw() ",topwindow)
 
 		-- push transitions
 		transition = transition or self._DEFAULT_HIDE_TRANSITION
@@ -1225,7 +1226,7 @@ end
 
 
 function __tostring(self)
-	local str = (self.title and self.title ~= "") and self.title or (self.windowId or "")
+	local str = (self.title and self.title ~= "") and self.title or (self.windowId or self.style)
 	return "Window(" .. tostring(str) .. ")"
 end
 
@@ -2017,6 +2018,7 @@ jive.ui.Window:_eventHandler()
 =head1 LICENSE
 
 Copyright 2010 Logitech. All Rights Reserved.
+Copyright 2018 Phillip Camp. All Rights Reserved.
 
 This file is licensed under BSD. Please see the LICENSE file for details.
 
