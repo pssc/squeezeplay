@@ -348,7 +348,7 @@ function show(self, transition)
 		return
 	end
 
-	log:debug("show ",self)
+	log:debug("show ",self ," topwindow ",topwindow ,"idx ",idx)
 
 	if not self.contextMenu and not self.transient then
 		self:hideContextMenus()
@@ -1623,7 +1623,7 @@ function _transitionFadeIn(oldWindow, newWindow, duration)
 	-- Alpha channel is 8bit
 	local scale = 255 / duration
 
-	log:debug("_transitionFadeIn Frames ",math.ceil((duration/stepms)-1),"/",scale)
+	log:debug("_transitionFadeIn Frames ",math.ceil((duration/stepms)-1)," alpha scale ",scale)
 	-- assume old window is not updating snapshot
 	if oldWindow.getSurface then
 		oldsrf = oldWindow:getSurface()
@@ -1646,11 +1646,11 @@ function _transitionFadeIn(oldWindow, newWindow, duration)
 			remaining = transitionDuration - (Framework:getTicks() - startT)
 			newWindow:draw(surface, LAYER_ALL)
 			oldsrf:blitAlpha(surface, 0, 0, alpha)
-			log:debug(" _transitionFadeIn scaled ", alpha)
+			--log:debug(" _transitionFadeIn scaled alpha", alpha)
 
 			if remaining <= 0 then
 				Framework:_killTransition()
-				log:info(widget," _transitionFadeIn Finish ", animationCount, " (",alpha,")")
+				log:info(widget," _transitionFadeIn Finished in ", animationCount, " Fr a(",alpha,")")
 				return true
 			end
 			animationCount = animationCount + 1
