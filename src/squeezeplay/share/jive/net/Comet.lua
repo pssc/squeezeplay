@@ -885,7 +885,7 @@ _response = function(self, chunk)
 
 		-- Log response
 		if event.error then
-			log:warn(self, ": _response, ", event.channel, " id=", event.id, " failed: ", event.error)
+			log:warn(self, ": _response, ", event.channel, " id=", event.id, " failed: ", event.error, "advice: ", event.advice)
 			if event.advice then
 				return _handleAdvice(self)
 			end
