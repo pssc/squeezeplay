@@ -195,16 +195,15 @@ function setBrightnessSqueezePi(self, level)
 		local f,err = io.popen(command, "r")
 		if f then
 			for line in f:lines() do
-				-- display_power=1
-				local sc = string.match(line, "^display_power=([%d]+)")
+				local sc = string.match(line, "^display_power=([-%d]+)")
 				if sc then
 					sc = tonumber(sc) or 0
 					if sc == 0 then
 						off=true
-					else
+					elseif sc > 1 then
 						off=false
 					end
-					log:debug("state ",sc," ",off)
+					log:info("vcgencmd display_power=",sc," we are ",off)
 				else
 					log:warn("Parse error for ",command)
 					log:warn("line '",line,"'")
@@ -392,7 +391,7 @@ end
 =head1 LICENSE
 
 Copyright 2010 Logitech. All Rights Reserved.
-Copyright 2014-16 Phillip Camp. All Rights Reserved.
+Copyright 2014-18 Phillip Camp. All Rights Reserved.
 
 This file is licensed under BSD. Please see the LICENSE file for details.
 
