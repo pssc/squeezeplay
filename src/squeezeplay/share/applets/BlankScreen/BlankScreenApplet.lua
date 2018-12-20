@@ -59,9 +59,9 @@ function openScreensaver(self, menuItem)
 
 	self.window:addListener(EVENT_WINDOW_ACTIVE | EVENT_HIDE,
 		function(event)
+			log:debug("listener event type ",t)
 			local t = event:getType()
 			if t == EVENT_WINDOW_ACTIVE then
-				log:debug("event ",t)
 				self:_setBrightness("off")
 			else
 				self:_setBrightness("on")
