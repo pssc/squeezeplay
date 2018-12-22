@@ -190,6 +190,7 @@ function __init(self, style, title, titleStyle, windowId)
 	-- listener to allow other handlers to act on these events first
 	self.defaultActionListenerHandles = {}
 	table.insert(self.defaultActionListenerHandles, obj:addActionListener("back", obj, upAction))
+	log:debug("new ",obj)
 
 	return obj
 end
@@ -348,7 +349,9 @@ function show(self, transition)
 		return
 	end
 
-	log:debug("show ",self ," topwindow ",topwindow ,"idx ",idx)
+	if log:isDebug() then
+		log:debug("show ",self ," topwindow ",topwindow ," idx ",idx ," ",Framework:callerToString())
+	end
 
 	if not self.contextMenu and not self.transient then
 		self:hideContextMenus()
