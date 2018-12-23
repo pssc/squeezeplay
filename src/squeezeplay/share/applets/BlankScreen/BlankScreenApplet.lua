@@ -48,7 +48,7 @@ function openScreensaver(self, menuItem)
 	self.sw, self.sh = Framework:getScreenSize()
 
 	-- create window and icon
-	self.window = Window("text_list")
+	self.window = Window("text_list",_,_,"Blank")
 	self.bg  = Surface:newRGBA(self.sw, self.sh)
 	self.bg:filledRectangle(0, 0, self.sw, self.sh, 0x000000FF)
 
@@ -57,22 +57,25 @@ function openScreensaver(self, menuItem)
 
 	self.window:setShowFrameworkWidgets(false)
 
-	self.window:addListener(EVENT_WINDOW_ACTIVE | EVENT_HIDE,
+	self.window:addListener(EVENT_WINDOW_ACTIVE,
 		function(event)
-			log:debug("listener event type ",event:getType())
-			if t == EVENT_WINDOW_ACTIVE then
-				self:_setBrightness("off")
-			else
-				self:_setBrightness("on")
-			end
+			log:debug("active")
+			self:_setBrightness("off")
 			return EVENT_UNUSED
 		end,
 		true
 	)
-
-	self.window:addListener(EVENT_MOTION,
+	self.window:addListener(EVENT_HIDE,
 		function()
 			log:debug("hide")
+			self:_setBrightness("on")
+			return EVENT_UNUSED
+		end,
+		true
+	)
+	self.window:addListener(EVENT_MOTION,
+		function()
+			log:debug("motion")
 			self.window:hide()
 			return EVENT_CONSUME
 		end)
