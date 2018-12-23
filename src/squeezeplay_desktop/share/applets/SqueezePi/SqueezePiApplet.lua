@@ -200,7 +200,7 @@ function setBrightnessSqueezePi(self, level)
 					sc = tonumber(sc) or 0
 					if sc == 0 then
 						off=true
-					elseif sc > 1 then
+					elseif sc >= 1 then
 						off=false
 					end
 					log:info("vcgencmd display_power=",sc," we are ",off)
