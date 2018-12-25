@@ -46,7 +46,7 @@ local appletManager = appletManager
 
 -- contants
 local mappings = { "UNMAPPED","LOCAL","REMOTE","IGNORE" }
-local readsize = 2 -- Could lead to blocking... > 1 -- sizeof(input_event)
+local readsize = 1 -- Could lead to blocking... > 1 -- sizeof(input_event)
 
 -- runtime
 local mapping = nil
@@ -341,7 +341,7 @@ function monitordevices(self)
 			readfds,ec = self:readfdsetup(settings.devicelist)
 		end
 
-		local r,w,err = socket.select(readfds,nil,0) -- non blocking
+		local r,_,err = socket.select(readfds,nil,0) -- non blocking
 
 		if err and err ~= "timeout" then
 			log:error(":monitordevices select error", err)
@@ -351,10 +351,9 @@ function monitordevices(self)
 			for n,fd in ipairs(r) do
 				log:debug("monitordevices fd consume data ",fd.detail.name," ",fd.file)
 				-- consume data on fd
-				local data = 'x'
-				local lr, err = {fd} , nil
-				while(#lr > 0 and data and not err) do
-					data = fd.detail.handler == "raw" and 1 or fd.dev:read(readsize) -- blocking
+				local data, lr, err = 'x', {fd}, nil
+				while(#lr > 0 and data and #data > 0 and not err) do
+					data = fd.dev:read(readsize) -- blocking
 					lr,_,err = socket.select(lr,nil,0)
 				end
 				log:debug("monitordevices consumed data")
