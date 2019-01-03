@@ -113,10 +113,35 @@ function view(table, depth, linebreak)
 	})
 	return viewer:tostring(table)
 end
+
+
+--[[
+=head2 callerToString(Optfunction)
+
+Returns source:lineNumber information about the function/caller from the Lua call stack
+
+=cut
+--]]
+function callerToString(func)
+	local info = func and debug.getinfo(func) or debug.getinfo(3, "Sl")
+	if not info then
+		return "No caller found"
+	end
+
+	if info.what == "C" then
+		return "C function"
+	end
+
+	-- else is a Lua function
+	return string.format("[%s]:%d", info.short_src, info.currentline)
+end
+
+
 --[[
 =head1 LICENSE
 
 Copyright 2010 Logitech. All Rights Reserved.
+Copyright 2014-19 Phillip Camp. All Rights Reserved.
 
 This file is licensed under BSD. Please see the LICENSE file for details.
 
