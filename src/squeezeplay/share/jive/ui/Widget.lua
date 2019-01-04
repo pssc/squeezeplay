@@ -426,16 +426,14 @@ end
 function addActionListener(self, action, obj, listener)
 	_assert(type(listener) == "function")
 
-	local callerInfo = "N/A"
 	if log:isDebug() then
-		callerInfo = Framework:callerToString()
+		log:debug("Creating widget action listener for action: (" , action, ") from source: ", debug.callerToString())
 	end
 	
 	if not Framework:_getActionEventIndexByName(action) then
 		log:error("action name not registered:(" , action, "). Available actions: ", Framework:dumpActions() )
 		return 
 	end
-	log:debug("Creating widget action listener for action: (" , action, ") from source: ", callerInfo)
 	
 	return self:addListener(ACTION,
 			function(event)

@@ -350,7 +350,7 @@ function show(self, transition)
 	end
 
 	if log:isDebug() then
-		log:debug("show ",self ," topwindow ",topwindow ," idx ",idx ," ",Framework:callerToString())
+		log:debug("show ",self ," topwindow ",topwindow ," idx ",idx ," ",debug.callerToString())
 	end
 
 	if not self.contextMenu and not self.transient then
