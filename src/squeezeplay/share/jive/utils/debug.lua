@@ -35,7 +35,7 @@ tables. This modules extends the lua debug module.
 =cut
 --]]
 
-local print, setmetatable, tostring  = print, setmetatable, tostring
+local print, setmetatable, tostring, string = print, setmetatable, tostring, string
 local ldebug  = require("debug")
 local Viewer = require("loop.debug.Viewer")
 
@@ -123,7 +123,7 @@ Returns source:lineNumber information about the function/caller from the Lua cal
 =cut
 --]]
 function callerToString(func)
-	local info = func and debug.getinfo(func) or debug.getinfo(3, "Sl")
+	local info = func and ldebug.getinfo(func) or ldebug.getinfo(3, "Sl")
 	if not info then
 		return "No caller found"
 	end
