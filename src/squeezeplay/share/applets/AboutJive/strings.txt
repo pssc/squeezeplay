@@ -22,7 +22,7 @@ ABOUT_COPYRIGHT
 	CS	Copyright 2007-2011 Logitech
 	DA	Copyright 2007-2011, Logitech.
 	DE	Copyright 2007–2011, Logitech.
-	EN	Copyright 2007-2011, Logitech. \nCopyright 2007-2015, Various (Apache, GPL and BSD).
+	EN	Copyright 2007-2011, Logitech. \nCopyright 2007-2019, Various (Apache, GPL and BSD).
 	ES	Copyright 2007-2011, Logitech.
 	FI	Copyright 2007-2011, Logitech.
 	FR	Copyright 2007-2011, Logitech.
