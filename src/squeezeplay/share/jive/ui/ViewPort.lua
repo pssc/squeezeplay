@@ -10,8 +10,9 @@ local debug	       = require("jive.utils.debug")
 local oo               = require("loop.simple")
 
 local Framework        = require("jive.ui.Framework")
-local log              = require("jive.utils.log").logger("squeezeplay.ui")
+local log              = require("jive.utils.log").logger("squeezeplay.ui.draw")
 
+local ppi = 96
 
 module(..., Framework.constants)
 --oo.class(_M, Applet)
@@ -28,7 +29,7 @@ function ViewPort:__init(w,h,x,y)
 	if not w or not h then
 		w,h = obj.x, obj.y	
 	end
-	obj.ppi = 96
+	obj.ppi = ppi
 	obj.ptSize = 1/72
 	obj.vw = w/100
 	obj.vh = h/100
