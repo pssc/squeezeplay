@@ -880,12 +880,12 @@ _response = function(self, chunk)
 		-- Update advice if any
 		if event.advice then
 			self.advice = event.advice
-			log:debug(self, ": _response, advice updated from server")
+			log:info(self, ": _response, advice updated from server")
 		end
 
 		-- Log response
 		if event.error then
-			log:warn(self, ": _response, ", event.channel, " id=", event.id, " failed: ", event.error, "advice: ", event.advice)
+			log:warn(self, ": _response, ", event.channel, " id=", event.id, " failed: ", event.error)
 			if event.advice then
 				return _handleAdvice(self)
 			end
@@ -956,7 +956,7 @@ _response = function(self, chunk)
 				log:debug(self, ": _response, notifiying callbacks for ", subscription)
 				
 				for _, func in pairs( self.notify[subscription] ) do
-					log:debug("  callback to: ", func)
+					log:debug("  callback to: ", debug.callerToString(func))
 					func(event)
 				end
 						
@@ -1096,6 +1096,7 @@ end
 =head1 LICENSE
 
 Copyright 2010 Logitech. All Rights Reserved.
+Copyright 2014-18 Phillip Camp. All Rights Reserved.
 
 This file is licensed under BSD. Please see the LICENSE file for details.
 
