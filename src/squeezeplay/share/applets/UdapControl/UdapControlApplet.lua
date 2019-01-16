@@ -58,7 +58,7 @@ function _udapSink( self, chunk, err)
 		return -- ignore errors
 	end
 
-	log:debug("udapSink chunk ip: ", chunk.ip ," port: ", chunk.port, " data len: ", #chunk.data)
+	log:debug("udapSink chunk from: ", chunk.ip ,":", chunk.port, " len: ", #chunk.data)
 	local pkt = Udap.parseUdap( chunk.data)
 	log:debug("udapSink {", Udap.tostringUdap(pkt," / "),"}")
 
@@ -322,6 +322,7 @@ end
 =head1 LICENSE
 
 Copyright 2010 Logitech. All Rights Reserved.
+Copyright 2014-19 Phillip Camp. All Right Reserved.
 
 This file is licensed under BSD. Please see the LICENSE file for details.
 
