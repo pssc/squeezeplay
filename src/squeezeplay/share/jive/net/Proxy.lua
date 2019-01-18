@@ -323,7 +323,7 @@ function isProxied(self,test)
                                         end
                         	elseif self:getMethod(idx) == 'PF_SERVER' then
                                         proxying = false
-                                elseif (n == self.ip) and (self:getMethod(idx) ~= 'PF_SERVER') then -- doni't noporxy the proxy IP
+                                elseif (n == self.ip) and (self:getMethod(idx) ~= 'PF_SERVER') then -- don't noporxy the proxy IP
 					log:warn(self,":self denied own proxy[",n,":",self.host,"]=",self.ip)
                                 	proxying = false
 				else
