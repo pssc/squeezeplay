@@ -22,6 +22,8 @@ if [ -r "/boot/bcm2708-rpi-b.dtb" ]; then
 	SDL_FBACCEL=${SDL_FBACCEL:-176}
 	export SDL_FBACCEL
 fi
+#LOWMEM flag or scale on FREE FIXME
+#FREE_MEM=$(cat /proc/meminfo | awk '/MemFree/ { print $2 } ')
 # DISPMANX_ID_FORCE_TV  5
 # DISPMANX_ID_FORCE_LCD 4
 # DISPMANX_ID_FORCE_OTHER 6 /* non-default display */
