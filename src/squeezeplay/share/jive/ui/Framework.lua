@@ -129,7 +129,7 @@ The main display and event loop.
 
 =head2 jive.ui.Framework.reDraw(r)
 
-Mark an area of the screen for redrawing, of the while screen if r is nil.
+Mark an area of the screen for redrawing, of the whole screen if r is nil.
 
 =head2 jive.ui.Framework.pushEvent(event)
 
@@ -382,7 +382,7 @@ function eventLoop(self, netTask)
 
 		now = self:getTicks()
 		if now > (framedue - FRAME_REFRESH) then
-			if log:isInfo() then
+			if logFrame:isWarn() then
 				local x = (now - framedue) / FRAME_INT
 				if (x > 0 ) then
 					x = math.floor(x+0.5)
@@ -406,9 +406,9 @@ function eventLoop(self, netTask)
 				local sf = math.floor((gap/FRAME_INT)+0.5)
 
 				if drops > 0 then
-					logFrame:warn("FR(",FRAME_RATE,"): e=",fr-sf-drops," fr=",fr ," dr=",drops,"/",mdrop, " st=", gap,"(",sf,")")
+					logFrame:warn("FR(",FRAME_RATE,"): ef=",fr-sf-drops," fr=",fr ," dr=",drops,"/",mdrop, " st=", gap,"(",sf,")")
 				else
-					logFrame:info("FR(",FRAME_RATE,"): e=",fr-sf-drops," fr=",fr ," dr=",drops,"/",mdrop, " st=", gap,"(",sf,")")
+					logFrame:info("FR(",FRAME_RATE,"): ef=",fr-sf-drops," fr=",fr ," dr=",drops,"/",mdrop, " st=", gap,"(",sf,")")
 				end
 				last=now
 				fr = 0
@@ -630,28 +630,9 @@ function getSounds(self)
 	return self.sound
 end
 
-
---[[
-=head2 jive.ui.Framework:callerToString()
-
-Returns source:lineNumber information about the caller from the Lua call stack 
-
-=cut
---]]
-function callerToString(self)
-	local info = debug.getinfo(3, "Sl")
-	if not info then 
-		return "No caller found" 
-	end
-	
-	if info.what == "C" then
-		return "C function"
-	end		
-
-	-- else is a Lua function
-	return string.format("[%s]:%d", info.short_src, info.currentline)
+function callerToString(self,...)
+	log:warn('function moved to debug')
 end
-
 
 --[[
 
@@ -826,7 +807,7 @@ function getActionToActionTranslation(self, action)
 	if not translatedAction then
 		return action
 	end
-	log:debug("Translated action " , action, " to ", translatedAction )
+	if log:isDebug() then log:error("Translated action " , action, " to ", translatedAction ) end
 	return translatedAction 
 end
 
@@ -990,7 +971,7 @@ function addActionListener(self, action, obj, listener, priority)
 
 	local callerInfo = "N/A"
 	if log:isDebug() then
-		callerInfo = self:callerToString()
+		callerInfo = debug.callerToString()
 	end
 
 	if not self:assertActionName(action) then
